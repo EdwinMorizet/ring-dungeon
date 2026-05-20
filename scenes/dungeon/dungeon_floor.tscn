@@ -1,10 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://0bxh1i8p6arq7"]
+[gd_scene format=3 uid="uid://b4iah6p7r2i7m"]
 
-[ext_resource type="Script" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_r3r5s"]
+[ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_r3r5s"]
 
-[node name="DungeonFloor" type="Node3D"]
+[node name="DungeonFloor" type="Node3D" unique_id=426038178]
 script = ExtResource("1_r3r5s")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.784886, -0.422618, 0.453154, 0, 0.731354, 0.681998, -0.61964, -0.535311, 0.57398, 0, 30, 0)
-light_energy = 1.6

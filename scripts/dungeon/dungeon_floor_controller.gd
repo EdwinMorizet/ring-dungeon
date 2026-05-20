@@ -13,7 +13,7 @@ const PlayerScene = preload("res://scenes/player/player.tscn")
 @export var create_floor_collision: bool = true
 @export var auto_randomize_seed_on_regenerate: bool = false
 @export var player_scene: PackedScene = PlayerScene
-@export var player_spawn_fallback: Vector3 = Vector3(0, 3, 0)
+@export var player_spawn_fallback: Vector3 = Vector3(0.0, 3.0, 0.0)
 @export var player_spawn_height_offset: float = 1.2
 
 var _regenerate_toggle: bool = false
@@ -51,9 +51,9 @@ func _ready() -> void:
 func regenerate_now() -> void:
 	_clear_generated()
 	var floor_config := _get_config()
-	var generator := DungeonGenerator.new()
-	var layout := generator.generate(floor_config.seed, _build_generation_params())
-	var builder := DungeonBuilder3D.new()
+	var generator: DungeonGenerator = DungeonGenerator.new()
+	var layout: Dictionary = generator.generate(floor_config.seed, _build_generation_params())
+	var builder: DungeonBuilder3D = DungeonBuilder3D.new()
 	var editor_owner: Node = null
 	if Engine.is_editor_hint() and get_tree() != null:
 		editor_owner = get_tree().edited_scene_root
@@ -99,23 +99,24 @@ func _spawn_or_reposition_player() -> void:
 	if player_scene == null:
 		return
 	if _player_instance == null or not is_instance_valid(_player_instance):
-		var player := player_scene.instantiate()
-		if player is RigidBody3D:
-			_player_instance = player
+		var player_node: Node = player_scene.instantiate()
+		if player_node is RigidBody3D:
+			_player_instance = player_node as RigidBody3D
 			add_child(_player_instance)
 		else:
-			player.queue_free()
+			player_node.queue_free()
 			return
 
-	var spawn_position := _find_player_spawn_position()
+	var spawn_position: Vector3 = _find_player_spawn_position()
 	_player_instance.global_position = spawn_position
 	_player_instance.linear_velocity = Vector3.ZERO
 	_player_instance.angular_velocity = Vector3.ZERO
 
 func _find_player_spawn_position() -> Vector3:
 	if _generated_root != null and is_instance_valid(_generated_root):
-		var marker := _generated_root.find_child("PlayerStart_0", true, false)
-		if marker is Marker3D:
+		var marker_node: Node = _generated_root.find_child("PlayerStart_0", true, false)
+		if marker_node is Marker3D:
+			var marker: Marker3D = marker_node as Marker3D
 			return marker.global_position + Vector3.UP * player_spawn_height_offset
 	return player_spawn_fallback
 

@@ -1,12 +1,9 @@
 [gd_scene format=3 uid="uid://dnbs1hu3innu4"]
 
-[ext_resource type="PackedScene" uid="uid://b4iah6p7r2i7m" path="res://scenes/dungeon/dungeon_floor.tscn" id="1_0xm2m"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_h2yge"]
+[ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
 
 [node name="Node3D" type="Node3D" unique_id=149825789]
 
-[node name="DungeonFloor" parent="." unique_id=1705968943 instance=ExtResource("1_0xm2m")]
-create_floor_collision = false
-auto_randomize_seed_on_regenerate = true
-
-[node name="Player" parent="." unique_id=1006839036 instance=ExtResource("2_h2yge")]
+[node name="DungeonFloorController" type="Node3D" parent="." unique_id=1732804526]
+script = ExtResource("1_ig7tw")
+metadata/_custom_type_script = "uid://bla0efmx0rcb4"

@@ -1,6 +1,6 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://q6thighm2mu1"]
 
-[ext_resource type="Script" path="res://scripts/player/player_fps_controller.gd" id="1_8mmsm"]
+[ext_resource type="Script" uid="uid://dlejhctdpchsr" path="res://scripts/player/player_fps_controller.gd" id="1_8mmsm"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mka3k"]
 radius = 0.35
@@ -10,23 +10,20 @@ height = 1.2
 radius = 0.35
 height = 1.2
 
-[node name="Player" type="RigidBody3D"]
+[node name="Player" type="RigidBody3D" unique_id=1695648106]
 script = ExtResource("1_8mmsm")
-collision_layer = 1
-collision_mask = 1
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.95, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1893127377]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
 shape = SubResource("CapsuleShape3D_mka3k")
 
-[node name="BodyVisual" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.95, 0)
-mesh = SubResource("CapsuleMesh_v1w8k")
+[node name="BodyVisual" type="MeshInstance3D" parent="." unique_id=1959566001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
 visible = false
+mesh = SubResource("CapsuleMesh_v1w8k")
 
-[node name="CameraPivot" type="Node3D" parent="."]
-position = Vector3(0, 1.55, 0)
+[node name="CameraPivot" type="Node3D" parent="." unique_id=676732102]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
 
-[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+[node name="Camera3D" type="Camera3D" parent="CameraPivot" unique_id=317685250]
 current = true
-near = 0.05
