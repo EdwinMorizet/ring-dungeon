@@ -57,9 +57,7 @@ func _input(event: InputEvent) -> void:
 			deg_to_rad(pitch_max_degrees)
 		)
 		_camera_pivot.rotation.x = _pitch_radians
-	elif event.is_action_pressed("look"):
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
+		
 func _physics_process(delta: float) -> void:
 	var move_input: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if move_input == Vector2.ZERO:

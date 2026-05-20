@@ -32,8 +32,8 @@ func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -
 		return
 
 	var projectile: FireballProjectile = instance_node as FireballProjectile
-	projectile.configure(_config, origin, _apply_accuracy(direction), shooter)
 	parent_node.add_child(projectile)
+	projectile.configure(_config, origin, _apply_accuracy(direction), shooter)
 
 func _apply_accuracy(direction: Vector3) -> Vector3:
 	var base_direction: Vector3 = direction.normalized()
