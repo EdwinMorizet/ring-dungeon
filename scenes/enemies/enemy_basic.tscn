@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://djyryd2kvvusk"]
+
+[ext_resource type="Script" uid="uid://cgl8dwod24ws4" path="res://scripts/enemies/enemy_basic.gd" id="1_xl3e3"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pbnra"]
+radius = 0.45
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_0d0ow"]
+radius = 0.45
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kvr4y"]
+albedo_color = Color(0.769, 0.247, 0.137, 1)
+roughness = 0.35
+
+[node name="EnemyBasic" type="RigidBody3D" unique_id=1735187293]
+mass = 1.25
+lock_rotation = true
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+linear_damp = 3.5
+angular_damp = 8.0
+script = ExtResource("1_xl3e3")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1495744179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_pbnra")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1943366200]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_0d0ow")
+surface_material_override/0 = SubResource("StandardMaterial3D_kvr4y")

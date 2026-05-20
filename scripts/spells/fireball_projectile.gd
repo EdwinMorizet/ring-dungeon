@@ -24,6 +24,7 @@ func configure(config: FireballConfig, origin: Vector3, direction: Vector3, shoo
 	_shooter = shooter
 	if _shooter != null:
 		add_collision_exception_with(_shooter)
+	_apply_config()
 
 func _ready() -> void:
 	contact_monitor = true
@@ -33,7 +34,6 @@ func _ready() -> void:
 	can_sleep = false
 	if not body_entered.is_connected(_on_body_entered):
 		body_entered.connect(_on_body_entered)
-	_apply_config()
 
 func _exit_tree() -> void:
 	if body_entered.is_connected(_on_body_entered):
@@ -61,18 +61,22 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body == _shooter:
 		return
+	if body.has_method("take_damage"):
+		body.call("take_damage", _config.damage)
+		_detonate(body)
+		return
 	_remaining_bounces -= 1
 	if _remaining_bounces <= 0:
 		_detonate()
 
-func _detonate() -> void:
+func _detonate(excluded_target: Node = null) -> void:
 	if _detonated:
 		return
 	_detonated = true
-	_apply_aoe_damage()
+	_apply_aoe_damage(excluded_target)
 	queue_free()
 
-func _apply_aoe_damage() -> void:
+func _apply_aoe_damage(excluded_target: Node = null) -> void:
 	var world: World3D = get_world_3d()
 	if world == null:
 		return
@@ -92,7 +96,7 @@ func _apply_aoe_damage() -> void:
 		var collider_value: Variant = result.get("collider", null)
 		if collider_value is Node:
 			var collider_node: Node = collider_value as Node
-			if collider_node == self or collider_node == _shooter:
+			if collider_node == self or collider_node == _shooter or collider_node == excluded_target:
 				continue
 			if collider_node.has_method("take_damage"):
 				collider_node.call("take_damage", _config.damage)

@@ -7,6 +7,7 @@ const DungeonBuilder3D = preload("res://scripts/dungeon/dungeon_builder_3d.gd")
 const DungeonFloorConfig = preload("res://scripts/dungeon/dungeon_floor_config.gd")
 const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
 const PlayerScene = preload("res://scenes/player/player.tscn")
+const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
 
 @export var config: DungeonFloorConfig = DefaultFloorConfig
 @export var use_multimesh: bool = true
@@ -15,6 +16,9 @@ const PlayerScene = preload("res://scenes/player/player.tscn")
 @export var player_scene: PackedScene = PlayerScene
 @export var player_spawn_fallback: Vector3 = Vector3(0.0, 3.0, 0.0)
 @export var player_spawn_height_offset: float = 1.2
+@export var enemy_scene: PackedScene = EnemyScene
+@export var enemy_spawn_fallback: Vector3 = Vector3(8.0, 2.5, 8.0)
+@export var enemy_spawn_offset_from_player: Vector3 = Vector3(8.0, 0.0, 0.0)
 
 var _regenerate_toggle: bool = false
 var _clear_floor_toggle: bool = false
@@ -42,7 +46,8 @@ var _seed_rng := RandomNumberGenerator.new()
 			_clear_generated()
 
 var _generated_root: Node3D
-var _player_instance: RigidBody3D
+var _player_instance: CharacterBody3D
+var _enemy_instance: RigidBody3D
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -59,6 +64,7 @@ func regenerate_now() -> void:
 		editor_owner = get_tree().edited_scene_root
 	_generated_root = builder.build(self, layout, _build_builder_params(), editor_owner)
 	_spawn_or_reposition_player()
+	_spawn_or_reposition_enemy()
 
 func _build_generation_params() -> Dictionary:
 	var floor_config := _get_config()
@@ -94,14 +100,17 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
+	if _enemy_instance != null and is_instance_valid(_enemy_instance):
+		_enemy_instance.queue_free()
+		_enemy_instance = null
 
 func _spawn_or_reposition_player() -> void:
 	if player_scene == null:
 		return
 	if _player_instance == null or not is_instance_valid(_player_instance):
 		var player_node: Node = player_scene.instantiate()
-		if player_node is RigidBody3D:
-			_player_instance = player_node as RigidBody3D
+		if player_node is CharacterBody3D:
+			_player_instance = player_node as CharacterBody3D
 			add_child(_player_instance)
 		else:
 			player_node.queue_free()
@@ -109,8 +118,7 @@ func _spawn_or_reposition_player() -> void:
 
 	var spawn_position: Vector3 = _find_player_spawn_position()
 	_player_instance.global_position = spawn_position
-	_player_instance.linear_velocity = Vector3.ZERO
-	_player_instance.angular_velocity = Vector3.ZERO
+	_player_instance.velocity = Vector3.ZERO
 
 func _find_player_spawn_position() -> Vector3:
 	if _generated_root != null and is_instance_valid(_generated_root):
@@ -124,6 +132,29 @@ func _next_random_seed() -> int:
 	if _seed_rng.seed == 0:
 		_seed_rng.randomize()
 	return _seed_rng.randi_range(1, 2147483646)
+
+func _spawn_or_reposition_enemy() -> void:
+	if Engine.is_editor_hint():
+		return
+	if enemy_scene == null:
+		return
+
+	if _enemy_instance == null or not is_instance_valid(_enemy_instance):
+		var enemy_node: Node = enemy_scene.instantiate()
+		if enemy_node is RigidBody3D:
+			_enemy_instance = enemy_node as RigidBody3D
+			add_child(_enemy_instance)
+		else:
+			enemy_node.queue_free()
+			return
+
+	var spawn_position: Vector3 = enemy_spawn_fallback
+	if _player_instance != null and is_instance_valid(_player_instance):
+		spawn_position = _player_instance.global_position + enemy_spawn_offset_from_player
+
+	_enemy_instance.global_position = spawn_position
+	_enemy_instance.linear_velocity = Vector3.ZERO
+	_enemy_instance.angular_velocity = Vector3.ZERO
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
