@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player_fps_controller.gd" id="1_8mmsm"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mka3k"]
+radius = 0.35
+height = 1.2
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_v1w8k"]
+radius = 0.35
+height = 1.2
+
+[node name="Player" type="RigidBody3D"]
+script = ExtResource("1_8mmsm")
+collision_layer = 1
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.95, 0)
+shape = SubResource("CapsuleShape3D_mka3k")
+
+[node name="BodyVisual" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.95, 0)
+mesh = SubResource("CapsuleMesh_v1w8k")
+visible = false
+
+[node name="CameraPivot" type="Node3D" parent="."]
+position = Vector3(0, 1.55, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+current = true
+near = 0.05

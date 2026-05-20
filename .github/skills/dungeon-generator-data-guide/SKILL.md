@@ -14,6 +14,7 @@ This skill produces implementation-focused guidance for using dungeon generation
 
 Expected outputs:
 - A map of available generation fields and their meaning.
+- How `DungeonFloorConfig` resource values feed generator and builder parameters.
 - How to read each field in code.
 - How to use spawn markers for player/enemy/chest/exit systems.
 - Runtime/editor lifecycle notes for safe usage.
@@ -30,7 +31,8 @@ Use this skill when the user asks to:
 ## Procedure
 
 1. Identify the data producer and consumer flow.
-- Producer: `DungeonGenerator.generate(seed, params)` returns layout dictionary.
+- Config source: `DungeonFloorConfig` resource stores selected tuning fields.
+- Producer: `DungeonGenerator.generate(config.seed, params)` returns layout dictionary.
 - Consumer: `DungeonFloorController.regenerate_now()` passes layout to `DungeonBuilder3D.build(...)`.
 
 2. Enumerate layout dictionary fields and intended use.
@@ -65,9 +67,13 @@ Use this skill when the user asks to:
 6. Cover editor/runtime branching.
 - Editor trigger path: inspector `regenerate` and `clear_current_floor` toggles.
 - Runtime path: generation in `_ready`.
-- If auto-random seed is enabled, mention seed mutation before regenerate.
+- If auto-random seed is enabled, mention `config.seed` mutation before regenerate.
 
-7. Validate with checks.
+7. Explain config access pattern.
+- Show that the controller uses a null-safe accessor (`_get_config`) and reads all selected tuning fields from the resource.
+- Clarify split of responsibility: config resource for generation/build numbers, controller exports for workflow toggles.
+
+8. Validate with checks.
 - Same seed should produce same marker positions.
 - Border ring should remain wall.
 - Exactly one player start marker and one floor exit marker should exist.

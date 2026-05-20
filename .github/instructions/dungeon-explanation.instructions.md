@@ -28,6 +28,7 @@ When asked to explain dungeon generation, cover all of these:
 
 2. Data flow between scripts:
 - `dungeon_floor_controller.gd` triggers generation
+- `dungeon_floor_config.gd` stores core generation/build tuning as a `Resource`
 - `dungeon_generator.gd` builds 2D layout + room metadata
 - `dungeon_graph.gd` builds graph edges / MST / loops
 - `dungeon_builder_3d.gd` converts layout to 3D nodes and spawn markers
@@ -44,9 +45,8 @@ When asked to explain dungeon generation, cover all of these:
 - room-role metadata (player start, enemy, chest candidate, floor exit)
 
 5. Practical tuning knobs:
-- map size, cell count, spawn radius, room thresholds
-- loop ratio and chest candidate ratio
-- rendering/collision options (MultiMesh and collision toggles)
+- resource-based knobs from `DungeonFloorConfig` (`seed`, map size, cell count, spawn radius, room thresholds, loop ratio, chest candidate ratio, tile size, wall height, floor thickness)
+- controller-level options (MultiMesh, collision toggle, regenerate behaviors)
 
 ## Response Structure
 
