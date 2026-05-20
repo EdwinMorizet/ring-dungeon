@@ -1,3 +1,12 @@
 [gd_scene format=3 uid="uid://dnbs1hu3innu4"]
 
+[ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
+
 [node name="Node3D" type="Node3D" unique_id=149825789]
+
+[node name="DungeonFloorController" type="Node3D" parent="." unique_id=1994209022]
+script = ExtResource("1_ig7tw")
+metadata/_custom_type_script = "uid://bla0efmx0rcb4"
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1540995305]
+transform = Transform3D(1, 0, 0, 0, 0.62994415, 0.7766405, 0, -0.7766405, 0.62994415, 0, 0, 0)

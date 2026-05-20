@@ -39,6 +39,16 @@ func _ready() -> void:
 	_setup_debug_overlay()
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		return
+
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+	if event.is_action_pressed("fireball_shoot") and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		_shoot_fireball()
+
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * mouse_sensitivity)
 		_pitch_radians = clamp(
@@ -47,10 +57,6 @@ func _input(event: InputEvent) -> void:
 			deg_to_rad(pitch_max_degrees)
 		)
 		_camera_pivot.rotation.x = _pitch_radians
-	elif event.is_action_pressed("ui_cancel"):
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	elif event.is_action_pressed("look"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -139,3 +145,10 @@ func _update_debug_overlay() -> void:
 		+ "position: (%.2f, %.2f, %.2f)\n" % [global_position.x, global_position.y, global_position.z] \
 		+ "velocity: (%.2f, %.2f, %.2f)\n" % [linear_velocity.x, linear_velocity.y, linear_velocity.z] \
 		+ "mouse_mode: %s" % [str(Input.get_mouse_mode())]
+
+func _shoot_fireball() -> void:
+	if not has_node("/root/FireballManager"):
+		return
+	var fireball_origin: Vector3 = _camera.global_position
+	var fireball_direction: Vector3 = -_camera.global_transform.basis.z.normalized()
+	FireballManager.shoot(fireball_origin, fireball_direction, self)
