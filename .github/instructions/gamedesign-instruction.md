@@ -11,6 +11,7 @@ Use these instructions when generating gameplay, systems, and content code for t
 - Project: Untitled Wizard FPS Dungeon Crawler
 - Engine: Godot 4.6
 - Genre: FPS, Dungeon Crawler, Roguelite
+- Graphics : 3D
 
 ## Core Loop Requirements
 
