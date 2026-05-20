@@ -240,6 +240,8 @@ func _spawn_room_markers(root: Node3D, layout: Dictionary, tile_size: float, edi
 			_spawn_marker(markers_root, "ChestCandidate_%d" % i, center, tile_size, editor_owner)
 		if metadata.get("is_floor_exit", false):
 			_spawn_marker(markers_root, "FloorExit_%d" % i, center, tile_size, editor_owner)
+	# Call _spawn_room_lights after spawning room markers
+	_spawn_room_lights(root, layout, tile_size, editor_owner)
 
 func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String, points: PackedVector2Array, tile_size: float, editor_owner: Node) -> void:
 	var group_root := Node3D.new()
@@ -285,3 +287,15 @@ func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vec
 func _assign_owner(node: Node, editor_owner: Node) -> void:
 	if editor_owner != null:
 		node.owner = editor_owner
+
+func _spawn_room_lights(parent: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
+	var rooms: Array = layout.get("rooms", [])
+	for room in rooms:
+		var center: Vector2 = room.get("center", Vector2.ZERO)
+		var light := OmniLight3D.new()
+		light.name = "RoomLight"
+		light.position = _tile_to_world(center.x, center.y, tile_size, 2.0) # Adjust Y for light height
+		light.intensity = 500.0 # Adjust intensity as needed
+		light.range = 20.0 # Adjust range to fit room size
+		parent.add_child(light)
+		_assign_owner(light, editor_owner)
