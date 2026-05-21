@@ -39,7 +39,7 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 
 - Bands can modify player core stats.
 - Support these modifier categories:
-  - Flats: `max_hp_flat`, `max_mp_flat`, `max_ap_flat`.
+  - Flats: `max_hp_flat`, `max_mp_flat`, `mana_regen_flat`, `max_ap_flat`.
   - Multipliers: `speed_mult`.
 
 ## Rarity And Affix Budgets
@@ -128,7 +128,9 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 
 - Inventory/equipment manager owns slot state and item transitions.
 - Spell/fireball manager owns shot construction using aggregated ring modifiers.
-- Player controller (or stat service) owns derived HP/MP/AP/speed from equipped bands.
+- Player controller (or stat service) owns derived HP/MP/AP/speed and mana regen from equipped bands.
+- Fireball casting must respect both mana and AP resource checks.
+- Enemy scripts should apply player damage through a simple typed player damage API (`take_damage`) so band HP bonuses have live combat impact.
 - UI reflects rolled affixes and trade-offs clearly, including negative stats.
 
 ## Implementation Notes

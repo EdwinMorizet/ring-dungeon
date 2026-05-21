@@ -4,6 +4,36 @@ class_name InventorySlotControl
 var _slot_kind: InventoryItemDefinition.ItemKind = InventoryItemDefinition.ItemKind.RING
 var _slot_index: int = 0
 
+func _make_custom_tooltip(for_text: String) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(280.0, 0.0)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.0, 0.0, 0.0, 1.0)
+	panel_style.border_width_left = 1
+	panel_style.border_width_top = 1
+	panel_style.border_width_right = 1
+	panel_style.border_width_bottom = 1
+	panel_style.border_color = Color(1.0, 1.0, 1.0, 0.22)
+	panel.add_theme_stylebox_override("panel", panel_style)
+
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	panel.add_child(margin)
+
+	var label: Label = Label.new()
+	label.text = for_text
+	label.custom_minimum_size = Vector2(264.0, 0.0)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.clip_text = false
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	margin.add_child(label)
+	return panel
+
 func setup(slot_index: int, slot_kind: InventoryItemDefinition.ItemKind) -> void:
 	_slot_index = slot_index
 	_slot_kind = slot_kind
@@ -31,9 +61,11 @@ func _refresh() -> void:
 	var equipped_item: InventoryItemDefinition = manager.get_equipped_item(_slot_kind, _slot_index)
 	var slot_label: String = _get_slot_label()
 	if equipped_item != null:
-		text = "%s\n%s" % [slot_label, equipped_item.display_name]
+		text = "%s\n%s (%s)" % [slot_label, equipped_item.display_name, equipped_item.get_rarity_label()]
+		tooltip_text = equipped_item.build_tooltip_text()
 	else:
 		text = "%s\nEmpty" % slot_label
+		tooltip_text = ""
 
 func _get_slot_label() -> String:
 	if _slot_kind == InventoryItemDefinition.ItemKind.BAND:

@@ -2,10 +2,14 @@ extends Node
 
 const FireballProjectileScene: PackedScene = preload("res://scenes/spells/fireball.tscn")
 const DefaultFireballConfig: FireballConfig = preload("res://resources/spells/default_fireball_config.tres")
+const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
 const DEGREES_TO_RADIANS: float = PI / 180.0
 
 var _config: FireballConfig = DefaultFireballConfig
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+func _has_inventory_manager() -> bool:
+	return has_node("/root/InventoryManager") and InventoryManager != null
 
 func _ready() -> void:
 	_rng.randomize()
@@ -18,7 +22,17 @@ func reset_default_config() -> void:
 	_config = DefaultFireballConfig
 
 func get_mana_cost() -> float:
-	return max(_config.mana_cost, 0.0)
+	if not _has_inventory_manager():
+		return max(_config.mana_cost, 0.0)
+	var mana_cost_multiplier: float = InventoryManager.get_fireball_mana_cost_multiplier()
+	return max(_config.mana_cost * mana_cost_multiplier, 0.0)
+
+func get_cast_delay_seconds() -> float:
+	if not _has_inventory_manager():
+		return max(_config.cast_delay_seconds, RingBandConstantsScript.CAST_DELAY_MIN_SECONDS)
+	var cast_delay_multiplier: float = InventoryManager.get_fireball_cast_delay_multiplier()
+	var effective_delay: float = _config.cast_delay_seconds * cast_delay_multiplier
+	return max(effective_delay, RingBandConstantsScript.CAST_DELAY_MIN_SECONDS)
 
 func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -> void:
 	var tree: SceneTree = get_tree()
@@ -29,37 +43,69 @@ func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -
 	if parent_node == null:
 		parent_node = tree.root
 
+	var modified_config: FireballConfig = _build_modified_config()
+	var split_count: int = maxi(modified_config.split_count, 0)
+	var projectile_count: int = 1 + split_count
+
+	var projectile_config: FireballConfig = modified_config.duplicate(true) as FireballConfig
+	if projectile_config == null:
+		projectile_config = modified_config
+	# Split count is consumed at cast time to produce a multi-shot fan.
+	projectile_config.split_count = 0
+	var spawned_projectiles: Array[PhysicsBody3D] = []
+
+	for _shot_index: int in range(projectile_count):
+		var final_direction: Vector3 = _apply_accuracy(direction, projectile_config.accuracy)
+		var spawned_projectile: FireballProjectile = _spawn_projectile(parent_node, projectile_config, origin, final_direction, shooter)
+		if spawned_projectile == null:
+			continue
+		for existing_projectile: PhysicsBody3D in spawned_projectiles:
+			spawned_projectile.add_collision_exception_with(existing_projectile)
+			existing_projectile.add_collision_exception_with(spawned_projectile)
+		spawned_projectiles.append(spawned_projectile)
+
+func _spawn_projectile(parent_node: Node, config: FireballConfig, origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -> FireballProjectile:
 	var instance_node: Node = FireballProjectileScene.instantiate()
 	if not instance_node is FireballProjectile:
 		instance_node.queue_free()
-		return
+		return null
 
 	var projectile: FireballProjectile = instance_node as FireballProjectile
 	parent_node.add_child(projectile)
-	projectile.configure(_build_modified_config(), origin, _apply_accuracy(direction), shooter)
+	projectile.configure(config, origin, direction, shooter)
+	return projectile
 
 func _build_modified_config() -> FireballConfig:
 	var modified_config: FireballConfig = _config.duplicate(true) as FireballConfig
 	if modified_config == null:
 		modified_config = _config
+	if not _has_inventory_manager():
+		modified_config.cast_delay_seconds = get_cast_delay_seconds()
+		return modified_config
 	var damage_multiplier: float = InventoryManager.get_fireball_damage_multiplier()
-	var speed_multiplier: float = InventoryManager.get_fireball_speed_multiplier()
-	var accuracy_bonus: float = InventoryManager.get_fireball_accuracy_bonus()
-	var gravity_multiplier: float = InventoryManager.get_fireball_gravity_multiplier()
+	var speed_multiplier: float = InventoryManager.get_fireball_projectile_speed_multiplier()
+	var accuracy_deviation: float = InventoryManager.get_fireball_accuracy_deviation_flat()
 	var bounce_bonus: int = InventoryManager.get_fireball_bounce_bonus()
+	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
+	var pierce_bonus: int = InventoryManager.get_fireball_pierce_bonus()
+	var aoe_bonus: float = InventoryManager.get_fireball_aoe_bonus()
 	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
 	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
-	modified_config.accuracy = max(_config.accuracy - accuracy_bonus, 0.0)
-	modified_config.gravity_influence = max(_config.gravity_influence * gravity_multiplier, 0.0)
+	modified_config.accuracy = max(_config.accuracy + accuracy_deviation, 0.0)
+	modified_config.gravity_influence = max(_config.gravity_influence, 0.0)
 	modified_config.bounce_count = maxi(_config.bounce_count + bounce_bonus, 0)
+	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
+	modified_config.pierce_count = maxi(_config.pierce_count + pierce_bonus, 0)
+	modified_config.aoe = max(_config.aoe + aoe_bonus, 0.1)
+	modified_config.cast_delay_seconds = get_cast_delay_seconds()
 	return modified_config
 
-func _apply_accuracy(direction: Vector3) -> Vector3:
+func _apply_accuracy(direction: Vector3, spread_degrees: float) -> Vector3:
 	var base_direction: Vector3 = direction.normalized()
 	if base_direction == Vector3.ZERO:
 		base_direction = Vector3.FORWARD
 
-	var spread_degrees: float = max(_config.accuracy, 0.0)
+	spread_degrees = max(spread_degrees, 0.0)
 	if spread_degrees <= 0.0:
 		return base_direction
 

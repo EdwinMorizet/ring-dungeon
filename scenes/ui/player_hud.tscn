@@ -35,7 +35,7 @@ layout_mode = 0
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = -92.0
+offset_top = -128.0
 offset_right = 316.0
 offset_bottom = -24.0
 
@@ -47,6 +47,28 @@ layout_mode = 2
 text = "MANA"
 
 [node name="ManaBar" type="ProgressBar" parent="Root/ManaContainer/VBox" unique_id=458229768]
+custom_minimum_size = Vector2(290, 18)
+layout_mode = 2
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="APContainer" type="MarginContainer" parent="Root" unique_id=1983004401]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -198.0
+offset_right = 316.0
+offset_bottom = -132.0
+
+[node name="VBox" type="VBoxContainer" parent="Root/APContainer" unique_id=1909931256]
+layout_mode = 2
+
+[node name="APLabel" type="Label" parent="Root/APContainer/VBox" unique_id=62616295]
+layout_mode = 2
+text = "AP"
+
+[node name="APBar" type="ProgressBar" parent="Root/APContainer/VBox" unique_id=1840474784]
 custom_minimum_size = Vector2(290, 18)
 layout_mode = 2
 size_flags_horizontal = 3

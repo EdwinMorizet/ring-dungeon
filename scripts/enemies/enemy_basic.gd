@@ -13,10 +13,13 @@ signal died(enemy: EnemyBasic)
 @export var chase_activation_radius: float = 14.0
 @export var require_line_of_sight: bool = true
 @export_flags_3d_physics var los_collision_mask: int = 1
+@export var contact_damage_interval_seconds: float = 0.8
+@export var contact_damage_radius: float = 1.4
 
 var _health: int = 100
 var _is_dead: bool = false
 var _is_chase_active: bool = false
+var _contact_damage_cooldown: float = 0.0
 
 func _ready() -> void:
 	contact_monitor = true
@@ -26,10 +29,13 @@ func _ready() -> void:
 	can_sleep = false
 	_health = max(max_health, 1)
 	_is_chase_active = false
+	_contact_damage_cooldown = 0.0
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+	if _contact_damage_cooldown > 0.0:
+		_contact_damage_cooldown = max(_contact_damage_cooldown - delta, 0.0)
 	var player_target: Node3D = _get_player_target()
 	if player_target == null:
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
@@ -37,9 +43,22 @@ func _physics_process(_delta: float) -> void:
 	var to_target: Vector3 = player_target.global_position - global_position
 	to_target.y = 0.0
 	if to_target.length_squared() <= 0.0001:
+		_try_apply_contact_damage(player_target)
 		return
 	var desired_velocity: Vector3 = to_target.normalized() * max(speed, 0.0)
 	linear_velocity = Vector3(desired_velocity.x, linear_velocity.y, desired_velocity.z)
+	_try_apply_contact_damage(player_target)
+
+func _try_apply_contact_damage(player_target: Node3D) -> void:
+	if _contact_damage_cooldown > 0.0:
+		return
+	if not player_target.has_method("take_damage"):
+		return
+	var radius: float = max(contact_damage_radius, 0.1)
+	if global_position.distance_squared_to(player_target.global_position) > radius * radius:
+		return
+	player_target.call("take_damage", max(strength, 1))
+	_contact_damage_cooldown = max(contact_damage_interval_seconds, 0.05)
 
 func take_damage(amount: int) -> void:
 	if _is_dead or amount <= 0:
@@ -119,6 +138,25 @@ func _spawn_damage_number(amount: int) -> void:
 func _die() -> void:
 	_is_dead = true
 	if has_node("/root/InventoryManager"):
-		InventoryManager.spawn_random_drop(global_position)
+		var floor_depth: int = _resolve_floor_depth()
+		var floor_seed: int = _resolve_floor_seed()
+		InventoryManager.spawn_random_drop(global_position, floor_depth, floor_seed)
 	died.emit(self)
 	queue_free()
+
+func _resolve_floor_depth() -> int:
+	if has_node("/root/GameProgressionManager") and GameProgressionManager.has_method("get_progression_index"):
+		return int(GameProgressionManager.get_progression_index())
+	return 0
+
+func _resolve_floor_seed() -> int:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return 0
+	var current_scene: Node = tree.current_scene
+	if current_scene == null:
+		return 0
+	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
+	if controller_node != null and controller_node.has_method("get_current_floor_seed"):
+		return int(controller_node.call("get_current_floor_seed"))
+	return 0

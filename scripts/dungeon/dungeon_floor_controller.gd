@@ -53,6 +53,7 @@ var _progression_config_override: DungeonFloorConfig
 var _runtime_floor_display: int = -10
 var _runtime_progression_index: int = 0
 var _enemy_spawn_manager: Node
+var _runtime_generation_seed: int = 0
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -94,6 +95,7 @@ func regenerate_now() -> void:
 	if not Engine.is_editor_hint():
 		generation_seed = _next_random_seed()
 		floor_config.seed = generation_seed
+	_runtime_generation_seed = generation_seed
 	var generator: DungeonGenerator = DungeonGenerator.new()
 	var layout: Dictionary = generator.generate(generation_seed, _build_generation_params())
 	var builder: DungeonBuilder3D = DungeonBuilder3D.new()
@@ -104,6 +106,12 @@ func regenerate_now() -> void:
 	_spawn_or_reposition_player()
 	_spawn_enemies_for_floor(generation_seed)
 	_connect_floor_exit_trigger()
+
+func get_runtime_progression_index() -> int:
+	return _runtime_progression_index
+
+func get_current_floor_seed() -> int:
+	return _runtime_generation_seed
 
 func _build_generation_params() -> Dictionary:
 	var floor_config := _get_config()

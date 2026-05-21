@@ -1,13 +1,11 @@
-[gd_resource type="Resource" script_class="FireballConfig" format=3]
+[gd_resource type="Resource" script_class="FireballConfig" format=3 uid="uid://ckd54enf5bfco"]
 
-[ext_resource type="Script" path="res://scripts/spells/fireball_config.gd" id="1_ex2vi"]
+[ext_resource type="Script" uid="uid://5biflvp08toa" path="res://scripts/spells/fireball_config.gd" id="1_ex2vi"]
 
 [resource]
 script = ExtResource("1_ex2vi")
-speed = 30.0
-gravity_influence = 0.2
-bounce_count = 2
-aoe = 2.5
-damage = 20
-size = 0.45
-accuracy = 0.75
+gravity_influence = 0
+pierce_count = 1
+split_count = 2
+aoe = 0
+accuracy = 2.0

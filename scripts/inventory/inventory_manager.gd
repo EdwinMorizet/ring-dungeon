@@ -5,6 +5,7 @@ const LEFT_HAND_SLOT_COUNT: int = 4
 const RIGHT_HAND_SLOT_COUNT: int = 4
 const NEARBY_RADIUS: float = 4.0
 const DROP_CHANCE: float = 0.8
+const ItemAffixGeneratorScript = preload("res://scripts/inventory/item_affix_generator.gd")
 
 signal inventory_open_changed(is_open: bool)
 signal inventory_changed()
@@ -18,6 +19,7 @@ var _world_items: Array[InventoryWorldItem] = []
 var _nearby_items: Array[InventoryWorldItem] = []
 var _player: Node3D = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _drop_counter: int = 0
 
 func _ready() -> void:
 	_rng.randomize()
@@ -123,11 +125,17 @@ func clear_world_items() -> void:
 	nearby_items_changed.emit()
 	inventory_changed.emit()
 
-func spawn_random_drop(spawn_position: Vector3) -> bool:
+func spawn_random_drop(spawn_position: Vector3, floor_depth: int = 0, floor_seed: int = 0) -> bool:
 	if _rng.randf() > DROP_CHANCE:
 		return false
-	var item_definition: InventoryItemDefinition = _create_random_item_definition()
+	var drop_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	if floor_seed != 0:
+		drop_rng.seed = _build_drop_seed(spawn_position, floor_depth, floor_seed)
+	else:
+		drop_rng.randomize()
+	var item_definition: InventoryItemDefinition = _create_random_item_definition(floor_depth, drop_rng)
 	spawn_world_item(item_definition, spawn_position)
+	_drop_counter += 1
 	return true
 
 func spawn_world_item(item_definition: InventoryItemDefinition, spawn_position: Vector3) -> InventoryWorldItem:
@@ -154,50 +162,111 @@ func get_fireball_damage_multiplier() -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			multiplier *= max(item_definition.fireball_damage_multiplier, 0.0)
+			multiplier *= max(item_definition.get_modifier_float(&"damage_mult", 1.0), 0.0)
 	return multiplier
 
-func get_fireball_speed_multiplier() -> float:
+func get_fireball_projectile_speed_multiplier() -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			multiplier *= max(item_definition.fireball_speed_multiplier, 0.0)
+			multiplier *= max(item_definition.get_modifier_float(&"proj_speed_mult", 1.0), 0.0)
 	return multiplier
 
-func get_fireball_accuracy_bonus() -> float:
-	var bonus: float = 0.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			bonus += item_definition.fireball_accuracy_bonus
-	return bonus
-
-func get_fireball_gravity_multiplier() -> float:
+func get_fireball_mana_cost_multiplier() -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			multiplier *= max(item_definition.fireball_gravity_multiplier, 0.0)
+			multiplier *= max(item_definition.get_modifier_float(&"mana_cost_mult", 1.0), 0.0)
 	return multiplier
+
+func get_fireball_cast_delay_multiplier() -> float:
+	var multiplier: float = 1.0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			multiplier *= max(item_definition.get_modifier_float(&"cast_delay_mult", 1.0), 0.0)
+	return multiplier
+
+func get_fireball_accuracy_deviation_flat() -> float:
+	var modifier: float = 0.0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			modifier += item_definition.get_modifier_float(&"accuracy_deviation_flat", 0.0)
+	return modifier
 
 func get_fireball_bounce_bonus() -> int:
 	var bonus: int = 0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.fireball_bounce_bonus
+			bonus += item_definition.get_modifier_int(&"bounces_flat", 0)
 	return bonus
 
-func get_mana_max_bonus() -> float:
+func get_fireball_split_bonus() -> int:
+	var bonus: int = 0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_int(&"split_flat", 0)
+	return bonus
+
+func get_fireball_aoe_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"aoe_radius_flat", 0.0)
+	return bonus
+
+func get_fireball_pierce_bonus() -> int:
+	var bonus: int = 0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_int(&"pierce_flat", 0)
+	return bonus
+
+func get_band_max_hp_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.mana_max_bonus
+			bonus += item_definition.get_modifier_float(&"max_hp_flat", 0.0)
 	return bonus
+
+func get_band_max_mp_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"max_mp_flat", 0.0)
+	return bonus
+
+func get_band_max_ap_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"max_ap_flat", 0.0)
+	return bonus
+
+func get_band_speed_multiplier() -> float:
+	var multiplier: float = 1.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			multiplier *= max(item_definition.get_modifier_float(&"speed_mult", 1.0), 0.0)
+	return multiplier
+
+func get_mana_max_bonus() -> float:
+	return get_band_max_mp_bonus()
 
 func get_mana_regen_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.mana_regen_bonus
+			bonus += item_definition.get_modifier_float(&"mana_regen_flat", 0.0)
 	return bonus
+
+func get_fireball_speed_multiplier() -> float:
+	return get_fireball_projectile_speed_multiplier()
+
+func get_fireball_accuracy_bonus() -> float:
+	return -get_fireball_accuracy_deviation_flat()
+
+func get_fireball_gravity_multiplier() -> float:
+	return 1.0
 
 func _refresh_player_reference() -> void:
 	if _player != null and is_instance_valid(_player):
@@ -274,28 +343,109 @@ func _unregister_world_item(world_item: InventoryWorldItem) -> void:
 	nearby_items_changed.emit()
 	inventory_changed.emit()
 
-func _create_random_item_definition() -> InventoryItemDefinition:
-	if _rng.randf() < 0.5:
-		return _create_random_ring_definition()
-	return _create_random_band_definition()
+func _create_random_item_definition(floor_depth: int, rng: RandomNumberGenerator) -> InventoryItemDefinition:
+	var item_kind: InventoryItemDefinition.ItemKind = InventoryItemDefinition.ItemKind.RING
+	if rng.randf() >= 0.5:
+		item_kind = InventoryItemDefinition.ItemKind.BAND
+	return ItemAffixGeneratorScript.generate_item(item_kind, floor_depth, rng)
 
-func _create_random_ring_definition() -> InventoryItemDefinition:
-	var item: InventoryItemDefinition = InventoryItemDefinition.new()
-	item.item_id = StringName("ring_%d" % _rng.randi())
-	item.display_name = "Ring"
-	item.item_kind = InventoryItemDefinition.ItemKind.RING
-	item.fireball_damage_multiplier = _rng.randf_range(1.05, 1.25)
-	item.fireball_speed_multiplier = _rng.randf_range(1.05, 1.20)
-	item.fireball_accuracy_bonus = _rng.randf_range(0.05, 0.20)
-	item.fireball_gravity_multiplier = _rng.randf_range(0.80, 1.00)
-	item.fireball_bounce_bonus = _rng.randi_range(0, 1)
-	return item
+func _build_drop_seed(spawn_position: Vector3, floor_depth: int, floor_seed: int) -> int:
+	var quantized_x: int = int(roundf(spawn_position.x * 100.0))
+	var quantized_y: int = int(roundf(spawn_position.y * 100.0))
+	var quantized_z: int = int(roundf(spawn_position.z * 100.0))
+	var combined: int = floor_seed
+	combined = int(combined ^ (floor_depth * 131))
+	combined = int(combined ^ (_drop_counter * 977))
+	combined = int(combined ^ quantized_x)
+	combined = int(combined ^ (quantized_y << 2))
+	combined = int(combined ^ (quantized_z << 4))
+	if combined == 0:
+		combined = 1
+	return abs(combined)
 
-func _create_random_band_definition() -> InventoryItemDefinition:
-	var item: InventoryItemDefinition = InventoryItemDefinition.new()
-	item.item_id = StringName("band_%d" % _rng.randi())
-	item.display_name = "Band"
-	item.item_kind = InventoryItemDefinition.ItemKind.BAND
-	item.mana_max_bonus = _rng.randf_range(10.0, 25.0)
-	item.mana_regen_bonus = _rng.randf_range(1.0, 4.0)
-	return item
+func debug_spawn_seeded_items(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
+	var spawn_count: int = maxi(count, 0)
+	if spawn_count <= 0:
+		return
+	var center: Vector3 = _get_player_spawn_position()
+	for index: int in spawn_count:
+		var local_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		local_rng.seed = _build_drop_seed(center + Vector3(float(index), 0.0, 0.0), floor_depth, floor_seed + index)
+		var angle: float = TAU * float(index) / max(float(spawn_count), 1.0)
+		var offset: Vector3 = Vector3(cos(angle), 0.0, sin(angle)) * max(radius, 0.2)
+		var spawn_position: Vector3 = center + offset + Vector3.UP * 0.6
+		var item_definition: InventoryItemDefinition = _create_random_item_definition(floor_depth, local_rng)
+		spawn_world_item(item_definition, spawn_position)
+
+func debug_print_equipped_modifier_summary() -> void:
+	var lines: Array[String] = []
+	lines.append("[RingsBands] Equipped Summary")
+	for index: int in _right_hand_slots.size():
+		var ring: InventoryItemDefinition = _right_hand_slots[index]
+		if ring == null:
+			lines.append("Ring %d: Empty" % (index + 1))
+			continue
+		lines.append("Ring %d: %s [%s]" % [index + 1, ring.display_name, ring.get_rarity_label()])
+	for index: int in _left_hand_slots.size():
+		var band: InventoryItemDefinition = _left_hand_slots[index]
+		if band == null:
+			lines.append("Band %d: Empty" % (index + 1))
+			continue
+		lines.append("Band %d: %s [%s]" % [index + 1, band.display_name, band.get_rarity_label()])
+	lines.append("Aggregates")
+	lines.append("damage_mult=%.3f" % get_fireball_damage_multiplier())
+	lines.append("mana_cost_mult=%.3f" % get_fireball_mana_cost_multiplier())
+	lines.append("proj_speed_mult=%.3f" % get_fireball_projectile_speed_multiplier())
+	lines.append("cast_delay_mult=%.3f" % get_fireball_cast_delay_multiplier())
+	lines.append("accuracy_deviation_flat=%+.3f" % get_fireball_accuracy_deviation_flat())
+	lines.append("bounces_flat=%d" % get_fireball_bounce_bonus())
+	lines.append("split_flat=%d" % get_fireball_split_bonus())
+	lines.append("pierce_flat=%d" % get_fireball_pierce_bonus())
+	lines.append("aoe_radius_flat=%+.3f" % get_fireball_aoe_bonus())
+	lines.append("max_hp_flat=%+.1f" % get_band_max_hp_bonus())
+	lines.append("max_mp_flat=%+.1f" % get_band_max_mp_bonus())
+	lines.append("mana_regen_flat=%+.1f" % get_mana_regen_bonus())
+	lines.append("max_ap_flat=%+.1f" % get_band_max_ap_bonus())
+	lines.append("speed_mult=%.3f" % get_band_speed_multiplier())
+	print("\n".join(lines))
+
+func debug_run_quick_validation(floor_depth: int = 0, floor_seed: int = 1337) -> void:
+	clear_world_items()
+	debug_spawn_seeded_items(8, floor_depth, floor_seed, 2.2)
+	_refresh_player_reference()
+	_refresh_nearby_items()
+
+	var rarity_counts: Dictionary = {
+		"Common": 0,
+		"Rare": 0,
+		"Epic": 0,
+		"Legendary": 0,
+	}
+	var preview_lines: Array[String] = []
+	for world_item: InventoryWorldItem in _world_items:
+		if world_item == null or not is_instance_valid(world_item):
+			continue
+		var definition: InventoryItemDefinition = world_item.item_definition
+		if definition == null:
+			continue
+		var rarity_label: String = definition.get_rarity_label()
+		rarity_counts[rarity_label] = int(rarity_counts.get(rarity_label, 0)) + 1
+		if preview_lines.size() < 4:
+			preview_lines.append("%s [%s]" % [definition.display_name, rarity_label])
+
+	var lines: Array[String] = []
+	lines.append("[RingsBands] Quick Validation")
+	lines.append("seed=%d depth=%d" % [floor_seed, floor_depth])
+	lines.append("world_items=%d nearby_items=%d" % [_world_items.size(), _nearby_items.size()])
+	lines.append("rarity_counts: Common=%d Rare=%d Epic=%d Legendary=%d" % [
+		int(rarity_counts.get("Common", 0)),
+		int(rarity_counts.get("Rare", 0)),
+		int(rarity_counts.get("Epic", 0)),
+		int(rarity_counts.get("Legendary", 0)),
+	])
+	if preview_lines.is_empty():
+		lines.append("preview: none")
+	else:
+		lines.append("preview: %s" % " | ".join(preview_lines))
+	print("\n".join(lines))
+	debug_print_equipped_modifier_summary()

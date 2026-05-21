@@ -29,6 +29,8 @@ Use this file for ring/band item presentation and readability standards.
 - Distinguish flat versus multiplier clearly:
   - Flat example: `+2 Bounce`.
   - Multiplier example: `Damage x1.15`.
+- Resource lines should be explicit:
+  - `Max HP`, `Max MP`, `Mana Regen`, and `Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.
 - For cast delay, show player-friendly meaning:
   - Lower delay is faster fire rate.
 - For accuracy deviation, include direction language:

@@ -7,7 +7,7 @@ const _RING_SLOT_COUNT: int = 4
 @onready var _panel_root: Control = $Root
 @onready var _band_slots: GridContainer = $Root/Panel/Margin/VBox/HandsRow/BandHand/Slots
 @onready var _ring_slots: GridContainer = $Root/Panel/Margin/VBox/HandsRow/RingHand/Slots
-@onready var _nearby_items_container: VBoxContainer = $Root/Panel/Margin/VBox/NearbySection/Items
+@onready var _nearby_items_container: GridContainer = $Root/Panel/Margin/VBox/NearbySection/Items
 
 func _ready() -> void:
 	visible = false
@@ -74,7 +74,7 @@ func _refresh_nearby_items() -> void:
 		if world_item == null or not is_instance_valid(world_item):
 			continue
 		var item_entry: InventoryItemEntry = InventoryItemEntry.new()
-		item_entry.custom_minimum_size = Vector2(220.0, 54.0)
+		item_entry.custom_minimum_size = Vector2(108.0, 108.0)
 		item_entry.setup(world_item)
 		_nearby_items_container.add_child(item_entry)
 

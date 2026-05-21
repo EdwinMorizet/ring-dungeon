@@ -43,6 +43,10 @@ Use this file to keep loot generation and stat aggregation deterministic and ver
 - Equipping and unequipping updates player-derived stats immediately.
 - Fireball shot config is derived per shot and does not mutate shared default resources.
 - World item cleanup occurs on floor reset/transition.
+- Band `mana_regen_flat` updates mana regeneration in live gameplay and reflects in HUD values.
+- Band `max_hp_flat` and `max_ap_flat` affect runtime resource caps immediately after equipment changes.
+- Fireball casts are rejected when mana or AP costs are not met.
+- Enemy-to-player damage path calls player `take_damage` and scales survivability with equipped HP bonuses.
 
 ## Debug Hooks To Prefer
 
