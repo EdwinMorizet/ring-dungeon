@@ -2,15 +2,40 @@
 
 [ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" path="res://scenes/ui/debug_floor_hud.tscn" id="2_dbgui"]
+[ext_resource type="Texture2D" uid="uid://b0anr3agalg3s" path="res://assets/sky_78_2k.png" id="3_h2yge"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1bvp3"]
+panorama = ExtResource("3_h2yge")
+
+[sub_resource type="Sky" id="Sky_lquwl"]
+sky_material = SubResource("PanoramaSkyMaterial_1bvp3")
+
+[sub_resource type="Environment" id="Environment_7mycd"]
+background_mode = 2
+sky = SubResource("Sky_lquwl")
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.49411765, 0.62352943, 0.6784314, 1)
+fog_light_energy = 2.0
+fog_sun_scatter = 1.0
+fog_density = 0.495
+fog_sky_affect = 0.667
+fog_depth_begin = 20.0
 
 [node name="Node3D" type="Node3D" unique_id=149825789]
 
-[node name="DungeonFloorController" type="Node3D" parent="." unique_id=1994209022]
-script = ExtResource("1_ig7tw")
-auto_randomize_seed_on_regenerate = true
-metadata/_custom_type_script = "uid://bla0efmx0rcb4"
+[node name="env" type="Node" parent="." unique_id=1664492510]
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1540995305]
-transform = Transform3D(1, 0, 0, 0, 0.62994415, 0.7766405, 0, -0.7766405, 0.62994415, 0, 0, 0)
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="env" unique_id=1540995305]
+transform = Transform3D(0.57107186, 0.6375442, -0.5171212, 0, 0.62994415, 0.7766405, 0.8209001, -0.4435175, 0.3597434, 0, 0, 0)
+shadow_enabled = true
+sky_mode = 1
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="env" unique_id=1814773616]
+environment = SubResource("Environment_7mycd")
 
 [node name="DebugFloorHud" parent="." unique_id=1054138337 instance=ExtResource("2_dbgui")]
+
+[node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
+script = ExtResource("1_ig7tw")
+metadata/_custom_type_script = "uid://bla0efmx0rcb4"

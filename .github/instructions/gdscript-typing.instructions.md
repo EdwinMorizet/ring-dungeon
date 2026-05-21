@@ -130,3 +130,4 @@ When editing .gd files:
 - [ ] Null checks exist before accessing node properties
 - [ ] `_onready` nodes are cached, not queried repeatedly
 - [ ] Signal connections are cleaned up in `_exit_tree()`
+- [ ] Corrected tabulation use for indent

@@ -3,24 +3,21 @@
 [ext_resource type="Script" uid="uid://dmg6yju54wbjt" path="res://scripts/progression/floor_difficulty_table.gd" id="1_8vk0h"]
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/dungeon_floor_config.gd" id="2_i020c"]
 [ext_resource type="Script" uid="uid://d08pq1l2tats" path="res://scripts/progression/floor_config_pool_entry.gd" id="2_u4v67"]
-[ext_resource type="Resource" uid="uid://dagc4uisms8mw" path="res://resources/dungeon/floor_config_easy.tres" id="3_h4rfp"]
 [ext_resource type="Resource" uid="uid://7cjyy6eh8qi" path="res://resources/dungeon/default_floor_config.tres" id="4_4qf3q"]
-[ext_resource type="Resource" uid="uid://cq1rqodoo4by2" path="res://resources/dungeon/floor_config_mid.tres" id="5_s5y53"]
-[ext_resource type="Resource" uid="uid://xogsi6tqw8de" path="res://resources/dungeon/floor_config_hard.tres" id="6_hm00f"]
 
 [sub_resource type="Resource" id="Resource_0k680"]
 script = ExtResource("2_u4v67")
-configs = Array[ExtResource("2_i020c")]([ExtResource("3_h4rfp"), ExtResource("4_4qf3q")])
+configs = Array[ExtResource("2_i020c")]([ExtResource("4_4qf3q")])
 
 [sub_resource type="Resource" id="Resource_n3i3o"]
 script = ExtResource("2_u4v67")
 start_progression_index = 4
-configs = Array[ExtResource("2_i020c")]([ExtResource("4_4qf3q"), ExtResource("5_s5y53")])
+configs = Array[ExtResource("2_i020c")]([ExtResource("4_4qf3q")])
 
 [sub_resource type="Resource" id="Resource_rks4j"]
 script = ExtResource("2_u4v67")
 start_progression_index = 9
-configs = Array[ExtResource("2_i020c")]([ExtResource("5_s5y53"), ExtResource("6_hm00f")])
+configs = Array[ExtResource("2_i020c")]([ExtResource("4_4qf3q")])
 
 [resource]
 script = ExtResource("1_8vk0h")

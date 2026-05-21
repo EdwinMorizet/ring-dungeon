@@ -100,8 +100,9 @@ func generate_cells(cell_count: int, radius: float, width: int, height: int, rng
 	return cells
 
 func separate_cells(cells: Array, max_iterations: int) -> Dictionary:
-	var iterations := 0
-	var overlaps := 0
+	const SEPARATION_MARGIN: float = 2.0 # Margin in tiles/pixels for separation
+	var iterations: int = 0
+	var overlaps: int = 0
 	for i in max_iterations:
 		iterations = i + 1
 		overlaps = 0
@@ -112,25 +113,25 @@ func separate_cells(cells: Array, max_iterations: int) -> Dictionary:
 
 		for a in cells.size():
 			for b in range(a + 1, cells.size()):
-				var rect_a: Rect2 = cells[a]["rect"]
-				var rect_b: Rect2 = cells[b]["rect"]
+				var rect_a: Rect2 = cells[a]["rect"].grow(SEPARATION_MARGIN)
+				var rect_b: Rect2 = cells[b]["rect"].grow(SEPARATION_MARGIN)
 				if rect_a.intersects(rect_b):
 					overlaps += 1
-					var delta := rect_b.get_center() - rect_a.get_center()
+					var delta: Vector2 = rect_b.get_center() - rect_a.get_center()
 					if delta.length_squared() < 0.0001:
 						delta = Vector2(1.0, 0.0)
-					var push := delta.normalized() * 0.5
+					var push: Vector2 = delta.normalized() * 0.5
 					motions[a] -= push
 					motions[b] += push
 
-		for c in cells.size():
-			if motions[c] != Vector2.ZERO:
-				var rect: Rect2 = cells[c]["rect"]
-				rect.position += motions[c]
-				cells[c]["rect"] = rect
+			for c in cells.size():
+				if motions[c] != Vector2.ZERO:
+					var rect: Rect2 = cells[c]["rect"]
+					rect.position += motions[c]
+					cells[c]["rect"] = rect
 
-		if overlaps == 0:
-			break
+			if overlaps == 0:
+				break
 
 	return {"iterations": iterations, "overlaps": overlaps}
 
