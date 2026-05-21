@@ -10,9 +10,13 @@ signal died(enemy: EnemyBasic)
 @export var speed: float = 3.5
 @export var strength: int = 10
 @export var damage_number_height: float = 1.5
+@export var chase_activation_radius: float = 14.0
+@export var require_line_of_sight: bool = true
+@export_flags_3d_physics var los_collision_mask: int = 1
 
 var _health: int = 100
 var _is_dead: bool = false
+var _is_chase_active: bool = false
 
 func _ready() -> void:
 	contact_monitor = true
@@ -21,12 +25,14 @@ func _ready() -> void:
 	lock_rotation = true
 	can_sleep = false
 	_health = max(max_health, 1)
+	_is_chase_active = false
 
 func _physics_process(_delta: float) -> void:
 	if _is_dead:
 		return
 	var player_target: Node3D = _get_player_target()
 	if player_target == null:
+		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 		return
 	var to_target: Vector3 = player_target.global_position - global_position
 	to_target.y = 0.0
@@ -49,9 +55,49 @@ func _get_player_target() -> Node3D:
 	if tree == null:
 		return null
 	var player_candidate: Node = tree.get_first_node_in_group("player")
-	if player_candidate is Node3D:
-		return player_candidate as Node3D
+	if not player_candidate is Node3D:
+		return null
+	var player_target: Node3D = player_candidate as Node3D
+	if _is_chase_active:
+		return player_target
+	if not _is_player_in_activation_radius(player_target):
+		return null
+	if require_line_of_sight and not _has_line_of_sight_to(player_target):
+		return null
+	_is_chase_active = true
+	return player_target
 	return null
+
+func _is_player_in_activation_radius(player_target: Node3D) -> bool:
+	var radius: float = maxf(chase_activation_radius, 0.0)
+	if radius <= 0.0:
+		return true
+	var max_distance_sq: float = radius * radius
+	return global_position.distance_squared_to(player_target.global_position) <= max_distance_sq
+
+func _has_line_of_sight_to(player_target: Node3D) -> bool:
+	var world_3d: World3D = get_world_3d()
+	if world_3d == null:
+		return false
+	var origin: Vector3 = global_position + Vector3.UP * 0.9
+	var destination: Vector3 = player_target.global_position + Vector3.UP * 0.9
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, destination)
+	query.exclude = [get_rid()]
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	query.collision_mask = los_collision_mask
+
+	var hit: Dictionary = world_3d.direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return false
+	var collider: Object = hit.get("collider", null)
+	if collider == player_target:
+		return true
+	if collider is Node:
+		var collider_node: Node = collider as Node
+		if player_target.is_ancestor_of(collider_node):
+			return true
+	return false
 
 func _spawn_damage_number(amount: int) -> void:
 	var tree: SceneTree = get_tree()

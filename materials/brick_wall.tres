@@ -1,0 +1,33 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://dsjoi6mvderau"]
+
+[ext_resource type="Texture2D" uid="uid://blmdlm7fcqua8" path="res://assets/bricks_wall_07_1k/bricks_wall_07_height_1k.png" id="1_6nxts"]
+[ext_resource type="Texture2D" uid="uid://dst8rnbrg4xpj" path="res://assets/bricks_wall_07_1k/bricks_wall_07_ambientOcclusion_1k.png" id="2_qrwws"]
+[ext_resource type="Texture2D" uid="uid://crs0kmj1thufy" path="res://assets/bricks_wall_07_1k/bricks_wall_07_metallic_1k.png" id="3_bnssa"]
+[ext_resource type="Texture2D" uid="uid://s3gbppb4a7jl" path="res://assets/bricks_wall_07_1k/bricks_wall_07_normal_gl_1k.png" id="4_xnhsj"]
+[ext_resource type="Texture2D" uid="uid://b3t14nvu8gitl" path="res://assets/bricks_wall_07_1k/bricks_wall_07_roughness_1k.png" id="5_4xpdc"]
+
+[resource]
+albedo_texture = ExtResource("1_6nxts")
+metallic = 1.0
+metallic_texture = ExtResource("3_bnssa")
+roughness_texture = ExtResource("5_4xpdc")
+normal_enabled = true
+normal_scale = 1.2
+normal_texture = ExtResource("4_xnhsj")
+ao_enabled = true
+ao_light_affect = 0.5
+ao_texture = ExtResource("2_qrwws")
+ao_texture_channel = 4
+heightmap_enabled = true
+heightmap_deep_parallax = true
+heightmap_min_layers = 8
+heightmap_max_layers = 32
+heightmap_texture = ExtResource("1_6nxts")
+subsurf_scatter_strength = 0.11
+uv1_scale = Vector3(0.2, 0.2, 0.2)
+uv1_triplanar = true
+grow_amount = 0.549
+proximity_fade_distance = 1126.08
+stencil_flags = 2
+stencil_color = Color(0.9034701, 0.65485615, 0.45014858, 1)
+stencil_outline_thickness = 0.07

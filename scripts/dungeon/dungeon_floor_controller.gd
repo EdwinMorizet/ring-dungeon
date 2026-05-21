@@ -9,6 +9,7 @@ const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config
 const PlayerScene = preload("res://scenes/player/player.tscn")
 const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
 const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
+const EnemySpawnManager = preload("res://scripts/enemies/enemy_spawn_manager.gd")
 
 @export var config: DungeonFloorConfig = DefaultFloorConfig
 @export var use_multimesh: bool = true
@@ -19,7 +20,6 @@ const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
 @export var player_spawn_height_offset: float = 1.2
 @export var enemy_scene: PackedScene = EnemyScene
 @export var enemy_spawn_fallback: Vector3 = Vector3(8.0, 2.5, 8.0)
-@export var enemy_spawn_offset_from_player: Vector3 = Vector3(8.0, 0.0, 0.0)
 @export var merchant_room_scene: PackedScene = MerchantRoomScene
 
 var _regenerate_toggle: bool = false
@@ -49,11 +49,11 @@ var _seed_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _generated_root: Node3D
 var _player_instance: CharacterBody3D
-var _enemy_instance: RigidBody3D
 var _merchant_room_instance: MerchantRoomController
 var _progression_config_override: DungeonFloorConfig
 var _runtime_floor_display: int = -10
 var _runtime_progression_index: int = 0
+var _enemy_spawn_manager: EnemySpawnManager
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -102,7 +102,7 @@ func regenerate_now() -> void:
 		editor_owner = get_tree().edited_scene_root
 	_generated_root = builder.build(self, layout, _build_builder_params(), editor_owner)
 	_spawn_or_reposition_player()
-	_spawn_or_reposition_enemy()
+	_spawn_enemies_for_floor(generation_seed)
 	_connect_floor_exit_trigger()
 
 func _build_generation_params() -> Dictionary:
@@ -141,9 +141,8 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
-	if _enemy_instance != null and is_instance_valid(_enemy_instance):
-		_enemy_instance.queue_free()
-		_enemy_instance = null
+	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
+		_enemy_spawn_manager.clear_spawned_enemies()
 
 func _hide_merchant_room() -> void:
 	if _merchant_room_instance != null and is_instance_valid(_merchant_room_instance):
@@ -183,28 +182,35 @@ func _next_random_seed() -> int:
 		_seed_rng.randomize()
 	return _seed_rng.randi_range(1, 2147483646)
 
-func _spawn_or_reposition_enemy() -> void:
+func _spawn_enemies_for_floor(generation_seed: int) -> void:
 	if Engine.is_editor_hint():
+		return
+	if _generated_root == null or not is_instance_valid(_generated_root):
 		return
 	if enemy_scene == null:
 		return
+	if _player_instance == null or not is_instance_valid(_player_instance):
+		return
+	_ensure_enemy_spawn_manager()
+	if _enemy_spawn_manager == null or not is_instance_valid(_enemy_spawn_manager):
+		return
+	var player_spawn_position: Vector3 = _find_player_spawn_position()
+	_enemy_spawn_manager.spawn_enemies_for_floor(
+		self,
+		_generated_root,
+		player_spawn_position,
+		enemy_scene,
+		_runtime_progression_index,
+		generation_seed,
+		enemy_spawn_fallback
+	)
 
-	if _enemy_instance == null or not is_instance_valid(_enemy_instance):
-		var enemy_node: Node = enemy_scene.instantiate()
-		if enemy_node is RigidBody3D:
-			_enemy_instance = enemy_node as RigidBody3D
-			add_child(_enemy_instance)
-		else:
-			enemy_node.queue_free()
-			return
-
-	var spawn_position: Vector3 = enemy_spawn_fallback
-	if _player_instance != null and is_instance_valid(_player_instance):
-		spawn_position = _player_instance.global_position + enemy_spawn_offset_from_player
-
-	_enemy_instance.global_position = spawn_position
-	_enemy_instance.linear_velocity = Vector3.ZERO
-	_enemy_instance.angular_velocity = Vector3.ZERO
+func _ensure_enemy_spawn_manager() -> void:
+	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
+		return
+	_enemy_spawn_manager = EnemySpawnManager.new()
+	_enemy_spawn_manager.name = "EnemySpawnManager"
+	add_child(_enemy_spawn_manager)
 
 func _connect_floor_exit_trigger() -> void:
 	if _generated_root == null or not is_instance_valid(_generated_root):

@@ -1,8 +1,13 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3 uid="uid://d2c638kyuv2vk"]
 
-[ext_resource type="Script" path="res://scripts/merchant/merchant_room_controller.gd" id="1_merchant"]
+[ext_resource type="Script" uid="uid://b55fsbwyrgd3l" path="res://scripts/merchant/merchant_room_controller.gd" id="1_merchant"]
+[ext_resource type="Material" uid="uid://6a00rgrgv11j" path="res://materials/floor_wall.tres" id="2_3wvds"]
+[ext_resource type="Material" uid="uid://dsjoi6mvderau" path="res://materials/brick_wall.tres" id="3_4qc8a"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(24, 0.2, 24)
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_exit"]
@@ -11,52 +16,87 @@ radius = 1.6
 [sub_resource type="BoxMesh" id="BoxMesh_wall_x"]
 size = Vector3(0.4, 3, 24)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_prkv2"]
+size = Vector3(0.4, 3, 24)
+
 [sub_resource type="BoxMesh" id="BoxMesh_wall_z"]
 size = Vector3(24, 3, 0.4)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(24, 0.2, 24)
+[sub_resource type="BoxShape3D" id="BoxShape3D_s7ey4"]
+size = Vector3(24, 3, 0.4)
 
-[node name="MerchantRoom" type="Node3D"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_yngm3"]
+size = Vector3(24, 3, 0.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_p36gr"]
+size = Vector3(0.4, 3, 24)
+
+[node name="MerchantRoom" type="Node3D" unique_id=828394423]
 script = ExtResource("1_merchant")
 
-[node name="Floor" type="MeshInstance3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=1652118451]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.103, 0)
+material_override = ExtResource("2_3wvds")
 mesh = SubResource("BoxMesh_floor")
 
-[node name="FloorCollider" type="StaticBody3D" parent="."]
+[node name="FloorCollider" type="StaticBody3D" parent="Floor" unique_id=563336556]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FloorCollider"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/FloorCollider" unique_id=1293461602]
 shape = SubResource("BoxShape3D_floor")
 
-[node name="MerchantPlayerSpawn" type="Marker3D" parent="."]
-position = Vector3(0, 1.2, -8)
+[node name="MerchantPlayerSpawn" type="Marker3D" parent="." unique_id=454575865]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -8)
 
-[node name="MerchantExitTrigger" type="Area3D" parent="."]
-position = Vector3(0, 1.0, 8)
-monitoring = true
-monitorable = true
+[node name="MerchantExitTrigger" type="Area3D" parent="." unique_id=284308934]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantExitTrigger"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantExitTrigger" unique_id=444722754]
 shape = SubResource("SphereShape3D_exit")
 
-[node name="LeftWall" type="MeshInstance3D" parent="."]
-position = Vector3(-12, 1.5, 0)
+[node name="RightWall" type="MeshInstance3D" parent="." unique_id=1244523705]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.5, 0)
+material_override = ExtResource("3_4qc8a")
 mesh = SubResource("BoxMesh_wall_x")
 
-[node name="RightWall" type="MeshInstance3D" parent="."]
-position = Vector3(12, 1.5, 0)
+[node name="StaticBody3D" type="StaticBody3D" parent="RightWall" unique_id=964583711]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RightWall/StaticBody3D" unique_id=1300653932]
+shape = SubResource("BoxShape3D_prkv2")
+
+[node name="BackWall" type="MeshInstance3D" parent="." unique_id=816256762]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -12)
+material_override = ExtResource("3_4qc8a")
+mesh = SubResource("BoxMesh_wall_z")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="BackWall" unique_id=521346246]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BackWall/StaticBody3D" unique_id=371227813]
+shape = SubResource("BoxShape3D_s7ey4")
+
+[node name="FrontWall" type="MeshInstance3D" parent="." unique_id=636066676]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 12)
+material_override = ExtResource("3_4qc8a")
+mesh = SubResource("BoxMesh_wall_z")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="FrontWall" unique_id=1311187683]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FrontWall/StaticBody3D" unique_id=727811689]
+shape = SubResource("BoxShape3D_yngm3")
+
+[node name="LeftWall" type="MeshInstance3D" parent="." unique_id=863700346]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 0)
+material_override = ExtResource("3_4qc8a")
 mesh = SubResource("BoxMesh_wall_x")
 
-[node name="BackWall" type="MeshInstance3D" parent="."]
-position = Vector3(0, 1.5, -12)
-mesh = SubResource("BoxMesh_wall_z")
+[node name="StaticBody3D" type="StaticBody3D" parent="LeftWall" unique_id=459219915]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, -1.5, 0)
 
-[node name="FrontWall" type="MeshInstance3D" parent="."]
-position = Vector3(0, 1.5, 12)
-mesh = SubResource("BoxMesh_wall_z")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LeftWall/StaticBody3D" unique_id=1909076799]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 0)
+shape = SubResource("BoxShape3D_p36gr")
 
-[node name="ExitLight" type="OmniLight3D" parent="."]
-position = Vector3(0, 2.6, 8)
+[node name="ExitLight" type="OmniLight3D" parent="." unique_id=282538277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 8)
 light_color = Color(0.62, 1, 0.67, 1)
 light_energy = 1.6
 omni_range = 9.0
