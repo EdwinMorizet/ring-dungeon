@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://eicmvh8yjf8w"]
+
+[ext_resource type="Script" uid="uid://d0qh0h7g42l5e" path="res://scripts/ui/player_hud.gd" id="1_player_hud"]
+[ext_resource type="Script" uid="uid://dpk00wywsbd7u" path="res://scripts/ui/hud_crosshair.gd" id="2_crosshair"]
+
+[node name="PlayerHud" type="CanvasLayer" unique_id=442110535]
+layer = 10
+script = ExtResource("1_player_hud")
+
+[node name="Root" type="Control" parent="." unique_id=194125400]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CenterCrosshair" type="Control" parent="Root" unique_id=889042011]
+anchors_preset = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_crosshair")
+
+[node name="ManaContainer" type="MarginContainer" parent="Root" unique_id=263483851]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -92.0
+offset_right = 316.0
+offset_bottom = -24.0
+
+[node name="VBox" type="VBoxContainer" parent="Root/ManaContainer" unique_id=1790829377]
+layout_mode = 2
+
+[node name="ManaLabel" type="Label" parent="Root/ManaContainer/VBox" unique_id=1942423147]
+layout_mode = 2
+text = "MANA"
+
+[node name="ManaBar" type="ProgressBar" parent="Root/ManaContainer/VBox" unique_id=458229768]
+custom_minimum_size = Vector2(290, 18)
+layout_mode = 2
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="HealthContainer" type="MarginContainer" parent="Root" unique_id=1621644807]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -316.0
+offset_top = -92.0
+offset_right = -24.0
+offset_bottom = -24.0
+
+[node name="VBox" type="VBoxContainer" parent="Root/HealthContainer" unique_id=2029569900]
+layout_mode = 2
+
+[node name="HealthLabel" type="Label" parent="Root/HealthContainer/VBox" unique_id=1643062219]
+layout_mode = 2
+text = "HEALTH"
+horizontal_alignment = 2
+
+[node name="HealthBar" type="ProgressBar" parent="Root/HealthContainer/VBox" unique_id=1373589021]
+custom_minimum_size = Vector2(290, 18)
+layout_mode = 2
+size_flags_horizontal = 3
+show_percentage = false

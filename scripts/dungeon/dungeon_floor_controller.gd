@@ -9,7 +9,6 @@ const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config
 const PlayerScene = preload("res://scenes/player/player.tscn")
 const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
 const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
-const EnemySpawnManager = preload("res://scripts/enemies/enemy_spawn_manager.gd")
 
 @export var config: DungeonFloorConfig = DefaultFloorConfig
 @export var use_multimesh: bool = true
@@ -53,7 +52,7 @@ var _merchant_room_instance: MerchantRoomController
 var _progression_config_override: DungeonFloorConfig
 var _runtime_floor_display: int = -10
 var _runtime_progression_index: int = 0
-var _enemy_spawn_manager: EnemySpawnManager
+var _enemy_spawn_manager: Node
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -83,6 +82,7 @@ func enter_merchant_room() -> void:
 			return
 
 	_merchant_room_instance.visible = true
+	_merchant_room_instance.reset_for_entry()
 	var merchant_spawn: Vector3 = _merchant_room_instance.get_player_spawn_position()
 	_player_instance.global_position = merchant_spawn
 	_player_instance.velocity = Vector3.ZERO
@@ -141,7 +141,8 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
-	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
+	_ensure_enemy_spawn_manager()
+	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager) and _enemy_spawn_manager.has_method("clear_spawned_enemies"):
 		_enemy_spawn_manager.clear_spawned_enemies()
 
 func _hide_merchant_room() -> void:
@@ -194,8 +195,11 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager == null or not is_instance_valid(_enemy_spawn_manager):
 		return
+	if not _enemy_spawn_manager.has_method("spawn_enemies_for_floor"):
+		return
 	var player_spawn_position: Vector3 = _find_player_spawn_position()
-	_enemy_spawn_manager.spawn_enemies_for_floor(
+	_enemy_spawn_manager.call(
+		"spawn_enemies_for_floor",
 		self,
 		_generated_root,
 		player_spawn_position,
@@ -208,9 +212,10 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 func _ensure_enemy_spawn_manager() -> void:
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
 		return
-	_enemy_spawn_manager = EnemySpawnManager.new()
-	_enemy_spawn_manager.name = "EnemySpawnManager"
-	add_child(_enemy_spawn_manager)
+	if not has_node("/root/EnemySpawnManager"):
+		_enemy_spawn_manager = null
+		return
+	_enemy_spawn_manager = get_node("/root/EnemySpawnManager")
 
 func _connect_floor_exit_trigger() -> void:
 	if _generated_root == null or not is_instance_valid(_generated_root):

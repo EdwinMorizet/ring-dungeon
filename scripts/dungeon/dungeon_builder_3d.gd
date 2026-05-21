@@ -1,6 +1,9 @@
 extends RefCounted
 class_name DungeonBuilder3D
 
+const floorMat: Material = preload("res://materials/floor_wall.tres")
+const wallMat: Material = preload("res://materials/brick_wall.tres")
+
 const FloorExitTriggerScript: Script = preload("res://scripts/dungeon/floor_exit_trigger.gd")
 const TILE_WALL := 0
 const TILE_FLOOR := 1
@@ -45,11 +48,13 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(tile_size, wall_height, tile_size)
 
-	var floor_material := StandardMaterial3D.new()
+	#var floor_material := StandardMaterial3D.new()
+	var floor_material := floorMat
 	floor_material.albedo_color = Color(0.28, 0.25, 0.2)
 	floor_mesh.material = floor_material
 
-	var wall_material := StandardMaterial3D.new()
+	#var wall_material := StandardMaterial3D.new()
+	var wall_material := wallMat
 	wall_material.albedo_color = Color(0.42, 0.42, 0.45)
 	wall_mesh.material = wall_material
 

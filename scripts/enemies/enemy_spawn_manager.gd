@@ -1,5 +1,4 @@
 extends Node3D
-class_name EnemySpawnManager
 
 @export var base_enemy_count: int = 2
 @export var progression_step_for_extra_enemy: int = 2

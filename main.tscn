@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" path="res://scenes/ui/debug_floor_hud.tscn" id="2_dbgui"]
 [ext_resource type="Texture2D" uid="uid://b0anr3agalg3s" path="res://assets/sky_78_2k.png" id="3_h2yge"]
+[ext_resource type="PackedScene" uid="uid://eicmvh8yjf8w" path="res://scenes/ui/player_hud.tscn" id="4_1bvp3"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1bvp3"]
 panorama = ExtResource("3_h2yge")
@@ -39,3 +40,5 @@ environment = SubResource("Environment_7mycd")
 [node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
 script = ExtResource("1_ig7tw")
 metadata/_custom_type_script = "uid://bla0efmx0rcb4"
+
+[node name="PlayerHud" parent="." unique_id=902724744 instance=ExtResource("4_1bvp3")]
