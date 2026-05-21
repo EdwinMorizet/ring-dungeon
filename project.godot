@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 FireballManager="*res://scripts/spells/fireball_manager.gd"
+GameProgressionManager="*res://scripts/progression/game_progression_manager.gd"
 
 [input]
 

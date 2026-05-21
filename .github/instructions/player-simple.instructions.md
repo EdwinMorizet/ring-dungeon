@@ -14,3 +14,4 @@ applyTo: "scripts/player/*.gd"
 - Keep tuning values in exported properties so movement and camera feel can be adjusted without rewriting logic.
 - Preserve existing input action names and FireballManager integration unless a task explicitly requests changing them.
 - Favor readable control flow over abstraction-heavy patterns.
+- Based on a CharacterBody3D node

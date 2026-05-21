@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://xogsi6tqw8de"]
+
+[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/dungeon_floor_config.gd" id="1_cycqr"]
+
+[resource]
+script = ExtResource("1_cycqr")
+seed = 409
+width = 190
+height = 190
+cell_count = 20
+spawn_radius = 62.0
+separation_iterations = 240
+min_room_size = 11.0
+room_area_threshold = 95.0
+room_keep_ratio = 0.4
+loop_percent = 0.1
+chest_candidate_ratio = 0.2

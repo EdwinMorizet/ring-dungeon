@@ -1,0 +1,62 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/merchant/merchant_room_controller.gd" id="1_merchant"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_exit"]
+radius = 1.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_x"]
+size = Vector3(0.4, 3, 24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_z"]
+size = Vector3(24, 3, 0.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(24, 0.2, 24)
+
+[node name="MerchantRoom" type="Node3D"]
+script = ExtResource("1_merchant")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_floor")
+
+[node name="FloorCollider" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FloorCollider"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="MerchantPlayerSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 1.2, -8)
+
+[node name="MerchantExitTrigger" type="Area3D" parent="."]
+position = Vector3(0, 1.0, 8)
+monitoring = true
+monitorable = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantExitTrigger"]
+shape = SubResource("SphereShape3D_exit")
+
+[node name="LeftWall" type="MeshInstance3D" parent="."]
+position = Vector3(-12, 1.5, 0)
+mesh = SubResource("BoxMesh_wall_x")
+
+[node name="RightWall" type="MeshInstance3D" parent="."]
+position = Vector3(12, 1.5, 0)
+mesh = SubResource("BoxMesh_wall_x")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, -12)
+mesh = SubResource("BoxMesh_wall_z")
+
+[node name="FrontWall" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, 12)
+mesh = SubResource("BoxMesh_wall_z")
+
+[node name="ExitLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.6, 8)
+light_color = Color(0.62, 1, 0.67, 1)
+light_energy = 1.6
+omni_range = 9.0

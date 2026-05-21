@@ -1,4 +1,5 @@
 ---
+description: "Use these instructions when generating gameplay, systems, and content code for this project."
 applyTo: "**/*.gd"
 ---
 
