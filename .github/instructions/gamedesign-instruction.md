@@ -7,6 +7,27 @@ applyTo: "**/*.gd"
 
 Use these instructions when generating gameplay, systems, and content code for this project.
 
+## Instruction Map And Precedence
+
+Use this file as the broad gameplay umbrella. For Rings/Bands work, defer to specialized instruction files first.
+
+- Primary Rings/Bands gameplay source:
+	- `.github/instructions/rings-bands-mechanics.instructions.md`
+- Numeric rarity/affix and economy constants:
+	- `.github/instructions/rarity-affix-table.instructions.md`
+- Deterministic tests, regression checks, and debug hooks:
+	- `.github/instructions/rings-bands-testing.instructions.md`
+- Tooltip and inventory item presentation:
+	- `.github/instructions/rings-bands-tooltip-ui.instructions.md`
+- Inventory architecture and slot flow integration:
+	- `.github/instructions/inventory-system.instructions.md`
+
+When guidance overlaps:
+
+1. Follow the most specific file by scope (`applyTo`) and topic.
+2. For Rings/Bands mechanics, prefer the specialized Rings/Bands files over this umbrella file.
+3. Use this file for high-level loop, pacing, and world/system intent.
+
 ## Project Context
 
 - Project: Untitled Wizard FPS Dungeon Crawler
@@ -42,45 +63,29 @@ Track currencies:
 
 ## Eight-Rings Equipment System
 
-Implement a backpack-less equipment system with exactly 8 finger slots:
+Maintain the high-level equipment fantasy and progression:
 
-- Right hand: 4 offensive `Rings`.
-- Left hand: 4 defensive/stat `Bands`.
-- Rule: only one item per finger slot.
-- Use Godot `Resource` scripts for item definitions.
+- Exactly 8 finger slots split between offensive rings and defensive bands.
+- Items should support meaningful synergies and trade-offs.
+- Item generation should be rarity-driven and floor-depth aware.
 
-### Rings (Right Hand, Offensive)
+Do not duplicate low-level mechanics here. For exact slot rules, affix domains, stacking math, rarity constants, and runtime behaviors, use:
 
-- Affect Fireball behavior and physics.
-- Visual language: jagged or bulky materials (iron, brass, obsidian).
-- Drop aura colors: warm palette (red, orange, yellow).
-- Include meaningful trade-offs (example: more projectiles with higher mana cost and lower damage).
-- Allow stacking of identical rings across slots, but tune projectile behavior to stay performant.
-
-#### Altering Shot Behavior (Right Hand)
-Instead of just upgrading damage, rings act as modifiers that change the "physics" and cost of the fireball. Inspired by Path of Exile skill gems or Binding of Isaac synergies.
-
-- Split Ring: Fires 3 smaller fireballs in a cone. (Reduces base damage).
-- Heavy Ring: Fireball becomes huge, slow, and pierces enemies. (Increases mana cost).
-- Rubber Ring: Fireballs bounce off walls up to 3 times.
-- Volatility Ring: Fireballs explode on impact for AOE damage. (Can damage the player if too close).
-
-Players create synergies by combining them. For example, Rubber Ring + Volatility Ring creates bouncing bombs.
-
-### Bands (Left Hand, Defensive/Stats)
-
-- Affect player stats (max health, max mana, displacement speed, shield).
-- Visual language: smooth or engraved materials (silver, bone, crystal).
-- Drop aura colors: cool palette (blue, green, purple).
-- Can be pure buffs or trade-off based.
+- `.github/instructions/rings-bands-mechanics.instructions.md`
+- `.github/instructions/rarity-affix-table.instructions.md`
 
 ## Loot Interaction Rules
 
-When the player interacts with a dropped `Ring` or `Band` (`Area3D`), present an immediate choice:
+Keep loot interaction immediate and run-flow friendly:
 
-- Equip: place into an empty slot of the matching hand.
-- Swap: if all 4 relevant slots are full, select one equipped item to replace.
-- On swap, drop the replaced item back to the floor immediately.
+- Equip into a valid empty slot when possible.
+- Offer swap when relevant slots are full.
+- Keep world-drop behavior consistent so the replaced item remains interactable.
+
+For concrete slot-validation and drop-flow rules, defer to:
+
+- `.github/instructions/inventory-system.instructions.md`
+- `.github/instructions/rings-bands-mechanics.instructions.md`
 
 ## Merchant Room Rules
 
@@ -91,12 +96,20 @@ Treat the Merchant Room as a safe inter-floor hub and support:
 - Blood magic trades: exchange permanent stats for powerful items.
 - Barter: trade one currently equipped Ring/Band for a new random item.
 
+For item-value tuning and rarity economy balance, defer to:
+
+- `.github/instructions/rarity-affix-table.instructions.md`
+
 ## Preferred Godot Architecture
 
-- `Player` (`CharacterBody3D`): manages stats, currencies, and owns `RingManager`.
-- `RingManager` (`Node`): stores two arrays (size 4 each) of item resources; recalculates derived stats and Fireball parameters on equip/swap.
-- `Fireball` (`RigidBody3D` or `Area3D`): receives injected runtime parameters (speed, size, collision behavior, spawn count).
-- `Item` pickups (`Area3D`): include mesh and `Label3D` showing effects and trade-offs.
+- `Player` (`CharacterBody3D`): owns movement/combat input and derived stat refresh triggers.
+- `Equipment/Inventory manager` (`Node` or autoload): owns slot state, equip/swap transitions, and compiled modifier aggregation.
+- `Fireball` (`RigidBody3D` or `Area3D`): consumes runtime shot parameters built from aggregated equipment effects.
+- `Item` pickups (`Area3D`): provide interaction hooks and presentation metadata.
+
+For UI rendering and tooltip rules, defer to:
+
+- `.github/instructions/rings-bands-tooltip-ui.instructions.md`
 
 ## Procedural Dungeon Generation (TinyKeep Style)
 
