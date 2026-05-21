@@ -118,5 +118,7 @@ func _spawn_damage_number(amount: int) -> void:
 
 func _die() -> void:
 	_is_dead = true
+	if has_node("/root/InventoryManager"):
+		InventoryManager.spawn_random_drop(global_position)
 	died.emit(self)
 	queue_free()

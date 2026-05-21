@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/inventory_panel.gd" id="1_inventory_panel"]
+
+[node name="InventoryPanel" type="CanvasLayer"]
+layer = 11
+script = ExtResource("1_inventory_panel")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -260.0
+offset_right = 320.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBox" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Title" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "INVENTORY"
+horizontal_alignment = 1
+
+[node name="HandsRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BandHand" type="VBoxContainer" parent="Root/Panel/Margin/VBox/HandsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BandLabel" type="Label" parent="Root/Panel/Margin/VBox/HandsRow/BandHand"]
+layout_mode = 2
+text = "LEFT HAND: BANDS"
+
+[node name="Slots" type="GridContainer" parent="Root/Panel/Margin/VBox/HandsRow/BandHand"]
+layout_mode = 2
+columns = 2
+
+[node name="RingHand" type="VBoxContainer" parent="Root/Panel/Margin/VBox/HandsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RingLabel" type="Label" parent="Root/Panel/Margin/VBox/HandsRow/RingHand"]
+layout_mode = 2
+text = "RIGHT HAND: RINGS"
+
+[node name="Slots" type="GridContainer" parent="Root/Panel/Margin/VBox/HandsRow/RingHand"]
+layout_mode = 2
+columns = 2
+
+[node name="NearbySection" type="VBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NearbyLabel" type="Label" parent="Root/Panel/Margin/VBox/NearbySection"]
+layout_mode = 2
+text = "NEARBY ITEMS"
+
+[node name="Items" type="VBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection"]
+layout_mode = 2
+size_flags_horizontal = 3

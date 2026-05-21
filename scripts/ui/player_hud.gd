@@ -18,6 +18,18 @@ func _ready() -> void:
 	set_health(current_health, max_health)
 	set_mana(current_mana, max_mana)
 
+func _process(_delta: float) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var player_node: Node = tree.get_first_node_in_group("player")
+	if player_node == null:
+		return
+	if player_node.has_method("get_current_mana") and player_node.has_method("get_max_mana"):
+		var current_value: float = float(player_node.call("get_current_mana"))
+		var max_value: float = float(player_node.call("get_max_mana"))
+		set_mana(current_value, max_value)
+
 func set_health(value: float, maximum: float = -1.0) -> void:
 	if maximum > 0.0:
 		max_health = maximum

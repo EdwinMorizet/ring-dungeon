@@ -141,6 +141,8 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
+	if has_node("/root/InventoryManager"):
+		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager) and _enemy_spawn_manager.has_method("clear_spawned_enemies"):
 		_enemy_spawn_manager.clear_spawned_enemies()

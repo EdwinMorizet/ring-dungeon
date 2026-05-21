@@ -57,6 +57,16 @@ Implement a backpack-less equipment system with exactly 8 finger slots:
 - Include meaningful trade-offs (example: more projectiles with higher mana cost and lower damage).
 - Allow stacking of identical rings across slots, but tune projectile behavior to stay performant.
 
+#### Altering Shot Behavior (Right Hand)
+Instead of just upgrading damage, rings act as modifiers that change the "physics" and cost of the fireball. Inspired by Path of Exile skill gems or Binding of Isaac synergies.
+
+- Split Ring: Fires 3 smaller fireballs in a cone. (Reduces base damage).
+- Heavy Ring: Fireball becomes huge, slow, and pierces enemies. (Increases mana cost).
+- Rubber Ring: Fireballs bounce off walls up to 3 times.
+- Volatility Ring: Fireballs explode on impact for AOE damage. (Can damage the player if too close).
+
+Players create synergies by combining them. For example, Rubber Ring + Volatility Ring creates bouncing bombs.
+
 ### Bands (Left Hand, Defensive/Stats)
 
 - Affect player stats (max health, max mana, displacement speed, shield).

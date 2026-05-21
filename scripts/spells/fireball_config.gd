@@ -8,3 +8,4 @@ class_name FireballConfig
 @export var damage: int = 20
 @export var size: float = 0.45
 @export var accuracy: float = 0.75
+@export var mana_cost: float = 20.0

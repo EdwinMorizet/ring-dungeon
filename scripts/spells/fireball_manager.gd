@@ -17,6 +17,9 @@ func set_config(config: FireballConfig) -> void:
 func reset_default_config() -> void:
 	_config = DefaultFireballConfig
 
+func get_mana_cost() -> float:
+	return max(_config.mana_cost, 0.0)
+
 func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -> void:
 	var tree: SceneTree = get_tree()
 	if tree == null:
@@ -33,7 +36,23 @@ func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -
 
 	var projectile: FireballProjectile = instance_node as FireballProjectile
 	parent_node.add_child(projectile)
-	projectile.configure(_config, origin, _apply_accuracy(direction), shooter)
+	projectile.configure(_build_modified_config(), origin, _apply_accuracy(direction), shooter)
+
+func _build_modified_config() -> FireballConfig:
+	var modified_config: FireballConfig = _config.duplicate(true) as FireballConfig
+	if modified_config == null:
+		modified_config = _config
+	var damage_multiplier: float = InventoryManager.get_fireball_damage_multiplier()
+	var speed_multiplier: float = InventoryManager.get_fireball_speed_multiplier()
+	var accuracy_bonus: float = InventoryManager.get_fireball_accuracy_bonus()
+	var gravity_multiplier: float = InventoryManager.get_fireball_gravity_multiplier()
+	var bounce_bonus: int = InventoryManager.get_fireball_bounce_bonus()
+	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
+	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
+	modified_config.accuracy = max(_config.accuracy - accuracy_bonus, 0.0)
+	modified_config.gravity_influence = max(_config.gravity_influence * gravity_multiplier, 0.0)
+	modified_config.bounce_count = maxi(_config.bounce_count + bounce_bonus, 0)
+	return modified_config
 
 func _apply_accuracy(direction: Vector3) -> Vector3:
 	var base_direction: Vector3 = direction.normalized()
