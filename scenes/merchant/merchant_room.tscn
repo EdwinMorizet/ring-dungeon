@@ -13,6 +13,38 @@ size = Vector3(24, 0.2, 24)
 [sub_resource type="SphereShape3D" id="SphereShape3D_exit"]
 radius = 1.6
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3wvds"]
+shading_mode = 0
+disable_ambient_light = true
+vertex_color_use_as_albedo = true
+billboard_mode = 2
+billboard_keep_scale = true
+
+[sub_resource type="Curve" id="Curve_3wvds"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_4qc8a"]
+curve = SubResource("Curve_3wvds")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_4qc8a"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 1.0
+emission_ring_radius = 2.0
+emission_ring_inner_radius = 3.6
+emission_ring_cone_angle = 90.0
+gravity = Vector3(0, 9, 0)
+damping_max = 5.0
+scale_min = 0.099999994
+scale_max = 0.25
+turbulence_enabled = true
+turbulence_noise_strength = 0.2
+turbulence_influence_min = 0.0
+turbulence_influence_over_life = SubResource("CurveTexture_4qc8a")
+
+[sub_resource type="QuadMesh" id="QuadMesh_prkv2"]
+
 [sub_resource type="BoxMesh" id="BoxMesh_wall_x"]
 size = Vector3(0.4, 3, 24)
 
@@ -52,6 +84,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantExitTrigger" unique_id=444722754]
 shape = SubResource("SphereShape3D_exit")
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="MerchantExitTrigger" unique_id=51188736]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5617571, 0)
+material_override = SubResource("StandardMaterial3D_3wvds")
+amount = 32
+process_material = SubResource("ParticleProcessMaterial_4qc8a")
+draw_pass_1 = SubResource("QuadMesh_prkv2")
 
 [node name="RightWall" type="MeshInstance3D" parent="." unique_id=1244523705]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.5, 0)

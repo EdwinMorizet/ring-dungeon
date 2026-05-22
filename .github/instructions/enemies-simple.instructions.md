@@ -1,6 +1,6 @@
 ---
 description: "Use when editing enemy scripts in scripts/enemies. Keep enemy behavior simple, typed, and easy to tune."
-applyTo: "scripts/enemies/*.gd"
+applyTo: "scripts/enemies/*.gd, scenes/enemies/*.tsn"
 ---
 
 # Enemies Folder Guidelines

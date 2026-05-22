@@ -1,7 +1,7 @@
 ---
 description: "Use when the user asks how dungeon generation works, requests architecture walkthroughs, or asks for procedural generation details in this Godot project."
 name: "Dungeon Generation Explanation Style"
-applyTo: "scripts/dungeon/*.gd"
+applyTo: "scripts/dungeon/*.gd, scenes/dungeon/*.tsn, ressources/dungeon/*.tres"
 ---
 
 # Dungeon Generation Explanation Guidelines

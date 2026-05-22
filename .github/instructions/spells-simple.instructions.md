@@ -1,6 +1,6 @@
 ---
 description: "Use when editing fireball or spell scripts in scripts/spells. Keep gameplay logic simple, typed, and easy to tune."
-applyTo: "scripts/spells/*.gd"
+applyTo: "scripts/spells/*.gd, resources/spells/*.tres, scenes/spells/*.tscn"
 ---
 
 # Spells Folder Guidelines

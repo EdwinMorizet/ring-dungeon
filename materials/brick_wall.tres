@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://b3t14nvu8gitl" path="res://assets/bricks_wall_07_1k/bricks_wall_07_roughness_1k.png" id="5_4xpdc"]
 
 [resource]
+albedo_color = Color(0.42, 0.42, 0.45, 1)
 albedo_texture = ExtResource("1_6nxts")
 metallic = 1.0
 metallic_texture = ExtResource("3_bnssa")

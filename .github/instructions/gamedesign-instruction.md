@@ -1,6 +1,6 @@
 ---
 description: "Use these instructions when generating gameplay, systems, and content code for this project."
-applyTo: "**/*.gd"
+applyTo: "**/*.gd, **/*.tscn, **/*.tres"
 ---
 
 # Game Design Instructions

@@ -60,6 +60,14 @@ Use this skill when the user asks to:
 - `ChestCandidateMarkers`
 - `FloorExitMarkers`
 
+4.1 Floor exit spawn integration details.
+- Marker source: use `spawn_markers.floor_exit` first; fallback path is room metadata with `is_floor_exit=true`.
+- Builder path: `DungeonBuilder3D._spawn_floor_exit_visuals(...)` locates `FloorExit_0` (or first `FloorExit_*`) and instances `res://scenes/dungeon/floor_exit_trigger.tscn` at that marker transform.
+- Runtime node contract: instantiated node must be named `FloorExitTrigger` so `DungeonFloorController._connect_floor_exit_trigger()` can find it under generated content.
+- Signal contract: trigger script emits `exit_reached`; controller listens and forwards progression via `complete_floor_exit` (or regenerates as fallback).
+- Ownership/persistence: when regenerating in editor, assign owner recursively to the instanced trigger subtree so scene-authored children remain visible/persistable.
+- Visual source of truth: floor-exit visuals should be authored in `scenes/dungeon/floor_exit_trigger.tscn`; avoid rebuilding exit VFX procedurally in builder unless explicitly required.
+
 5. Provide usage snippets when requested.
 - Show how to pull marker nodes by group and instantiate gameplay scenes at those transforms.
 - Show safe null/empty checks when a marker group has no children.
@@ -78,6 +86,9 @@ Use this skill when the user asks to:
 - Border ring should remain wall.
 - Exactly one player start marker and one floor exit marker should exist.
 - Enemy/chest candidate counts should be coherent with room count and configured ratios.
+- Generated scene should contain exactly one node named `FloorExitTrigger` under `GeneratedDungeon` after each regenerate.
+- `FloorExitTrigger` should sit at the selected floor-exit marker position (with expected Y offset defined by the trigger scene itself).
+- Entering trigger with a player-group body should emit `exit_reached` once per floor instance.
 
 ## Decision Rules
 

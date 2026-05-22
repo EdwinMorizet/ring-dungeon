@@ -1,10 +1,11 @@
+@tool
 extends RefCounted
 class_name DungeonBuilder3D
 
 const floorMat: Material = preload("res://materials/floor_wall.tres")
 const wallMat: Material = preload("res://materials/brick_wall.tres")
 
-const FloorExitTriggerScript: Script = preload("res://scripts/dungeon/floor_exit_trigger.gd")
+const FloorExitTriggerScene: PackedScene = preload("res://scenes/dungeon/floor_exit_trigger.tscn")
 const TILE_WALL := 0
 const TILE_FLOOR := 1
 const CARDINAL_OFFSETS: Array[Vector2i] = [
@@ -265,7 +266,7 @@ func _spawn_marker(parent: Node3D, marker_name: String, point: Vector2, tile_siz
 	parent.add_child(marker)
 	_assign_owner(marker, editor_owner)
 
-func _spawn_floor_exit_visuals(root: Node3D, tile_size: float, editor_owner: Node) -> void:
+func _spawn_floor_exit_visuals(root: Node3D, _tile_size: float, editor_owner: Node) -> void:
 	var marker_node: Node = root.find_child("FloorExit_0", true, false)
 	if not marker_node is Marker3D:
 		var fallback_markers: Array[Node] = root.find_children("FloorExit_*", "Marker3D", true, false)
@@ -275,59 +276,14 @@ func _spawn_floor_exit_visuals(root: Node3D, tile_size: float, editor_owner: Nod
 		return
 	var marker: Marker3D = marker_node as Marker3D
 
-	var trigger := Area3D.new()
+	var trigger_node: Node = FloorExitTriggerScene.instantiate()
+	if not trigger_node is FloorExitTrigger:
+		return
+	var trigger: FloorExitTrigger = trigger_node as FloorExitTrigger
 	trigger.name = "FloorExitTrigger"
-	trigger.position = marker.position + Vector3.UP * 0.9
-	trigger.set_script(FloorExitTriggerScript)
+	trigger.position = marker.position
 	root.add_child(trigger)
-	_assign_owner(trigger, editor_owner)
-
-	var collision := CollisionShape3D.new()
-	var shape := CylinderShape3D.new()
-	shape.radius = tile_size * 1.1
-	shape.height = 2.0
-	collision.shape = shape
-	trigger.add_child(collision)
-	_assign_owner(collision, editor_owner)
-
-	_spawn_exit_particle_ring(root, marker.position, tile_size, editor_owner)
-
-func _spawn_exit_particle_ring(parent: Node3D, center: Vector3, tile_size: float, editor_owner: Node) -> void:
-	var ring_root := Node3D.new()
-	ring_root.name = "FloorExitParticles"
-	parent.add_child(ring_root)
-	_assign_owner(ring_root, editor_owner)
-
-	var particle_mesh := SphereMesh.new()
-	particle_mesh.radius = 0.06
-	particle_mesh.height = 0.12
-
-	for i in range(12):
-		var angle: float = (TAU * float(i)) / 12.0
-		var emitter := GPUParticles3D.new()
-		emitter.name = "RingEmitter_%d" % i
-		emitter.amount = 16
-		emitter.lifetime = 0.9
-		emitter.explosiveness = 0.2
-		emitter.randomness = 0.6
-		emitter.emitting = true
-		emitter.one_shot = false
-		emitter.position = center + Vector3(cos(angle) * tile_size * 1.1, 0.15, sin(angle) * tile_size * 1.1)
-		emitter.draw_pass_1 = particle_mesh
-
-		var process_material := ParticleProcessMaterial.new()
-		process_material.direction = Vector3.UP
-		process_material.spread = 18.0
-		process_material.initial_velocity_min = 0.9
-		process_material.initial_velocity_max = 1.7
-		process_material.gravity = Vector3.ZERO
-		process_material.scale_min = 0.5
-		process_material.scale_max = 1.0
-		process_material.color = Color(0.55, 0.95, 1.0, 1.0)
-		emitter.process_material = process_material
-
-		ring_root.add_child(emitter)
-		_assign_owner(emitter, editor_owner)
+	_assign_owner_recursive(trigger, editor_owner)
 
 func _spawn_collision_box(parent: Node3D, box_size: Vector3, tile_size: float, center_y: float, x: int, y: int, editor_owner: Node) -> void:
 	var body := StaticBody3D.new()
@@ -358,6 +314,14 @@ func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vec
 func _assign_owner(node: Node, editor_owner: Node) -> void:
 	if editor_owner != null:
 		node.owner = editor_owner
+
+func _assign_owner_recursive(node: Node, editor_owner: Node) -> void:
+	if editor_owner == null:
+		return
+	node.owner = editor_owner
+	for child in node.get_children():
+		if child is Node:
+			_assign_owner_recursive(child as Node, editor_owner)
 
 func _spawn_room_lights(parent: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
 	var rooms: Array = layout.get("rooms", [])
