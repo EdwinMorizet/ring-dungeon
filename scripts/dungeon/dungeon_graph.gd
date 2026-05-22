@@ -1,3 +1,4 @@
+# Provides graph helpers used by dungeon generation for connectivity and edge selection.
 extends RefCounted
 class_name DungeonGraph
 

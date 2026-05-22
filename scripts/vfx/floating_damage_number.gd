@@ -1,3 +1,4 @@
+# Animates floating damage-number text feedback at hit locations.
 extends Node3D
 class_name FloatingDamageNumber
 

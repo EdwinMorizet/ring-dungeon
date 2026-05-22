@@ -1,3 +1,4 @@
+# Renders one nearby-item entry with tooltip and pickup interaction wiring.
 extends Button
 class_name InventoryItemEntry
 

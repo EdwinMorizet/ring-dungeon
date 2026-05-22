@@ -1,3 +1,4 @@
+# Holds shared constants and helper lookups for rings, bands, rarity, and stats.
 extends RefCounted
 class_name RingBandConstants
 

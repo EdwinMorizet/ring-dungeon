@@ -1,3 +1,4 @@
+# Simulates fireball projectile movement, collisions, damage, and burst effects.
 extends RigidBody3D
 class_name FireballProjectile
 

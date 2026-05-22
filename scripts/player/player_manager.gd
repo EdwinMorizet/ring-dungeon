@@ -1,12 +1,16 @@
+# Tracks and controls global player bindings, locks, and control-state changes.
 extends Node
 
-const INVENTORY_LOCK_ID: StringName = &"inventory_open"
+# Default parameter resource for lock ids and initial controls behavior.
+const DefaultPlayerManagerConfig: PlayerManagerConfig = preload("res://resources/player/default_player_manager_config.tres")
 
 signal player_bound(player: Node3D)
 signal player_unbound()
 signal controls_changed(enabled: bool)
 signal currency_changed(gold: int, gems: int)
 
+# Active parameter resource for this autoload manager.
+var _config: PlayerManagerConfig = DefaultPlayerManagerConfig
 var _player: Node3D = null
 var _controls_forced_enabled: bool = true
 var _input_locks: Dictionary = {}
@@ -14,7 +18,15 @@ var _gold: int = 0
 var _gems: int = 0
 var _inventory_lock_active: bool = false
 
+func set_config(config: PlayerManagerConfig) -> void:
+	if config != null:
+		_config = config
+
+func reset_default_config() -> void:
+	_config = DefaultPlayerManagerConfig
+
 func _ready() -> void:
+	_controls_forced_enabled = _config.controls_forced_enabled_by_default
 	_connect_inventory_lock_signal()
 	sync_inventory_lock_state()
 	_apply_controls_state()
@@ -222,21 +234,28 @@ func _disconnect_inventory_lock_signal() -> void:
 		InventoryManager.inventory_open_changed.disconnect(_on_inventory_open_changed)
 
 func sync_inventory_lock_state() -> void:
+	var inventory_lock_id: StringName = _get_inventory_lock_id()
 	if not has_node("/root/InventoryManager") or InventoryManager == null:
 		if _inventory_lock_active:
 			_inventory_lock_active = false
-			pop_input_lock(INVENTORY_LOCK_ID)
+			pop_input_lock(inventory_lock_id)
 		return
 	_on_inventory_open_changed(InventoryManager.is_inventory_open())
 
 func _on_inventory_open_changed(is_open: bool) -> void:
+	var inventory_lock_id: StringName = _get_inventory_lock_id()
 	if is_open:
 		if _inventory_lock_active:
 			return
 		_inventory_lock_active = true
-		push_input_lock(INVENTORY_LOCK_ID)
+		push_input_lock(inventory_lock_id)
 		return
 	if not _inventory_lock_active:
 		return
 	_inventory_lock_active = false
-	pop_input_lock(INVENTORY_LOCK_ID)
+	pop_input_lock(inventory_lock_id)
+
+func _get_inventory_lock_id() -> StringName:
+	if _config == null:
+		return StringName()
+	return _config.inventory_lock_id

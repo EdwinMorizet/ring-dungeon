@@ -1,3 +1,4 @@
+# Handles chest interaction and rolls rewards such as items and currency.
 extends Node3D
 class_name ChestInteractable
 

@@ -1,3 +1,4 @@
+# Drives first-person player movement, look input, and core combat interactions.
 extends CharacterBody3D
 
 @export var walk_speed: float = 9.0

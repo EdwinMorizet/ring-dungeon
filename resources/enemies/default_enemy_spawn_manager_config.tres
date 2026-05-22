@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="EnemySpawnManagerConfig" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_spawn_manager_config.gd" id="1_enemy_cfg"]
+
+[resource]
+script = ExtResource("1_enemy_cfg")

@@ -1,3 +1,4 @@
+# Draws the center crosshair used by the first-person HUD.
 extends Control
 class_name HudCrosshair
 

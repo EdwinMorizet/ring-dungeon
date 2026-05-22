@@ -1,3 +1,4 @@
+# Orchestrates floor generation, building, and runtime floor state transitions.
 @tool
 extends Node3D
 class_name DungeonFloorController

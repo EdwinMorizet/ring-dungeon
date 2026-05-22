@@ -1,3 +1,4 @@
+# Generates dungeon layout data such as rooms, corridors, and tile maps.
 extends RefCounted
 class_name DungeonGenerator
 

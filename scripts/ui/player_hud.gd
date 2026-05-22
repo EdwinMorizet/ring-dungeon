@@ -1,3 +1,4 @@
+# Updates player HUD bars, status values, and combat-facing readouts.
 extends CanvasLayer
 class_name PlayerHud
 

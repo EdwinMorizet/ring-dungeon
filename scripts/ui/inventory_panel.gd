@@ -1,3 +1,4 @@
+# Handles inventory panel layout, slot bindings, and item/equipment presentation.
 extends CanvasLayer
 class_name InventoryPanel
 

@@ -1,3 +1,4 @@
+# Represents a physical world item that can be previewed, hovered, and picked up.
 extends Node3D
 class_name InventoryWorldItem
 

@@ -1,3 +1,4 @@
+# Implements core enemy behavior, damage handling, and death signaling.
 extends RigidBody3D
 class_name EnemyBasic
 

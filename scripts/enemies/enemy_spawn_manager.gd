@@ -1,22 +1,20 @@
+# Manages enemy spawning on each floor using progression-aware spawn rules.
 extends Node3D
 
-@export var base_enemy_count: int = 2
-@export var progression_step_for_extra_enemy: int = 2
-@export var max_enemy_count: int = 10
-@export var min_enemies_per_spawn_point: int = 1
-@export var max_enemies_per_spawn_point: int = 10
-@export var spawn_circle_radius: float = 2.5
-@export var spawn_position_attempts: int = 14
-@export_flags_3d_physics var spawn_validation_collision_mask: int = 1
-@export var floor_probe_height: float = 2.5
-@export var floor_probe_depth: float = 4.5
-@export var spawn_clearance_radius: float = 0.5
-@export var spawn_clearance_height: float = 1.0
-@export var min_spawn_distance_from_player: float = 8.0
-@export var allow_fallback_spawn: bool = true
+# Default parameter resource for enemy count scaling and spawn validation behavior.
+const DefaultEnemySpawnManagerConfig: EnemySpawnManagerConfig = preload("res://resources/enemies/default_enemy_spawn_manager_config.tres")
 
+# Active parameter resource for this autoload manager.
+var _config: EnemySpawnManagerConfig = DefaultEnemySpawnManagerConfig
 var _spawned_enemies: Array[RigidBody3D] = []
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+func set_config(config: EnemySpawnManagerConfig) -> void:
+	if config != null:
+		_config = config
+
+func reset_default_config() -> void:
+	_config = DefaultEnemySpawnManagerConfig
 
 func clear_spawned_enemies() -> void:
 	for enemy in _spawned_enemies:
@@ -53,8 +51,8 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 				continue
 			_spawn_enemy_at(parent_node, enemy_scene, spawn_position)
 
-	if _spawned_enemies.is_empty() and allow_fallback_spawn:
-		if fallback_spawn_position.distance_to(player_spawn_position) >= min_spawn_distance_from_player:
+	if _spawned_enemies.is_empty() and _config.allow_fallback_spawn:
+		if fallback_spawn_position.distance_to(player_spawn_position) >= _config.min_spawn_distance_from_player:
 			var fallback_count: int = _resolve_spawn_count_for_marker()
 			for _i in range(fallback_count):
 				var spawn_position: Vector3 = _resolve_spawn_position_in_circle(fallback_spawn_position, generated_root)
@@ -63,8 +61,8 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 				_spawn_enemy_at(parent_node, enemy_scene, spawn_position)
 
 func _resolve_spawn_position_in_circle(center_position: Vector3, generated_root: Node3D) -> Vector3:
-	var radius: float = maxf(spawn_circle_radius, 0.0)
-	var attempts: int = maxi(spawn_position_attempts, 1)
+	var radius: float = maxf(_config.spawn_circle_radius, 0.0)
+	var attempts: int = maxi(_config.spawn_position_attempts, 1)
 	for _attempt in range(attempts):
 		var candidate: Vector3 = center_position
 		if radius > 0.0:
@@ -83,14 +81,14 @@ func _project_point_to_dungeon_floor(candidate: Vector3, generated_root: Node3D)
 	var world_3d: World3D = get_world_3d()
 	if world_3d == null:
 		return Vector3.INF
-	var up_height: float = maxf(floor_probe_height, 0.1)
-	var down_depth: float = maxf(floor_probe_depth, 0.1)
+	var up_height: float = maxf(_config.floor_probe_height, 0.1)
+	var down_depth: float = maxf(_config.floor_probe_depth, 0.1)
 	var ray_from: Vector3 = candidate + Vector3.UP * up_height
 	var ray_to: Vector3 = candidate - Vector3.UP * down_depth
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_from, ray_to)
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
-	query.collision_mask = spawn_validation_collision_mask
+	query.collision_mask = _config.spawn_validation_collision_mask
 
 	var hit: Dictionary = world_3d.direct_space_state.intersect_ray(query)
 	if hit.is_empty():
@@ -111,14 +109,14 @@ func _has_spawn_clearance(spawn_position: Vector3) -> bool:
 	if world_3d == null:
 		return false
 	var sphere_shape: SphereShape3D = SphereShape3D.new()
-	sphere_shape.radius = maxf(spawn_clearance_radius, 0.1)
+	sphere_shape.radius = maxf(_config.spawn_clearance_radius, 0.1)
 
 	var shape_query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	shape_query.shape = sphere_shape
-	shape_query.transform = Transform3D(Basis.IDENTITY, spawn_position + Vector3.UP * maxf(spawn_clearance_height, 0.1))
+	shape_query.transform = Transform3D(Basis.IDENTITY, spawn_position + Vector3.UP * maxf(_config.spawn_clearance_height, 0.1))
 	shape_query.collide_with_areas = false
 	shape_query.collide_with_bodies = true
-	shape_query.collision_mask = spawn_validation_collision_mask
+	shape_query.collision_mask = _config.spawn_validation_collision_mask
 
 	var collisions: Array[Dictionary] = world_3d.direct_space_state.intersect_shape(shape_query, 1)
 	return collisions.is_empty()
@@ -126,12 +124,12 @@ func _has_spawn_clearance(spawn_position: Vector3) -> bool:
 func _resolve_required_marker_count(target_count: int) -> int:
 	if target_count <= 0:
 		return 0
-	var max_per_marker: int = maxi(maxi(min_enemies_per_spawn_point, max_enemies_per_spawn_point), 1)
+	var max_per_marker: int = maxi(maxi(_config.min_enemies_per_spawn_point, _config.max_enemies_per_spawn_point), 1)
 	return ceili(float(target_count) / float(max_per_marker))
 
 func _resolve_spawn_count_for_marker() -> int:
-	var min_count: int = maxi(min_enemies_per_spawn_point, 0)
-	var max_count: int = maxi(max_enemies_per_spawn_point, 0)
+	var min_count: int = maxi(_config.min_enemies_per_spawn_point, 0)
+	var max_count: int = maxi(_config.max_enemies_per_spawn_point, 0)
 	if max_count < min_count:
 		var swap_count: int = max_count
 		max_count = min_count
@@ -141,12 +139,12 @@ func _resolve_spawn_count_for_marker() -> int:
 	return _rng.randi_range(min_count, max_count)
 
 func _resolve_enemy_count(progression_index: int) -> int:
-	var safe_step: int = max(progression_step_for_extra_enemy, 1)
+	var safe_step: int = max(_config.progression_step_for_extra_enemy, 1)
 	var extra_enemies: int = 0
 	if progression_index > 0:
 		extra_enemies = progression_index / safe_step
-	var desired_count: int = base_enemy_count + extra_enemies
-	var upper_bound: int = max(max_enemy_count, base_enemy_count)
+	var desired_count: int = _config.base_enemy_count + extra_enemies
+	var upper_bound: int = max(_config.max_enemy_count, _config.base_enemy_count)
 	return clampi(desired_count, 0, upper_bound)
 
 func _collect_enemy_markers(generated_root: Node3D) -> Array[Marker3D]:
@@ -163,7 +161,7 @@ func _sort_markers_by_name(a: Marker3D, b: Marker3D) -> bool:
 
 func _filter_markers_by_distance(markers: Array[Marker3D], player_spawn_position: Vector3) -> Array[Marker3D]:
 	var filtered_markers: Array[Marker3D] = []
-	var min_distance: float = maxf(min_spawn_distance_from_player, 0.0)
+	var min_distance: float = maxf(_config.min_spawn_distance_from_player, 0.0)
 	for marker in markers:
 		if marker == null or not is_instance_valid(marker):
 			continue

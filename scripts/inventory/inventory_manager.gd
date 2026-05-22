@@ -1,13 +1,13 @@
+# Central inventory service for equipment slots, pickups, and world item drops.
 extends Node
 
 const WORLD_ITEM_SCENE: PackedScene = preload("res://scenes/items/inventory_world_item.tscn")
 const CURRENCY_PICKUP_SCENE: PackedScene = preload("res://scenes/items/currency_pickup.tscn")
+# Currency type ids are fixed protocol values used by pickup nodes.
 const CURRENCY_KIND_GOLD: int = 0
 const CURRENCY_KIND_GEMS: int = 1
-const LEFT_HAND_SLOT_COUNT: int = 4
-const RIGHT_HAND_SLOT_COUNT: int = 4
-const NEARBY_RADIUS: float = 4.0
-const DROP_CHANCE: float = 0.8
+# Default parameter resource for slot counts and drop/nearby behavior.
+const DefaultInventoryManagerConfig: InventoryManagerConfig = preload("res://resources/inventory/default_inventory_manager_config.tres")
 const ItemAffixGeneratorScript = preload("res://scripts/inventory/item_affix_generator.gd")
 
 signal inventory_open_changed(is_open: bool)
@@ -15,6 +15,8 @@ signal inventory_changed()
 signal nearby_items_changed()
 signal equipment_changed()
 
+# Active parameter resource for this autoload manager.
+var _config: InventoryManagerConfig = DefaultInventoryManagerConfig
 var _is_inventory_open: bool = false
 var _left_hand_slots: Array[InventoryItemDefinition] = []
 var _right_hand_slots: Array[InventoryItemDefinition] = []
@@ -24,10 +26,17 @@ var _player: Node3D = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _drop_counter: int = 0
 
+func set_config(config: InventoryManagerConfig) -> void:
+	if config != null:
+		_config = config
+
+func reset_default_config() -> void:
+	_config = DefaultInventoryManagerConfig
+
 func _ready() -> void:
 	_rng.randomize()
-	_left_hand_slots = _create_empty_slots(LEFT_HAND_SLOT_COUNT)
-	_right_hand_slots = _create_empty_slots(RIGHT_HAND_SLOT_COUNT)
+	_left_hand_slots = _create_empty_slots(maxi(_config.left_hand_slot_count, 0))
+	_right_hand_slots = _create_empty_slots(maxi(_config.right_hand_slot_count, 0))
 
 func _process(_delta: float) -> void:
 	_refresh_player_reference()
@@ -129,7 +138,7 @@ func clear_world_items() -> void:
 	inventory_changed.emit()
 
 func spawn_random_drop(spawn_position: Vector3, floor_depth: int = 0, floor_seed: int = 0) -> bool:
-	if _rng.randf() > DROP_CHANCE:
+	if _rng.randf() > clampf(_config.drop_chance, 0.0, 1.0):
 		return false
 	var drop_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	if floor_seed != 0:
@@ -351,7 +360,8 @@ func _refresh_nearby_items() -> void:
 			nearby_items_changed.emit()
 		return
 	var next_nearby_items: Array[InventoryWorldItem] = []
-	var max_distance_sq: float = NEARBY_RADIUS * NEARBY_RADIUS
+	var nearby_radius: float = maxf(_config.nearby_radius, 0.0)
+	var max_distance_sq: float = nearby_radius * nearby_radius
 	for world_item: InventoryWorldItem in _world_items:
 		if world_item == null or not is_instance_valid(world_item):
 			continue

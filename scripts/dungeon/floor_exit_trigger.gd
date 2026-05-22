@@ -1,3 +1,4 @@
+# Emits floor-exit events when the player reaches and activates the exit area.
 extends Area3D
 class_name FloorExitTrigger
 

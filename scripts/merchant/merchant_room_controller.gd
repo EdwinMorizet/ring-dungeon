@@ -1,3 +1,4 @@
+# Controls merchant-room flow including spawn point setup and exit handling.
 extends Node3D
 class_name MerchantRoomController
 

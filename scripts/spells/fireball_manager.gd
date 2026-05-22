@@ -1,10 +1,13 @@
+# Spawns and configures fireball casts using player stats and equipped items.
 extends Node
 
 const FireballProjectileScene: PackedScene = preload("res://scenes/spells/fireball.tscn")
+# Default parameter resource for fireball baseline stats.
 const DefaultFireballConfig: FireballConfig = preload("res://resources/spells/default_fireball_config.tres")
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
 const DEGREES_TO_RADIANS: float = PI / 180.0
 
+# Active parameter resource for this autoload manager.
 var _config: FireballConfig = DefaultFireballConfig
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 

@@ -1,3 +1,4 @@
+# Runs a quick balance sample to inspect ring and band generation outcomes.
 extends SceneTree
 
 const _SAMPLE_COUNT: int = 200

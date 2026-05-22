@@ -1,3 +1,4 @@
+# Builds the 3D dungeon scene geometry and gameplay markers from generated layout data.
 @tool
 extends RefCounted
 class_name DungeonBuilder3D

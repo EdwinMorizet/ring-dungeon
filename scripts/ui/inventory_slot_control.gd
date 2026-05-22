@@ -1,3 +1,4 @@
+# Represents one equipment slot control and handles equip/unequip interactions.
 extends Button
 class_name InventorySlotControl
 

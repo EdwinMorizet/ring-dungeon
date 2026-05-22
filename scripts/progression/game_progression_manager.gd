@@ -1,47 +1,60 @@
+# Manages run progression state, phase transitions, and floor config selection.
 extends Node
 
 const DungeonFloorConfig = preload("res://scripts/dungeon/dungeon_floor_config.gd")
 const FloorDifficultyTable = preload("res://scripts/progression/floor_difficulty_table.gd")
+# Default parameter resource for phase names and floor display baseline.
+const DefaultGameProgressionManagerConfig: GameProgressionManagerConfig = preload("res://resources/progression/default_game_progression_manager_config.tres")
 const DefaultDifficultyTable: FloorDifficultyTable = preload("res://resources/dungeon/default_floor_difficulty_table.tres")
 const DefaultFloorConfig: DungeonFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
-const START_FLOOR_DISPLAY: int = -10
 
 signal floor_changed(display_floor: int, progression_index: int, config_path: String)
 signal phase_changed(phase: StringName)
 
+# Active parameter resource for this autoload manager.
+var _config: GameProgressionManagerConfig = DefaultGameProgressionManagerConfig
 var _difficulty_table: FloorDifficultyTable = DefaultDifficultyTable
 var _progression_index: int = 0
-var _display_floor: int = START_FLOOR_DISPLAY
+var _display_floor: int = 0
 var _phase: StringName = &"dungeon"
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
+	_display_floor = _config.start_floor_display
+	_phase = _config.dungeon_phase
 	call_deferred("start_run")
+
+func set_config(config: GameProgressionManagerConfig) -> void:
+	if config != null:
+		_config = config
+
+func reset_default_config() -> void:
+	_config = DefaultGameProgressionManagerConfig
 
 func start_run() -> void:
 	_progression_index = 0
-	_display_floor = START_FLOOR_DISPLAY
-	_set_phase(&"dungeon")
+	_display_floor = _config.start_floor_display
+	_set_phase(_config.dungeon_phase)
 	_request_current_floor()
 
 func reset_run() -> void:
 	start_run()
 
 func complete_floor_exit() -> void:
-	if _phase != &"dungeon":
+	if _phase != _config.dungeon_phase:
 		return
-	_set_phase(&"merchant")
+	_set_phase(_config.merchant_phase)
 	var controller: DungeonFloorController = _get_floor_controller()
 	if controller != null:
 		controller.enter_merchant_room()
 
 func complete_merchant_exit() -> void:
-	if _phase != &"merchant":
+	if _phase != _config.merchant_phase:
 		return
 	_progression_index += 1
-	_display_floor = START_FLOOR_DISPLAY + _progression_index
-	_set_phase(&"dungeon")
+	_display_floor = _config.start_floor_display + _progression_index
+	_set_phase(_config.dungeon_phase)
 	_request_current_floor()
 
 func set_difficulty_table(table: FloorDifficultyTable) -> void:

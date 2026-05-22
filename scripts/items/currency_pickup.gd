@@ -1,3 +1,4 @@
+# Represents collectible world currency and applies rewards when collected.
 extends Area3D
 class_name CurrencyPickup
 

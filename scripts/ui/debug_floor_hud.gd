@@ -1,3 +1,4 @@
+# Displays runtime debug information for floor index, phase, and progression state.
 extends CanvasLayer
 class_name DebugFloorHud
 

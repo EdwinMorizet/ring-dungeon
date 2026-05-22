@@ -1,3 +1,4 @@
+# Defines inventory item data, item kinds, rarity, and stat-related metadata.
 extends Resource
 class_name InventoryItemDefinition
 

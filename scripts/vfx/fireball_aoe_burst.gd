@@ -1,3 +1,4 @@
+# Plays the expanding burst visual effect used by fireball area impacts.
 extends Node3D
 class_name FireballAoeBurst
 
