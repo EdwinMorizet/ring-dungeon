@@ -7,6 +7,26 @@ applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/playe
 
 Use this file as the source of truth for the 8-finger equipment loop and all stat math linked to rings (offense) and bands (defense).
 
+## Stat Emoji Legend
+
+Use these emoji prefixes whenever stats are shown in UI text, debug summaries, balance tables, or design notes.
+
+- `damage_mult`: 💥 Damage
+- `mana_cost_mult`: 🔷 Mana Cost
+- `proj_speed_mult`: 🚀 Projectile Speed
+- `gravity_influence_mult`: 🧲 Gravity
+- `cast_delay_mult`: ⏱ Cast Delay
+- `accuracy_deviation_flat`: 🎯 Accuracy Deviation (spread)
+- `bounces_flat`: 🪃 Bounce
+- `split_flat`: ✨ Split Projectile
+- `aoe_radius_flat`: 💣 AoE Radius
+- `pierce_flat`: 🗡 Pierce
+- `max_hp_flat`: ❤️ Max HP
+- `max_mp_flat`: 🔵 Max MP
+- `mana_regen_flat`: ♻️ Mana Regen
+- `max_ap_flat`: ⚡ Max AP
+- `speed_mult`: 👟 Move Speed
+
 ## Scope And Slot Rules
 
 - Keep exactly 8 equipped slots:
@@ -32,8 +52,20 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 
 - Rings can modify only fireball/combat casting behavior.
 - Support these modifier categories:
-  - Multipliers: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `cast_delay_mult`.
+  - Multipliers: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `gravity_influence_mult`, `cast_delay_mult`.
   - Flats: `accuracy_deviation_flat`, `bounces_flat`, `split_flat`, `aoe_radius_flat`, `pierce_flat`.
+
+### Ring Benefit To Trade-off Pairing Rules
+
+When a generated ring rolls one of these primary benefits, enforce the linked downside in the same item payload.
+
+- Better `damage_mult` must add both higher `mana_cost_mult` and higher `cast_delay_mult`.
+- Better `mana_cost_mult` (lower mana cost) must reduce `damage_mult`.
+- Faster `proj_speed_mult` must add worse `accuracy_deviation_flat` (less accurate).
+- Higher `split_flat` must reduce `damage_mult` and add worse `accuracy_deviation_flat`.
+- Higher `pierce_flat` must add higher `mana_cost_mult`.
+- Trade-off magnitude should scale with rarity tier and rolled benefit strength.
+- If a major trait injects one of these benefits, still apply its required trade-off pair unless the trait explicitly overrides this rule.
 
 ### Bands (Left Hand, Player Domain)
 
@@ -45,10 +77,10 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 ## Rarity And Affix Budgets
 
 - Use weighted rarity drops and affix budgets:
-  - Common: 65%, 1 benefit.
-  - Rare: 25%, 1 benefit + 1 trade-off.
-  - Epic: 8%, 2 benefits + 1 trade-off.
-  - Legendary: 2%, 2 benefits + 1 major trait.
+  - Common: 65%, 1 benefit + its required trade-off pair..
+  - Rare: 25%, 2 benefit + its required trade-off pair.
+  - Epic: 8%, 3 benefits + at least 1 required trade-off pair.
+  - Legendary: 2%, 4 benefits + 1 major trait + required trade-off pairs for rolled benefits.
 - Keep value multipliers tied to rarity:
   - Common: 1.0x.
   - Rare: 1.5x.
@@ -66,6 +98,7 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
   - Ring pools must remain fireball-focused.
   - Band pools must remain player-stat-focused.
 - Legendary generation should apply at least one distinct major trait behavior (for example split/pierce-centric outcomes) instead of only larger numeric rolls.
+- For ring generation, apply the benefit-to-trade-off pairing rules before filling any remaining rarity budget slots.
 
 ## Procedural Item Generation Flow
 
@@ -85,6 +118,9 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 - Use these principles:
   - Multipliers combine multiplicatively unless the design explicitly defines additive conversion.
   - Flat bonuses combine additively.
+  - Gravity influence uses multiplicative stacking where values below `1.0` produce a straighter arc and values above `1.0` produce a heavier drop.
+  - Gravity trade-off must stay positive: if `gravity_influence_mult` increases above `1.0`, grant a small runtime bonus to final damage and AoE.
+  - `aoe_radius_flat` must be quantized in 0.25 world-unit steps, with a minimum effective AoE radius of `1.0` world unit.
   - Accuracy deviation is additive and can be positive (worse spread) or negative (tighter spread).
   - Cast-delay handling must include a safe lower clamp to prevent zero/negative cooldown.
 - Use these baseline defaults:
@@ -132,6 +168,7 @@ Use this file as the source of truth for the 8-finger equipment loop and all sta
 - Fireball casting must respect both mana and AP resource checks.
 - Enemy scripts should apply player damage through a simple typed player damage API (`take_damage`) so band HP bonuses have live combat impact.
 - UI reflects rolled affixes and trade-offs clearly, including negative stats.
+- Keep stat labels emoji-first in player-facing and debug-facing strings (for example: `💥 Damage x1.15`, `❤️ Max HP +20`).
 
 ## Implementation Notes
 

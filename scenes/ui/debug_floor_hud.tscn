@@ -10,7 +10,7 @@ layer = 10
 offset_left = 12.0
 offset_top = 12.0
 offset_right = 360.0
-offset_bottom = 120.0
+offset_bottom = 190.0
 
 [node name="FloorLabel" type="Label" parent="MarginContainer"]
 text = "Floor: -10\nPhase: dungeon\nIndex: 0"

@@ -3,6 +3,7 @@ class_name FireballProjectile
 
 const DEFAULT_FIREBALL_CONFIG: FireballConfig = preload("res://resources/spells/default_fireball_config.tres")
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+const AOE_BURST_SCENE: PackedScene = preload("res://scenes/vfx/fireball_aoe_burst.tscn")
 
 @onready var _mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var _collision_shape: CollisionShape3D = $CollisionShape3D
@@ -103,14 +104,16 @@ func _apply_aoe_damage(excluded_target: Node = null, is_lesser: bool = false) ->
 	var explosion_shape: SphereShape3D = SphereShape3D.new()
 	var aoe_scale: float = RingBandConstantsScript.LESSER_EXPLOSION_AOE_SCALE if is_lesser else RingBandConstantsScript.GREATER_EXPLOSION_AOE_SCALE
 	var damage_scale: float = RingBandConstantsScript.LESSER_EXPLOSION_DAMAGE_SCALE if is_lesser else RingBandConstantsScript.GREATER_EXPLOSION_DAMAGE_SCALE
-	explosion_shape.radius = max(_config.aoe * aoe_scale, 0.1)
+	explosion_shape.radius = max(_config.aoe * aoe_scale, 1.0)
+	_spawn_aoe_burst(explosion_shape.radius, is_lesser)
 
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	query.shape = explosion_shape
 	query.transform = Transform3D(Basis.IDENTITY, global_position)
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
-	query.collision_mask = collision_mask
+	query.collision_mask = 0xFFFFFFFF
+	query.exclude = [get_rid()]
 
 	var results: Array[Dictionary] = world.direct_space_state.intersect_shape(query, 64)
 	for result: Dictionary in results:
@@ -130,3 +133,27 @@ func _apply_aoe_damage(excluded_target: Node = null, is_lesser: bool = false) ->
 			if collider_node.has_method("take_damage"):
 				var scaled_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale)), 0)
 				collider_node.call("take_damage", scaled_damage)
+
+func _spawn_aoe_burst(aoe_radius: float, is_lesser: bool) -> void:
+	if AOE_BURST_SCENE == null:
+		return
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var parent_node: Node = tree.current_scene
+	if parent_node == null:
+		parent_node = tree.root
+	var instance_node: Node = AOE_BURST_SCENE.instantiate()
+	if instance_node == null:
+		return
+	if not instance_node.has_method("play"):
+		instance_node.queue_free()
+		return
+	parent_node.add_child(instance_node)
+	if instance_node is Node3D:
+		(instance_node as Node3D).global_position = global_position
+	instance_node.call("play", aoe_radius, is_lesser)
+
+
+func _on_timer_timeout() -> void:
+	queue_free()

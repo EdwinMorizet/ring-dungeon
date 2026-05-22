@@ -9,6 +9,8 @@ From the DebugFloorHud overlay:
 1. F6: Spawn seeded items around player.
 2. F7: Print equipped modifier summary.
 3. F8: Run quick validation (one-key self-check).
+4. F9: Spawn seeded gold pickups around player.
+5. F10: Spawn seeded gems pickups around player.
 
 ## What Each Command Does
 
@@ -37,6 +39,18 @@ From the DebugFloorHud overlay:
     - preview list of generated items
   - Then prints full equipped summary.
 
+4. Spawn seeded gold (F9)
+- Calls: `InventoryManager.debug_spawn_seeded_gold(8, floor_depth, 2027, 2.2)`
+- Effect:
+  - Spawns deterministic gold pickups in a ring around player.
+  - Gold amounts scale with floor depth.
+
+5. Spawn seeded gems (F10)
+- Calls: `InventoryManager.debug_spawn_seeded_gems(8, floor_depth, 3037, 2.2)`
+- Effect:
+  - Spawns deterministic gems pickups in a ring around player.
+  - Gem amounts scale lightly with floor depth.
+
 ## Direct Script Calls
 
 You can also call these from debug scripts or editor console hooks:
@@ -44,6 +58,8 @@ You can also call these from debug scripts or editor console hooks:
 1. `InventoryManager.debug_spawn_seeded_items(count, floor_depth, floor_seed, radius)`
 2. `InventoryManager.debug_print_equipped_modifier_summary()`
 3. `InventoryManager.debug_run_quick_validation(floor_depth, floor_seed)`
+4. `InventoryManager.debug_spawn_seeded_gold(count, floor_depth, floor_seed, radius)`
+5. `InventoryManager.debug_spawn_seeded_gems(count, floor_depth, floor_seed, radius)`
 
 ## Expected Console Prefixes
 

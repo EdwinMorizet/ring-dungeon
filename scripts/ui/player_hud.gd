@@ -11,10 +11,14 @@ const _DEFAULT_MAX_AP: float = 100.0
 @export var current_health: float = _DEFAULT_MAX_HEALTH
 @export var current_mana: float = _DEFAULT_MAX_MANA
 @export var current_ap: float = _DEFAULT_MAX_AP
+@export var current_gold: int = 0
+@export var current_gems: int = 0
 
 @onready var _health_bar: ProgressBar = $Root/HealthContainer/VBox/HealthBar
 @onready var _mana_bar: ProgressBar = $Root/ManaContainer/VBox/ManaBar
 @onready var _ap_bar: ProgressBar = get_node_or_null("Root/APContainer/VBox/APBar") as ProgressBar
+@onready var _gold_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GoldValue") as Label
+@onready var _gems_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GemsValue") as Label
 
 func _ready() -> void:
 	_setup_bar_style(_health_bar, Color(0.88, 0.15, 0.15, 1.0))
@@ -24,6 +28,8 @@ func _ready() -> void:
 	set_health(current_health, max_health)
 	set_mana(current_mana, max_mana)
 	set_ap(current_ap, max_ap)
+	set_gold(current_gold)
+	set_gems(current_gems)
 
 func _process(_delta: float) -> void:
 	var tree: SceneTree = get_tree()
@@ -44,6 +50,10 @@ func _process(_delta: float) -> void:
 		var ap_current_value: float = float(player_node.call("get_current_ap"))
 		var ap_max_value: float = float(player_node.call("get_max_ap"))
 		set_ap(ap_current_value, ap_max_value)
+	if player_node.has_method("get_gold"):
+		set_gold(int(player_node.call("get_gold")))
+	if player_node.has_method("get_gems"):
+		set_gems(int(player_node.call("get_gems")))
 
 func set_health(value: float, maximum: float = -1.0) -> void:
 	if maximum > 0.0:
@@ -69,6 +79,16 @@ func set_ap(value: float, maximum: float = -1.0) -> void:
 	if _ap_bar != null:
 		_ap_bar.max_value = max_ap
 		_ap_bar.value = current_ap
+
+func set_gold(value: int) -> void:
+	current_gold = maxi(value, 0)
+	if _gold_value_label != null:
+		_gold_value_label.text = "GOLD: %d" % current_gold
+
+func set_gems(value: int) -> void:
+	current_gems = maxi(value, 0)
+	if _gems_value_label != null:
+		_gems_value_label.text = "GEMS: %d" % current_gems
 
 func _setup_bar_style(bar: ProgressBar, fill_color: Color) -> void:
 	var background_style: StyleBoxFlat = StyleBoxFlat.new()

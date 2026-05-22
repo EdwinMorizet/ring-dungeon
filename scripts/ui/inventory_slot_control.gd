@@ -1,6 +1,8 @@
 extends Button
 class_name InventorySlotControl
 
+const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+
 var _slot_kind: InventoryItemDefinition.ItemKind = InventoryItemDefinition.ItemKind.RING
 var _slot_index: int = 0
 
@@ -63,9 +65,11 @@ func _refresh() -> void:
 	if equipped_item != null:
 		text = "%s\n%s (%s)" % [slot_label, equipped_item.display_name, equipped_item.get_rarity_label()]
 		tooltip_text = equipped_item.build_tooltip_text()
+		_apply_rarity_color(equipped_item.rarity)
 	else:
 		text = "%s\nEmpty" % slot_label
 		tooltip_text = ""
+		_remove_rarity_color_overrides()
 
 func _get_slot_label() -> String:
 	if _slot_kind == InventoryItemDefinition.ItemKind.BAND:
@@ -94,3 +98,14 @@ func _gui_input(event: InputEvent) -> void:
 		if mouse_event.button_index == MOUSE_BUTTON_RIGHT and mouse_event.pressed:
 			if InventoryManager.unequip_item(_slot_kind, _slot_index):
 				_refresh()
+
+func _apply_rarity_color(rarity: InventoryItemDefinition.Rarity) -> void:
+	var rarity_color: Color = RingBandConstantsScript.get_rarity_color(int(rarity))
+	add_theme_color_override("font_color", rarity_color)
+	add_theme_color_override("font_hover_color", rarity_color)
+	add_theme_color_override("font_pressed_color", rarity_color)
+
+func _remove_rarity_color_overrides() -> void:
+	remove_theme_color_override("font_color")
+	remove_theme_color_override("font_hover_color")
+	remove_theme_color_override("font_pressed_color")

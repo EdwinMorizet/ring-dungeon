@@ -33,6 +33,8 @@ var _effective_max_ap: float = 100.0
 var _effective_ap_regen: float = 10.0
 var _effective_speed_multiplier: float = 1.0
 var _cast_cooldown_remaining: float = 0.0
+var _gold: int = 0
+var _gems: int = 0
 
 func _has_inventory_manager() -> bool:
 	return has_node("/root/InventoryManager") and InventoryManager != null
@@ -173,8 +175,38 @@ func get_mana_regen_rate() -> float:
 func get_current_ap() -> float:
 	return _current_ap
 
+func get_ap_regen_rate() -> float:
+	return _effective_ap_regen
+
+func get_speed_multiplier() -> float:
+	return _effective_speed_multiplier
+
+func get_actual_walk_speed() -> float:
+	return walk_speed * _effective_speed_multiplier
+
+func get_actual_sprint_speed() -> float:
+	return sprint_speed * _effective_speed_multiplier
+
 func get_max_ap() -> float:
 	return _effective_max_ap
+
+func get_gold() -> int:
+	return _gold
+
+func get_gems() -> int:
+	return _gems
+
+func add_gold(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	_gold += amount
+	return amount
+
+func add_gems(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	_gems += amount
+	return amount
 
 func take_damage(amount: int) -> void:
 	if amount <= 0 or _current_health <= 0.0:

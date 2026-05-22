@@ -19,7 +19,6 @@ ao_enabled = true
 ao_light_affect = 0.41
 ao_texture = ExtResource("2_dkrji")
 ao_texture_channel = 4
-heightmap_enabled = true
 heightmap_texture = ExtResource("3_l34k5")
 subsurf_scatter_strength = 0.11
 uv1_scale = Vector3(0.2, 0.2, 0.2)

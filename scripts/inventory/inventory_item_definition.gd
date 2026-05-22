@@ -26,6 +26,7 @@ enum Rarity {
 	&"damage_mult": 1.0,
 	&"mana_cost_mult": 1.0,
 	&"proj_speed_mult": 1.0,
+	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
 	&"bounces_flat": 0,
@@ -43,6 +44,7 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"damage_mult": 1.0,
 	&"mana_cost_mult": 1.0,
 	&"proj_speed_mult": 1.0,
+	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
 	&"bounces_flat": 0,
@@ -54,6 +56,42 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"mana_regen_flat": 0.0,
 	&"max_ap_flat": 0.0,
 	&"speed_mult": 1.0,
+}
+
+const _STAT_EMOJI_MAP: Dictionary = {
+	&"damage_mult": "💥",
+	&"mana_cost_mult": "🔷",
+	&"proj_speed_mult": "🚀",
+	&"gravity_influence_mult": "🧲",
+	&"cast_delay_mult": "⏱",
+	&"accuracy_deviation_flat": "🎯",
+	&"bounces_flat": "🪃",
+	&"split_flat": "✨",
+	&"aoe_radius_flat": "💣",
+	&"pierce_flat": "🗡",
+	&"max_hp_flat": "❤️",
+	&"max_mp_flat": "🔵",
+	&"mana_regen_flat": "♻️",
+	&"max_ap_flat": "⚡",
+	&"speed_mult": "👟",
+}
+
+const _STAT_LABEL_MAP: Dictionary = {
+	&"damage_mult": "Damage",
+	&"mana_cost_mult": "Mana Cost",
+	&"proj_speed_mult": "Projectile Speed",
+	&"gravity_influence_mult": "Gravity",
+	&"cast_delay_mult": "Cast Delay",
+	&"accuracy_deviation_flat": "Accuracy Deviation",
+	&"bounces_flat": "Bounce",
+	&"split_flat": "Split",
+	&"aoe_radius_flat": "AoE Radius",
+	&"pierce_flat": "Pierce",
+	&"max_hp_flat": "Max HP",
+	&"max_mp_flat": "Max MP",
+	&"mana_regen_flat": "Mana Regen",
+	&"max_ap_flat": "Max AP",
+	&"speed_mult": "Move Speed",
 }
 
 func is_ring() -> bool:
@@ -99,6 +137,12 @@ func get_slot_compatibility_hint() -> String:
 		return "Fits Right-Hand Ring Slots"
 	return "Fits Left-Hand Band Slots"
 
+static func get_stat_emoji(key: StringName) -> String:
+	return String(_STAT_EMOJI_MAP.get(key, "•"))
+
+static func get_stat_label(key: StringName) -> String:
+	return String(_STAT_LABEL_MAP.get(key, String(key)))
+
 func build_tooltip_text() -> String:
 	var lines: Array[String] = []
 	lines.append(display_name)
@@ -138,6 +182,7 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 		&"damage_mult",
 		&"mana_cost_mult",
 		&"proj_speed_mult",
+		&"gravity_influence_mult",
 		&"cast_delay_mult",
 		&"accuracy_deviation_flat",
 		&"bounces_flat",
@@ -162,7 +207,7 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 	return lines
 
 func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
-	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat":
+	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat" or key == &"gravity_influence_mult":
 		return float(value) < float(_DEFAULT_MODIFIERS.get(key, 0.0))
 	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult":
 		return float(value) > float(_DEFAULT_MODIFIERS.get(key, 1.0))
@@ -171,34 +216,39 @@ func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
 	return float(value) > 0.0
 
 func _format_modifier_line(key: StringName, value: Variant) -> String:
+	var emoji: String = get_stat_emoji(key)
+	var label: String = get_stat_label(key)
 	if key == &"damage_mult":
-		return "Damage x%.2f" % float(value)
+		return "%s %s x%.2f" % [emoji, label, float(value)]
 	if key == &"mana_cost_mult":
-		return "Mana Cost x%.2f" % float(value)
+		return "%s %s x%.2f" % [emoji, label, float(value)]
 	if key == &"proj_speed_mult":
-		return "Projectile Speed x%.2f" % float(value)
+		return "%s %s x%.2f" % [emoji, label, float(value)]
+	if key == &"gravity_influence_mult":
+		var gravity_desc: String = "straighter arc" if float(value) < 1.0 else "heavier drop"
+		return "%s %s x%.2f (%s)" % [emoji, label, float(value), gravity_desc]
 	if key == &"cast_delay_mult":
 		var pace: String = "faster" if float(value) < 1.0 else "slower"
-		return "Cast Delay x%.2f (%s)" % [float(value), pace]
+		return "%s %s x%.2f (%s)" % [emoji, label, float(value), pace]
 	if key == &"accuracy_deviation_flat":
 		var spread_desc: String = "tighter spread" if float(value) < 0.0 else "wider spread"
-		return "%+.2f Accuracy Deviation (%s)" % [float(value), spread_desc]
+		return "%s %s %+.2f (%s)" % [emoji, label, float(value), spread_desc]
 	if key == &"bounces_flat":
-		return "%+d Bounce" % int(value)
+		return "%s %s %+d" % [emoji, label, int(value)]
 	if key == &"split_flat":
-		return "%+d Split" % int(value)
+		return "%s %s %+d" % [emoji, label, int(value)]
 	if key == &"aoe_radius_flat":
-		return "%+.2f AoE Radius" % float(value)
+		return "%s %s %+.2f" % [emoji, label, float(value)]
 	if key == &"pierce_flat":
-		return "%+d Pierce" % int(value)
+		return "%s %s %+d" % [emoji, label, int(value)]
 	if key == &"max_hp_flat":
-		return "%+.0f Max HP" % float(value)
+		return "%s %s %+.0f" % [emoji, label, float(value)]
 	if key == &"max_mp_flat":
-		return "%+.0f Max MP" % float(value)
+		return "%s %s %+.0f" % [emoji, label, float(value)]
 	if key == &"mana_regen_flat":
-		return "%+.1f Mana Regen" % float(value)
+		return "%s %s %+.1f" % [emoji, label, float(value)]
 	if key == &"max_ap_flat":
-		return "%+.0f Max AP" % float(value)
+		return "%s %s %+.0f" % [emoji, label, float(value)]
 	if key == &"speed_mult":
-		return "Move Speed x%.2f" % float(value)
+		return "%s %s x%.2f" % [emoji, label, float(value)]
 	return "%s: %s" % [String(key), String(value)]

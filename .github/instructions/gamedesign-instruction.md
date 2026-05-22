@@ -21,6 +21,8 @@ Use this file as the broad gameplay umbrella. For Rings/Bands work, defer to spe
 	- `.github/instructions/rings-bands-tooltip-ui.instructions.md`
 - Inventory architecture and slot flow integration:
 	- `.github/instructions/inventory-system.instructions.md`
+- Chest interaction, loot rolling, and currency pickup behavior:
+	- `.github/instructions/chest-system.instructions.md`
 
 When guidance overlaps:
 
@@ -146,6 +148,12 @@ Enemy roster requirements:
 
 - Treasure chests: primarily room-based; may require keys; major source of high-tier Rings/Bands, diamonds, and large gold rewards.
 - Traps: place in rooms and corridors; must damage both player and enemies to enable tactical baiting.
+
+Current implementation note:
+
+- Chests are rectangle placeholders that open with `interact` (`E`) when player is in range.
+- Loot outcomes currently include: gold, diamonds, ring/band items, or empty.
+- Gold and diamonds use collision pickups, while ring/band items remain inventory world items.
 
 ## Implementation Guidance For Copilot
 

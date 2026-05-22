@@ -1,6 +1,8 @@
 extends Button
 class_name InventoryItemEntry
 
+const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+
 var _world_item: InventoryWorldItem = null
 
 func _make_custom_tooltip(for_text: String) -> Control:
@@ -40,6 +42,7 @@ func setup(world_item: InventoryWorldItem) -> void:
 func _refresh() -> void:
 	if _world_item == null or not is_instance_valid(_world_item) or _world_item.item_definition == null:
 		text = "Unknown"
+		_remove_rarity_color_overrides()
 		return
 	var item_definition: InventoryItemDefinition = _world_item.item_definition
 	var rarity_label: String = item_definition.get_rarity_label()
@@ -48,6 +51,18 @@ func _refresh() -> void:
 		summary = "%s | %s" % [summary, item_definition.major_trait_label]
 	text = "%s\n%s" % [item_definition.display_name, summary]
 	tooltip_text = item_definition.build_tooltip_text()
+	_apply_rarity_color(item_definition.rarity)
+
+func _apply_rarity_color(rarity: InventoryItemDefinition.Rarity) -> void:
+	var rarity_color: Color = RingBandConstantsScript.get_rarity_color(int(rarity))
+	add_theme_color_override("font_color", rarity_color)
+	add_theme_color_override("font_hover_color", rarity_color)
+	add_theme_color_override("font_pressed_color", rarity_color)
+
+func _remove_rarity_color_overrides() -> void:
+	remove_theme_color_override("font_color")
+	remove_theme_color_override("font_hover_color")
+	remove_theme_color_override("font_pressed_color")
 
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	if _world_item == null or not is_instance_valid(_world_item):

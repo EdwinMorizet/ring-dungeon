@@ -7,6 +7,26 @@ applyTo: "scripts/inventory/*.gd, scripts/spells/*.gd, scripts/player/player_fps
 
 Use this file to keep loot generation and stat aggregation deterministic and verifiable.
 
+## Stat Emoji Legend
+
+Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
+
+- 💥 Damage (`damage_mult`)
+- 🔷 Mana Cost (`mana_cost_mult`)
+- 🚀 Projectile Speed (`proj_speed_mult`)
+- 🧲 Gravity (`gravity_influence_mult`)
+- ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
+- 🪃 Bounce (`bounces_flat`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
+- 🗡 Pierce (`pierce_flat`)
+- ❤️ Max HP (`max_hp_flat`)
+- 🔵 Max MP (`max_mp_flat`)
+- ♻️ Mana Regen (`mana_regen_flat`)
+- ⚡ Max AP (`max_ap_flat`)
+- 👟 Move Speed (`speed_mult`)
+
 ## Determinism Requirements
 
 - All procedural item generation paths must support seeded random.
@@ -20,15 +40,23 @@ Use this file to keep loot generation and stat aggregation deterministic and ver
   - Verify approximate ratio order: common > rare > epic > legendary.
 - Affix budget tests per rarity:
   - Common has exactly 1 benefit.
-  - Rare has exactly 1 benefit and 1 trade-off.
-  - Epic has exactly 2 benefits and 1 trade-off.
-  - Legendary has 2 benefits and 1 major trait.
+  - Rare has exactly 1 benefit plus its required trade-off pair.
+  - Epic has exactly 2 benefits plus at least 1 required trade-off pair.
+  - Legendary has 2 benefits, 1 major trait, and required trade-off pairs for rolled benefits.
+- Ring trade-off pair tests:
+  - Better `damage_mult` also increases `mana_cost_mult` and `cast_delay_mult`.
+  - Better `mana_cost_mult` (lower cost) decreases `damage_mult`.
+  - Better `proj_speed_mult` worsens `accuracy_deviation_flat`.
+  - Higher `split_flat` decreases `damage_mult` and worsens `accuracy_deviation_flat`.
+  - Higher `pierce_flat` increases `mana_cost_mult`.
 - Slot domain tests:
   - Ring cannot equip in band slots.
   - Band cannot equip in ring slots.
   - Swap drops replaced item to world.
 - Stacking math tests:
   - Multipliers combine as configured.
+  - Gravity multiplier combines multiplicatively and applies to runtime projectile config.
+  - Gravity above baseline (> 1.0 multiplier) provides a small runtime bonus to damage and AoE.
   - Flats combine additively.
   - Cast delay clamps to minimum floor.
   - Accuracy deviation can go positive or negative.
@@ -42,16 +70,25 @@ Use this file to keep loot generation and stat aggregation deterministic and ver
 
 - Equipping and unequipping updates player-derived stats immediately.
 - Fireball shot config is derived per shot and does not mutate shared default resources.
+- Fireball runtime `gravity_influence` reflects equipped ring `gravity_influence_mult` and updates after equipment changes.
 - World item cleanup occurs on floor reset/transition.
+- Chest spawn count/selection remains deterministic per floor seed and progression depth.
+- Chest open interaction is one-shot and requires player-in-range + interact action.
+- Currency pickup collision radius behavior remains stable (target 0.25 default for gold/diamond pickups).
+- Gold and Diamonds values update immediately in player state and UI after pickup.
 - Band `mana_regen_flat` updates mana regeneration in live gameplay and reflects in HUD values.
 - Band `max_hp_flat` and `max_ap_flat` affect runtime resource caps immediately after equipment changes.
 - Fireball casts are rejected when mana or AP costs are not met.
 - Enemy-to-player damage path calls player `take_damage` and scales survivability with equipped HP bonuses.
+- HUD/inventory/debug stat strings keep canonical emoji prefixes for each stat key.
 
 ## Debug Hooks To Prefer
 
 - Add a debug command or method to spawn N seeded items for quick verification.
+- Add debug commands to spawn seeded gold/diamond pickups for economy checks.
 - Add a debug summary method that prints compiled modifiers for equipped slots.
+- Keep debug summary lines emoji-prefixed (for example: `🪃 Bounce +2`, `♻️ Mana Regen +0.4`).
+- When chest loot debug mode is enabled, keep per-open logs parseable and include running totals/averages.
 - Keep debug output structured and parseable.
 
 ## Test Style

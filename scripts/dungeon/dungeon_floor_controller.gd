@@ -9,6 +9,7 @@ const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config
 const PlayerScene = preload("res://scenes/player/player.tscn")
 const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
 const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
+const ChestScene = preload("res://scenes/items/chest_interactable.tscn")
 
 @export var config: DungeonFloorConfig = DefaultFloorConfig
 @export var use_multimesh: bool = true
@@ -103,6 +104,7 @@ func regenerate_now() -> void:
 	if Engine.is_editor_hint() and get_tree() != null:
 		editor_owner = get_tree().edited_scene_root
 	_generated_root = builder.build(self, layout, _build_builder_params(), editor_owner)
+	_spawn_chests_for_floor(generation_seed)
 	_spawn_or_reposition_player()
 	_spawn_enemies_for_floor(generation_seed)
 	_connect_floor_exit_trigger()
@@ -149,7 +151,7 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
-	if has_node("/root/InventoryManager"):
+	if is_inside_tree() and has_node("/root/InventoryManager"):
 		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager) and _enemy_spawn_manager.has_method("clear_spawned_enemies"):
@@ -219,10 +221,66 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 		enemy_spawn_fallback
 	)
 
+func _spawn_chests_for_floor(generation_seed: int) -> void:
+	if Engine.is_editor_hint():
+		return
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		return
+	if ChestScene == null:
+		return
+	var marker_nodes: Array[Node] = _generated_root.find_children("ChestCandidate_*", "Marker3D", true, false)
+	if marker_nodes.is_empty():
+		return
+
+	var chest_markers: Array[Marker3D] = []
+	for marker_node: Node in marker_nodes:
+		if marker_node is Marker3D:
+			chest_markers.append(marker_node as Marker3D)
+	if chest_markers.is_empty():
+		return
+
+	var desired_chest_count: int = clampi(1 + int(floor(float(_runtime_progression_index) / 4.0)), 1, 3)
+	var spawn_count: int = mini(desired_chest_count, chest_markers.size())
+	if spawn_count <= 0:
+		return
+
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = max(1, abs(generation_seed ^ (_runtime_progression_index * 193)))
+	for spawn_index: int in spawn_count:
+		var marker_choice_index: int = rng.randi_range(0, chest_markers.size() - 1)
+		var marker: Marker3D = chest_markers[marker_choice_index]
+		chest_markers.remove_at(marker_choice_index)
+
+		var chest_node: Node = ChestScene.instantiate()
+		if not chest_node is Node3D:
+			chest_node.queue_free()
+			continue
+		var chest: Node3D = chest_node as Node3D
+		chest.name = "ChestInteractable_%d" % spawn_index
+		_generated_root.add_child(chest)
+		chest.global_position = marker.global_position + Vector3.UP * 0.42
+		var chest_seed: int = _build_chest_seed(generation_seed, marker.global_position, spawn_index)
+		if chest.has_method("configure"):
+			chest.call("configure", _runtime_progression_index, generation_seed, chest_seed)
+
+func _build_chest_seed(generation_seed: int, marker_position: Vector3, spawn_index: int) -> int:
+	var quantized_x: int = int(roundf(marker_position.x * 100.0))
+	var quantized_y: int = int(roundf(marker_position.y * 100.0))
+	var quantized_z: int = int(roundf(marker_position.z * 100.0))
+	var combined: int = generation_seed
+	combined = int(combined ^ (_runtime_progression_index * 239))
+	combined = int(combined ^ (spawn_index * 977))
+	combined = int(combined ^ quantized_x)
+	combined = int(combined ^ (quantized_y << 3))
+	combined = int(combined ^ (quantized_z << 5))
+	if combined == 0:
+		combined = 1
+	return abs(combined)
+
 func _ensure_enemy_spawn_manager() -> void:
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
 		return
-	if not has_node("/root/EnemySpawnManager"):
+	if not is_inside_tree() or not has_node("/root/EnemySpawnManager"):
 		_enemy_spawn_manager = null
 		return
 	_enemy_spawn_manager = get_node("/root/EnemySpawnManager")

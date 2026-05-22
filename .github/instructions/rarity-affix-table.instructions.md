@@ -7,6 +7,25 @@ applyTo: "scripts/inventory/*.gd, scripts/progression/*.gd, scripts/merchant/*.g
 
 Use this file for numeric balance constants and table-driven rarity behavior.
 
+## Stat Emoji Legend
+
+Use canonical emoji tokens in stat tables, generated name tokens, debug previews, and design notes.
+
+- 💥 Damage (`damage_mult`)
+- 🔷 Mana Cost (`mana_cost_mult`)
+- 🚀 Projectile Speed (`proj_speed_mult`)
+- ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
+- 🪃 Bounce (`bounces_flat`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
+- 🗡 Pierce (`pierce_flat`)
+- ❤️ Max HP (`max_hp_flat`)
+- 🔵 Max MP (`max_mp_flat`)
+- ♻️ Mana Regen (`mana_regen_flat`)
+- ⚡ Max AP (`max_ap_flat`)
+- 👟 Move Speed (`speed_mult`)
+
 ## Canonical Rarity Weights
 
 - `COMMON_DROP_WEIGHT = 65`
@@ -17,9 +36,20 @@ Use this file for numeric balance constants and table-driven rarity behavior.
 ## Canonical Affix Budgets
 
 - `COMMON`: 1 benefit, 0 trade-off, 0 major trait.
-- `RARE`: 1 benefit, 1 trade-off, 0 major trait.
-- `EPIC`: 2 benefits, 1 trade-off, 0 major trait.
-- `LEGENDARY`: 2 benefits, 0 to 1 trade-off, 1 major trait.
+- `RARE`: 1 benefit + its required trade-off pair, 0 major trait.
+- `EPIC`: 2 benefits + at least 1 required trade-off pair, 0 major trait.
+- `LEGENDARY`: 2 benefits + 1 major trait + required trade-off pairs for rolled benefits.
+
+## Canonical Ring Trade-off Pairs
+
+Apply these links during ring affix compilation.
+
+- Better `damage_mult` requires higher `mana_cost_mult` and higher `cast_delay_mult`.
+- Better `mana_cost_mult` (lower mana cost) requires lower `damage_mult`.
+- Better `proj_speed_mult` requires worse `accuracy_deviation_flat`.
+- Better `split_flat` requires lower `damage_mult` and worse `accuracy_deviation_flat`.
+- Better `pierce_flat` requires higher `mana_cost_mult`.
+- Required pairs are mandatory constraints, not optional random trade-off picks.
 
 ## Canonical Value Multipliers
 
@@ -57,10 +87,12 @@ The GDD defines these ranges, but some source values are embedded as images. Kee
 - Store rarity metadata in one table and query by enum/string key.
 - Use weighted roll helper functions instead of duplicated `match` trees.
 - Keep floor-depth scaling as a pure function of depth and base weights.
+- For rings, resolve required trade-off pairs first, then fill remaining budget with optional affixes.
 
 ## Naming And Gold Value
 
 - Build item names from ordered affix tokens plus base type.
+- If affix tokens include stat shorthand, use canonical emoji in preview/debug names for readability.
 - Gold value should be deterministic from:
   - base value
   - rarity value multiplier

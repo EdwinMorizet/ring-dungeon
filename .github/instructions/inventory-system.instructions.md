@@ -5,11 +5,40 @@ applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/playe
 
 # Inventory System Guidelines
 
+## Stat Emoji Legend
+
+Use these stat emojis consistently in inventory UI strings, equip previews, and debug output.
+
+- 💥 Damage (`damage_mult`)
+- 🔷 Mana Cost (`mana_cost_mult`)
+- 🚀 Projectile Speed (`proj_speed_mult`)
+- ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
+- 🪃 Bounce (`bounces_flat`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
+- 🗡 Pierce (`pierce_flat`)
+- ❤️ Max HP (`max_hp_flat`)
+- 🔵 Max MP (`max_mp_flat`)
+- ♻️ Mana Regen (`mana_regen_flat`)
+- ⚡ Max AP (`max_ap_flat`)
+- 👟 Move Speed (`speed_mult`)
+
 - Keep inventory logic centralized in the InventoryManager autoload:
   - Inventory open and close state.
   - Left hand slots (4 bands).
   - Right hand slots (4 rings).
   - Nearby world item tracking and equip validation.
+- Keep currency ownership and flow explicit:
+  - Player stores authoritative Gold and Diamonds values.
+  - InventoryManager provides helper APIs to add/read player currency from other systems.
+  - HUD and inventory panel read currency through player or InventoryManager-facing methods.
+- Keep pickup domains separate:
+  - Ring/Band world items use inventory world item flow and equip/swap logic.
+  - Gold/Diamonds use collision pickup flow with a small radius (default 0.25).
+- Keep chest rewards interoperable with inventory flow:
+  - Chest item drops must use existing InventoryManager world-item spawn paths.
+  - Chest currency rewards must use dedicated currency pickup spawn paths.
 - Do not declare class_name with the same name as an autoload singleton script. Access the autoload as the runtime singleton to avoid class/singleton symbol collisions.
 - Use strongly typed GDScript for variables, function arguments, return values, and signals.
 - Keep gameplay constants explicit and easy to tune:
@@ -28,5 +57,6 @@ applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/playe
 - Apply fireball modifiers per shot using derived values, and avoid mutating shared config resources in place.
 - Keep player resource ownership in player code: mana and AP are both valid cast gates when enabled by gameplay tuning.
 - Keep inventory UI scripts focused on presentation and interaction wiring; keep game-state ownership in InventoryManager.
+- Keep stat presentation emoji-first and label-consistent across inventory panel, tooltips, and HUD summaries.
 - On floor regeneration or room transitions, clear runtime world inventory items to prevent stale pickup nodes.
 - Treat `.github/instructions/rings-bands-mechanics.instructions.md` as the gameplay rules source of truth for rarity budgets, affix composition, and stacking math.

@@ -12,7 +12,7 @@ func _ready() -> void:
 			manager.phase_changed.connect(_on_phase_changed)
 		_refresh(manager)
 	else:
-		_label.text = "Floor: N/A\nPhase: N/A\nF6: Spawn Seeded Items\nF7: Print Modifier Summary\nF8: Quick Validation"
+		_label.text = "Floor: N/A\nPhase: N/A\nF6: Spawn Seeded Items\nF7: Print Modifier Summary\nF8: Quick Validation\nF9: Spawn Seeded Gold\nF10: Spawn Seeded Gems"
 
 func _exit_tree() -> void:
 	var manager: Node = _get_manager()
@@ -39,6 +39,7 @@ func _refresh(manager: Node) -> void:
 		String(manager.call("get_phase")),
 		int(manager.call("get_progression_index")),
 	]
+	_label.text += "\nF9: Spawn Seeded Gold\nF10: Spawn Seeded Gems"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:
@@ -54,6 +55,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if key_event.keycode == KEY_F8:
 		_run_quick_validation()
+		return
+	if key_event.keycode == KEY_F9:
+		_spawn_debug_gold()
+		return
+	if key_event.keycode == KEY_F10:
+		_spawn_debug_gems()
 
 func _spawn_debug_items() -> void:
 	if not has_node("/root/InventoryManager"):
@@ -77,6 +84,24 @@ func _run_quick_validation() -> void:
 	if manager != null:
 		floor_depth = int(manager.call("get_progression_index"))
 	InventoryManager.debug_run_quick_validation(floor_depth, 1337)
+
+func _spawn_debug_gold() -> void:
+	if not has_node("/root/InventoryManager"):
+		return
+	var manager: Node = _get_manager()
+	var floor_depth: int = 0
+	if manager != null:
+		floor_depth = int(manager.call("get_progression_index"))
+	InventoryManager.debug_spawn_seeded_gold(8, floor_depth, 2027, 2.2)
+
+func _spawn_debug_gems() -> void:
+	if not has_node("/root/InventoryManager"):
+		return
+	var manager: Node = _get_manager()
+	var floor_depth: int = 0
+	if manager != null:
+		floor_depth = int(manager.call("get_progression_index"))
+	InventoryManager.debug_spawn_seeded_gems(8, floor_depth, 3037, 2.2)
 
 func _get_manager() -> Node:
 	if has_node("/root/GameProgressionManager"):

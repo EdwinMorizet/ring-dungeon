@@ -18,12 +18,20 @@ const EPIC_STAT_SCALE_MAX: float = 1.65
 const LEGENDARY_STAT_SCALE_MIN: float = 1.65
 const LEGENDARY_STAT_SCALE_MAX: float = 2.10
 
+const REQUIRED_TRADEOFF_BASE_COMMON: float = 1.00
+const REQUIRED_TRADEOFF_BASE_RARE: float = 0.93
+const REQUIRED_TRADEOFF_BASE_EPIC: float = 0.86
+const REQUIRED_TRADEOFF_BASE_LEGENDARY: float = 0.80
+const REQUIRED_TRADEOFF_STACK_STEP: float = 0.10
+
 const CAST_DELAY_MIN_SECONDS: float = 0.12
 const LESSER_EXPLOSION_DAMAGE_SCALE: float = 0.55
 const LESSER_EXPLOSION_AOE_SCALE: float = 0.72
 const GREATER_EXPLOSION_DAMAGE_SCALE: float = 1.00
 const GREATER_EXPLOSION_AOE_SCALE: float = 1.00
 const SELF_GREATER_EXPLOSION_DAMAGE_SCALE: float = 0.40
+const GRAVITY_TRADEOFF_DAMAGE_GAIN_PER_EXTRA: float = 0.25
+const GRAVITY_TRADEOFF_AOE_GAIN_PER_EXTRA: float = 0.18
 
 const MAX_SPLIT_COUNT: int = 3
 const MAX_PIERCE_COUNT: int = 5
@@ -73,3 +81,16 @@ static func get_rarity_color(rarity: int) -> Color:
 	if RARITY_COLORS.has(rarity):
 		return RARITY_COLORS[rarity]
 	return RARITY_COLORS[InventoryItemDefinition.Rarity.COMMON]
+
+static func get_required_tradeoff_scale(rarity: int, required_tradeoff_count: int) -> float:
+	var rarity_base: float = REQUIRED_TRADEOFF_BASE_COMMON
+	match rarity:
+		InventoryItemDefinition.Rarity.RARE:
+			rarity_base = REQUIRED_TRADEOFF_BASE_RARE
+		InventoryItemDefinition.Rarity.EPIC:
+			rarity_base = REQUIRED_TRADEOFF_BASE_EPIC
+		InventoryItemDefinition.Rarity.LEGENDARY:
+			rarity_base = REQUIRED_TRADEOFF_BASE_LEGENDARY
+	var overflow_count: int = maxi(required_tradeoff_count - 1, 0)
+	var attenuation: float = 1.0 / (1.0 + REQUIRED_TRADEOFF_STACK_STEP * float(overflow_count))
+	return rarity_base * attenuation

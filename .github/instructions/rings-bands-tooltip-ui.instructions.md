@@ -7,6 +7,26 @@ applyTo: "scripts/ui/*.gd, scripts/inventory/*.gd, scenes/ui/*.tscn"
 
 Use this file for ring/band item presentation and readability standards.
 
+## Stat Emoji Legend
+
+Prefix every stat line with the canonical stat emoji.
+
+- 💥 Damage (`damage_mult`)
+- 🔷 Mana Cost (`mana_cost_mult`)
+- 🚀 Projectile Speed (`proj_speed_mult`)
+- 🧲 Gravity (`gravity_influence_mult`)
+- ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
+- 🪃 Bounce (`bounces_flat`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
+- 🗡 Pierce (`pierce_flat`)
+- ❤️ Max HP (`max_hp_flat`)
+- 🔵 Max MP (`max_mp_flat`)
+- ♻️ Mana Regen (`mana_regen_flat`)
+- ⚡ Max AP (`max_ap_flat`)
+- 👟 Move Speed (`speed_mult`)
+
 ## Tooltip Content Order
 
 - Header:
@@ -26,16 +46,17 @@ Use this file for ring/band item presentation and readability standards.
 - Use stable prefixes and signs:
   - `+` for positive flat or beneficial reduction.
   - `-` for negative flat or harmful increase.
+- Place emoji first, then localized stat label.
 - Distinguish flat versus multiplier clearly:
-  - Flat example: `+2 Bounce`.
-  - Multiplier example: `Damage x1.15`.
+  - Flat example: `🪃 Bounce +2`.
+  - Multiplier example: `💥 Damage x1.15`.
 - Resource lines should be explicit:
-  - `Max HP`, `Max MP`, `Mana Regen`, and `Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.
+  - `❤️ Max HP`, `🔵 Max MP`, `♻️ Mana Regen`, and `⚡ Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.
 - For cast delay, show player-friendly meaning:
-  - Lower delay is faster fire rate.
+  - `⏱` Lower delay is faster fire rate.
 - For accuracy deviation, include direction language:
-  - negative deviation means tighter spread.
-  - positive deviation means wider spread.
+  - `🎯` negative deviation means tighter spread.
+  - `🎯` positive deviation means wider spread.
 
 ## Color And Rarity Mapping
 

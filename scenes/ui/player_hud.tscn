@@ -30,6 +30,24 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_crosshair")
 
+[node name="CurrencyContainer" type="MarginContainer" parent="Root"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 284.0
+offset_bottom = 90.0
+
+[node name="VBox" type="VBoxContainer" parent="Root/CurrencyContainer"]
+layout_mode = 2
+
+[node name="GoldValue" type="Label" parent="Root/CurrencyContainer/VBox"]
+layout_mode = 2
+text = "GOLD: 0"
+
+[node name="GemsValue" type="Label" parent="Root/CurrencyContainer/VBox"]
+layout_mode = 2
+text = "GEMS: 0"
+
 [node name="ManaContainer" type="MarginContainer" parent="Root" unique_id=263483851]
 layout_mode = 0
 anchor_top = 1.0

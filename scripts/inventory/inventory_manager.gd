@@ -1,6 +1,9 @@
 extends Node
 
 const WORLD_ITEM_SCENE: PackedScene = preload("res://scenes/items/inventory_world_item.tscn")
+const CURRENCY_PICKUP_SCENE: PackedScene = preload("res://scenes/items/currency_pickup.tscn")
+const CURRENCY_KIND_GOLD: int = 0
+const CURRENCY_KIND_GEMS: int = 1
 const LEFT_HAND_SLOT_COUNT: int = 4
 const RIGHT_HAND_SLOT_COUNT: int = 4
 const NEARBY_RADIUS: float = 4.0
@@ -158,6 +161,62 @@ func spawn_world_item(item_definition: InventoryItemDefinition, spawn_position: 
 	register_world_item(world_item)
 	return world_item
 
+func spawn_currency_pickup(currency_kind: int, amount: int, spawn_position: Vector3, parent_node: Node = null) -> Node3D:
+	if CURRENCY_PICKUP_SCENE == null or amount <= 0:
+		return null
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var resolved_parent: Node = parent_node
+	if resolved_parent == null:
+		resolved_parent = tree.current_scene
+	if resolved_parent == null:
+		resolved_parent = tree.root
+	var instance_node: Node = CURRENCY_PICKUP_SCENE.instantiate()
+	if not instance_node is Node3D:
+		instance_node.queue_free()
+		return null
+	var pickup: Node3D = instance_node as Node3D
+	resolved_parent.add_child(pickup)
+	pickup.global_position = spawn_position
+	if pickup.has_method("configure"):
+		pickup.call("configure", currency_kind, amount)
+	return pickup
+
+func spawn_gold_pickup(amount: int, spawn_position: Vector3, parent_node: Node = null) -> Node3D:
+	return spawn_currency_pickup(CURRENCY_KIND_GOLD, amount, spawn_position, parent_node)
+
+func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node = null) -> Node3D:
+	return spawn_currency_pickup(CURRENCY_KIND_GEMS, amount, spawn_position, parent_node)
+
+func add_player_gold(amount: int) -> int:
+	var player_node: Node = _resolve_player_node()
+	if player_node == null or not player_node.has_method("add_gold"):
+		return 0
+	var added: int = int(player_node.call("add_gold", maxi(amount, 0)))
+	inventory_changed.emit()
+	return added
+
+func add_player_gems(amount: int) -> int:
+	var player_node: Node = _resolve_player_node()
+	if player_node == null or not player_node.has_method("add_gems"):
+		return 0
+	var added: int = int(player_node.call("add_gems", maxi(amount, 0)))
+	inventory_changed.emit()
+	return added
+
+func get_player_gold() -> int:
+	var player_node: Node = _resolve_player_node()
+	if player_node == null or not player_node.has_method("get_gold"):
+		return 0
+	return int(player_node.call("get_gold"))
+
+func get_player_gems() -> int:
+	var player_node: Node = _resolve_player_node()
+	if player_node == null or not player_node.has_method("get_gems"):
+		return 0
+	return int(player_node.call("get_gems"))
+
 func get_fireball_damage_multiplier() -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
@@ -170,6 +229,13 @@ func get_fireball_projectile_speed_multiplier() -> float:
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
 			multiplier *= max(item_definition.get_modifier_float(&"proj_speed_mult", 1.0), 0.0)
+	return multiplier
+
+func get_fireball_gravity_multiplier() -> float:
+	var multiplier: float = 1.0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null:
+			multiplier *= max(item_definition.get_modifier_float(&"gravity_influence_mult", 1.0), 0.0)
 	return multiplier
 
 func get_fireball_mana_cost_multiplier() -> float:
@@ -265,9 +331,6 @@ func get_fireball_speed_multiplier() -> float:
 func get_fireball_accuracy_bonus() -> float:
 	return -get_fireball_accuracy_deviation_flat()
 
-func get_fireball_gravity_multiplier() -> float:
-	return 1.0
-
 func _refresh_player_reference() -> void:
 	if _player != null and is_instance_valid(_player):
 		return
@@ -280,6 +343,12 @@ func _refresh_player_reference() -> void:
 		_player = player_candidate as Node3D
 		return
 	_player = null
+
+func _resolve_player_node() -> Node:
+	_refresh_player_reference()
+	if _player != null and is_instance_valid(_player):
+		return _player
+	return null
 
 func _refresh_nearby_items() -> void:
 	var player: Node3D = _player
@@ -377,6 +446,12 @@ func debug_spawn_seeded_items(count: int, floor_depth: int = 0, floor_seed: int 
 		var item_definition: InventoryItemDefinition = _create_random_item_definition(floor_depth, local_rng)
 		spawn_world_item(item_definition, spawn_position)
 
+func debug_spawn_seeded_gold(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
+	_debug_spawn_seeded_currency(CURRENCY_KIND_GOLD, count, floor_depth, floor_seed, radius)
+
+func debug_spawn_seeded_gems(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
+	_debug_spawn_seeded_currency(CURRENCY_KIND_GEMS, count, floor_depth, floor_seed, radius)
+
 func debug_print_equipped_modifier_summary() -> void:
 	var lines: Array[String] = []
 	lines.append("[RingsBands] Equipped Summary")
@@ -396,6 +471,7 @@ func debug_print_equipped_modifier_summary() -> void:
 	lines.append("damage_mult=%.3f" % get_fireball_damage_multiplier())
 	lines.append("mana_cost_mult=%.3f" % get_fireball_mana_cost_multiplier())
 	lines.append("proj_speed_mult=%.3f" % get_fireball_projectile_speed_multiplier())
+	lines.append("gravity_influence_mult=%.3f" % get_fireball_gravity_multiplier())
 	lines.append("cast_delay_mult=%.3f" % get_fireball_cast_delay_multiplier())
 	lines.append("accuracy_deviation_flat=%+.3f" % get_fireball_accuracy_deviation_flat())
 	lines.append("bounces_flat=%d" % get_fireball_bounce_bonus())
@@ -449,3 +525,34 @@ func debug_run_quick_validation(floor_depth: int = 0, floor_seed: int = 1337) ->
 		lines.append("preview: %s" % " | ".join(preview_lines))
 	print("\n".join(lines))
 	debug_print_equipped_modifier_summary()
+
+func _debug_spawn_seeded_currency(currency_kind: int, count: int, floor_depth: int, floor_seed: int, radius: float) -> void:
+	var spawn_count: int = maxi(count, 0)
+	if spawn_count <= 0:
+		return
+	var center: Vector3 = _get_player_spawn_position()
+	for index: int in spawn_count:
+		var local_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		local_rng.seed = _build_drop_seed(center + Vector3(float(index), 0.0, 0.0), floor_depth, floor_seed + index)
+		var angle: float = TAU * float(index) / max(float(spawn_count), 1.0)
+		var offset: Vector3 = Vector3(cos(angle), 0.0, sin(angle)) * max(radius, 0.2)
+		var spawn_position: Vector3 = center + offset + Vector3.UP * 0.4
+		var amount: int = _roll_currency_amount(currency_kind, floor_depth, local_rng)
+		spawn_currency_pickup(currency_kind, amount, spawn_position)
+
+func _roll_currency_amount(currency_kind: int, floor_depth: int, rng: RandomNumberGenerator) -> int:
+	var safe_depth: int = maxi(floor_depth, 0)
+	if currency_kind == CURRENCY_KIND_GEMS:
+		var gems_min: int = 1 + int(floor(float(safe_depth) / 9.0))
+		var gems_max: int = maxi(2 + int(floor(float(safe_depth) / 3.5)), gems_min)
+		var gems_amount: int = rng.randi_range(gems_min, gems_max)
+		if safe_depth >= 12 and rng.randf() < 0.12:
+			gems_amount += 1
+		return gems_amount
+	var gold_tier: int = int(floor(float(safe_depth) / 5.0))
+	var gold_min: int = 8 + safe_depth + gold_tier * 2
+	var gold_max: int = maxi(20 + safe_depth * 2 + gold_tier * 5, gold_min)
+	var gold_amount: int = rng.randi_range(gold_min, gold_max)
+	if rng.randf() < clampf(0.03 + float(safe_depth) * 0.007, 0.03, 0.18):
+		gold_amount += rng.randi_range(2 + gold_tier, 6 + safe_depth)
+	return gold_amount

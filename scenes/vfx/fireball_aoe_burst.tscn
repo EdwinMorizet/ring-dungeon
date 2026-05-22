@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/fireball_aoe_burst.gd" id="1_fireball_aoe_burst"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_aoe"]
+radial_segments = 24
+rings = 12
+radius = 1.0
+height = 2.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aoe"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.45, 0.12, 0.35)
+emission_enabled = true
+emission = Color(1, 0.5, 0.15, 1)
+emission_energy_multiplier = 2.5
+cull_mode = 2
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_aoe"]
+emission_shape = 1
+emission_sphere_radius = 0.2
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 2.0
+initial_velocity_max = 7.5
+scale_min = 0.05
+scale_max = 0.18
+color = Color(1, 0.55, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_particle"]
+radial_segments = 8
+rings = 4
+radius = 0.05
+height = 0.1
+
+[node name="FireballAoeBurst" type="Node3D"]
+script = ExtResource("1_fireball_aoe_burst")
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_aoe")
+cast_shadow = 0
+surface_material_override/0 = SubResource("StandardMaterial3D_aoe")
+transparency = 0.0
+
+[node name="BurstParticles" type="GPUParticles3D" parent="."]
+emitting = false
+amount = 20
+lifetime = 0.28
+one_shot = true
+explosiveness = 1.0
+visibility_aabb = AABB(-3, -3, -3, 6, 6, 6)
+process_material = SubResource("ParticleProcessMaterial_aoe")
+draw_pass_1 = SubResource("SphereMesh_particle")

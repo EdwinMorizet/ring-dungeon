@@ -19,7 +19,6 @@ ao_enabled = true
 ao_light_affect = 0.5
 ao_texture = ExtResource("2_qrwws")
 ao_texture_channel = 4
-heightmap_enabled = true
 heightmap_deep_parallax = true
 heightmap_min_layers = 8
 heightmap_max_layers = 32

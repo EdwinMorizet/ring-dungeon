@@ -22,10 +22,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -260.0
-offset_right = 320.0
-offset_bottom = 260.0
+offset_left = -380.0
+offset_top = -320.0
+offset_right = 380.0
+offset_bottom = 320.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -73,6 +73,94 @@ text = "RIGHT HAND: RINGS"
 layout_mode = 2
 columns = 2
 
+[node name="SummaryRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BandSummary" type="VBoxContainer" parent="Root/Panel/Margin/VBox/SummaryRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BandSummaryTitle" type="Label" parent="Root/Panel/Margin/VBox/SummaryRow/BandSummary"]
+layout_mode = 2
+text = "LEFT MODIFIERS (BANDS)"
+
+[node name="BandSummaryScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/SummaryRow/BandSummary"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 110)
+vertical_scroll_mode = 1
+
+[node name="BandSummaryValue" type="Label" parent="Root/Panel/Margin/VBox/SummaryRow/BandSummary/BandSummaryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+text = "None equipped"
+
+[node name="RingSummary" type="VBoxContainer" parent="Root/Panel/Margin/VBox/SummaryRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RingSummaryTitle" type="Label" parent="Root/Panel/Margin/VBox/SummaryRow/RingSummary"]
+layout_mode = 2
+text = "RIGHT MODIFIERS (RINGS)"
+
+[node name="RingSummaryScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/SummaryRow/RingSummary"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 110)
+vertical_scroll_mode = 1
+
+[node name="RingSummaryValue" type="Label" parent="Root/Panel/Margin/VBox/SummaryRow/RingSummary/RingSummaryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+text = "None equipped"
+
+[node name="ActualStatsRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayerStats" type="VBoxContainer" parent="Root/Panel/Margin/VBox/ActualStatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayerStatsTitle" type="Label" parent="Root/Panel/Margin/VBox/ActualStatsRow/PlayerStats"]
+layout_mode = 2
+text = "ACTUAL PLAYER STATS"
+
+[node name="PlayerStatsScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/ActualStatsRow/PlayerStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 130)
+vertical_scroll_mode = 1
+
+[node name="PlayerStatsValue" type="Label" parent="Root/Panel/Margin/VBox/ActualStatsRow/PlayerStats/PlayerStatsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+text = "Player not found"
+
+[node name="FireballStats" type="VBoxContainer" parent="Root/Panel/Margin/VBox/ActualStatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FireballStatsTitle" type="Label" parent="Root/Panel/Margin/VBox/ActualStatsRow/FireballStats"]
+layout_mode = 2
+text = "ACTUAL FIREBALL STATS"
+
+[node name="FireballStatsScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/ActualStatsRow/FireballStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 130)
+vertical_scroll_mode = 1
+
+[node name="FireballStatsValue" type="Label" parent="Root/Panel/Margin/VBox/ActualStatsRow/FireballStats/FireballStatsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+text = "Fireball stats unavailable"
+
 [node name="NearbySection" type="VBoxContainer" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -81,7 +169,42 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "NEARBY ITEMS"
 
-[node name="Items" type="GridContainer" parent="Root/Panel/Margin/VBox/NearbySection"]
+[node name="NearbyRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection"]
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 5
+
+[node name="NearbyBands" type="VBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NearbyBandsLabel" type="Label" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyBands"]
+layout_mode = 2
+text = "BANDS"
+
+[node name="NearbyBandsScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyBands"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 170)
+vertical_scroll_mode = 1
+
+[node name="BandsList" type="VBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyBands/NearbyBandsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NearbyRings" type="VBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NearbyRingsLabel" type="Label" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyRings"]
+layout_mode = 2
+text = "RINGS"
+
+[node name="NearbyRingsScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyRings"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 170)
+vertical_scroll_mode = 1
+
+[node name="RingsList" type="VBoxContainer" parent="Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyRings/NearbyRingsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3

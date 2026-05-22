@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/currency_pickup.gd" id="1_currency_pickup"]
+
+[node name="CurrencyPickup" type="Area3D"]
+script = ExtResource("1_currency_pickup")
+monitoring = true
+monitorable = true
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
