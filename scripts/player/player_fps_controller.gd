@@ -33,8 +33,7 @@ var _effective_max_ap: float = 100.0
 var _effective_ap_regen: float = 10.0
 var _effective_speed_multiplier: float = 1.0
 var _cast_cooldown_remaining: float = 0.0
-var _gold: int = 0
-var _gems: int = 0
+var _controls_enabled: bool = true
 
 func _has_inventory_manager() -> bool:
 	return has_node("/root/InventoryManager") and InventoryManager != null
@@ -53,11 +52,15 @@ func _ready() -> void:
 	_refresh_derived_stats()
 	if _has_inventory_manager() and not InventoryManager.equipment_changed.is_connected(_on_equipment_changed):
 		InventoryManager.equipment_changed.connect(_on_equipment_changed)
+	if has_node("/root/PlayerManager") and PlayerManager != null:
+		PlayerManager.register_player(self)
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 func _exit_tree() -> void:
 	if _has_inventory_manager() and InventoryManager.equipment_changed.is_connected(_on_equipment_changed):
 		InventoryManager.equipment_changed.disconnect(_on_equipment_changed)
+	if has_node("/root/PlayerManager") and PlayerManager != null:
+		PlayerManager.unregister_player(self)
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
@@ -72,6 +75,9 @@ func _input(event: InputEvent) -> void:
 			_sync_mouse_mode()
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		return
+
+	if not _controls_enabled:
 		return
 
 	if _is_inventory_open_safe():
@@ -95,14 +101,24 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		move_and_slide()
 		return
+	var controls_active: bool = _controls_enabled and not _is_inventory_open_safe()
+	if not controls_active:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if is_on_floor():
+			if velocity.y < 0.0:
+				velocity.y = 0.0
+		else:
+			velocity.y -= gravity * delta
+		move_and_slide()
+		return
 	var move_input: Vector2 = Vector2.ZERO
-	if not _is_inventory_open_safe():
-		move_input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	move_input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var local_input: Vector3 = Vector3(move_input.x, 0.0, move_input.y)
 	var move_direction: Vector3 = (global_transform.basis * local_input).normalized()
 
 	var target_speed: float = walk_speed
-	if Input.is_action_pressed("sprint") and not _is_inventory_open_safe():
+	if Input.is_action_pressed("sprint"):
 		target_speed = sprint_speed
 	target_speed *= _effective_speed_multiplier
 
@@ -128,7 +144,7 @@ func _process(delta: float) -> void:
 	_regen_ap(delta)
 	if _cast_cooldown_remaining > 0.0:
 		_cast_cooldown_remaining = max(_cast_cooldown_remaining - delta, 0.0)
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED and Input.is_action_pressed("fireball_shoot"):
+	if _controls_enabled and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED and Input.is_action_pressed("fireball_shoot"):
 		_shoot_fireball()
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
 	var is_sprinting: bool = Input.is_action_pressed("sprint") and horizontal_speed > 0.05
@@ -191,22 +207,34 @@ func get_max_ap() -> float:
 	return _effective_max_ap
 
 func get_gold() -> int:
-	return _gold
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_gold"):
+		return int(PlayerManager.get_gold())
+	return 0
 
 func get_gems() -> int:
-	return _gems
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_gems"):
+		return int(PlayerManager.get_gems())
+	return 0
 
 func add_gold(amount: int) -> int:
-	if amount <= 0:
-		return 0
-	_gold += amount
-	return amount
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("add_gold"):
+		return int(PlayerManager.add_gold(amount))
+	return 0
 
 func add_gems(amount: int) -> int:
-	if amount <= 0:
-		return 0
-	_gems += amount
-	return amount
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("add_gems"):
+		return int(PlayerManager.add_gems(amount))
+	return 0
+
+func set_controls_enabled(enabled: bool) -> void:
+	_controls_enabled = enabled
+	if not _controls_enabled:
+		velocity.x = 0.0
+		velocity.z = 0.0
+	_sync_mouse_mode()
+
+func are_controls_enabled() -> bool:
+	return _controls_enabled
 
 func take_damage(amount: int) -> void:
 	if amount <= 0 or _current_health <= 0.0:
@@ -259,7 +287,7 @@ func _refresh_derived_stats() -> void:
 	_current_ap = clamp(_current_ap, 0.0, _effective_max_ap)
 
 func _sync_mouse_mode() -> void:
-	if _is_inventory_open_safe():
+	if not _controls_enabled or _is_inventory_open_safe():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

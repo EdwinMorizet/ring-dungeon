@@ -125,9 +125,14 @@ func _apply_aoe_damage(excluded_target: Node = null, is_lesser: bool = false) ->
 			if collider_node == _shooter:
 				if is_lesser:
 					continue
+				var self_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale * RingBandConstantsScript.SELF_GREATER_EXPLOSION_DAMAGE_SCALE)), 0)
+				if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node") and PlayerManager.is_player_node(collider_node):
+					if not PlayerManager.has_method("apply_damage_to_player"):
+						continue
+					PlayerManager.apply_damage_to_player(self_damage)
+					continue
 				if not collider_node.has_method("take_damage"):
 					continue
-				var self_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale * RingBandConstantsScript.SELF_GREATER_EXPLOSION_DAMAGE_SCALE)), 0)
 				collider_node.call("take_damage", self_damage)
 				continue
 			if collider_node.has_method("take_damage"):

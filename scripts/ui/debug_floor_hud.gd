@@ -12,7 +12,7 @@ func _ready() -> void:
 			manager.phase_changed.connect(_on_phase_changed)
 		_refresh(manager)
 	else:
-		_label.text = "Floor: N/A\nPhase: N/A\nF6: Spawn Seeded Items\nF7: Print Modifier Summary\nF8: Quick Validation\nF9: Spawn Seeded Gold\nF10: Spawn Seeded Gems"
+		_label.text = "Floor: N/A  Phase: N/A  F6: Spawn Seeded Items  F7: Print Modifier Summary  F8: Quick Validation  F9: Spawn Seeded Gold  F10: Spawn Seeded Gems"
 
 func _exit_tree() -> void:
 	var manager: Node = _get_manager()
@@ -34,12 +34,12 @@ func _on_phase_changed(_phase: StringName) -> void:
 		_refresh(manager)
 
 func _refresh(manager: Node) -> void:
-	_label.text = "Floor: %d\nPhase: %s\nIndex: %d\nF6: Spawn Seeded Items\nF7: Print Modifier Summary\nF8: Quick Validation" % [
+	_label.text = "Floor: %d  Phase: %s  Index: %d  F6: Spawn Seeded Items  F7: Print Modifier Summary  F8: Quick Validation" % [
 		int(manager.call("get_display_floor")),
 		String(manager.call("get_phase")),
 		int(manager.call("get_progression_index")),
 	]
-	_label.text += "\nF9: Spawn Seeded Gold\nF10: Spawn Seeded Gems"
+	_label.text += "  F9: Spawn Seeded Gold  F10: Spawn Seeded Gems"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:

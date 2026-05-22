@@ -190,32 +190,28 @@ func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node =
 	return spawn_currency_pickup(CURRENCY_KIND_GEMS, amount, spawn_position, parent_node)
 
 func add_player_gold(amount: int) -> int:
-	var player_node: Node = _resolve_player_node()
-	if player_node == null or not player_node.has_method("add_gold"):
+	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("add_gold"):
 		return 0
-	var added: int = int(player_node.call("add_gold", maxi(amount, 0)))
+	var added: int = int(PlayerManager.add_gold(maxi(amount, 0)))
 	inventory_changed.emit()
 	return added
 
 func add_player_gems(amount: int) -> int:
-	var player_node: Node = _resolve_player_node()
-	if player_node == null or not player_node.has_method("add_gems"):
+	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("add_gems"):
 		return 0
-	var added: int = int(player_node.call("add_gems", maxi(amount, 0)))
+	var added: int = int(PlayerManager.add_gems(maxi(amount, 0)))
 	inventory_changed.emit()
 	return added
 
 func get_player_gold() -> int:
-	var player_node: Node = _resolve_player_node()
-	if player_node == null or not player_node.has_method("get_gold"):
+	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("get_gold"):
 		return 0
-	return int(player_node.call("get_gold"))
+	return int(PlayerManager.get_gold())
 
 func get_player_gems() -> int:
-	var player_node: Node = _resolve_player_node()
-	if player_node == null or not player_node.has_method("get_gems"):
+	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("get_gems"):
 		return 0
-	return int(player_node.call("get_gems"))
+	return int(PlayerManager.get_gems())
 
 func get_fireball_damage_multiplier() -> float:
 	var multiplier: float = 1.0
@@ -334,14 +330,11 @@ func get_fireball_accuracy_bonus() -> float:
 func _refresh_player_reference() -> void:
 	if _player != null and is_instance_valid(_player):
 		return
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		_player = null
-		return
-	var player_candidate: Node = tree.get_first_node_in_group("player")
-	if player_candidate is Node3D:
-		_player = player_candidate as Node3D
-		return
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):
+		var manager_player: Node = PlayerManager.get_player_node()
+		if manager_player is Node3D:
+			_player = manager_player as Node3D
+			return
 	_player = null
 
 func _resolve_player_node() -> Node:

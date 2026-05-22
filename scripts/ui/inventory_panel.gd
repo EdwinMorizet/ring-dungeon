@@ -165,10 +165,14 @@ func _get_world_item_rarity(world_item: InventoryWorldItem) -> int:
 func _get_world_item_distance_sq(world_item: InventoryWorldItem) -> float:
 	if world_item == null or not is_instance_valid(world_item):
 		return INF
-	var player: Node = get_tree().get_first_node_in_group("player")
-	if not player is Node3D:
+	if not has_node("/root/PlayerManager") or PlayerManager == null:
 		return INF
-	return world_item.global_position.distance_squared_to((player as Node3D).global_position)
+	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
+		return INF
+	if not PlayerManager.has_method("get_player_position"):
+		return INF
+	var player_position: Vector3 = PlayerManager.get_player_position()
+	return world_item.global_position.distance_squared_to(player_position)
 
 func _clear_container(container: Container) -> void:
 	for child: Node in container.get_children():
@@ -187,24 +191,25 @@ func _refresh_actual_stats() -> void:
 		_fireball_actual_label.text = _build_fireball_actual_stats_text()
 
 func _build_player_actual_stats_text() -> String:
-	var player: Node = get_tree().get_first_node_in_group("player")
-	if player == null:
+	if not has_node("/root/PlayerManager") or PlayerManager == null:
+		return "Player manager not found"
+	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
 		return "Player not found"
-	if not player.has_method("get_current_health"):
+	if not PlayerManager.has_method("get_current_health"):
 		return "Player stats unavailable"
 
-	var current_health: float = float(player.call("get_current_health"))
-	var max_health: float = float(player.call("get_max_health"))
-	var current_mana: float = float(player.call("get_current_mana"))
-	var max_mana: float = float(player.call("get_max_mana"))
-	var mana_regen: float = float(player.call("get_mana_regen_rate"))
-	var current_ap: float = float(player.call("get_current_ap"))
-	var max_ap: float = float(player.call("get_max_ap"))
-	var ap_regen: float = float(player.call("get_ap_regen_rate")) if player.has_method("get_ap_regen_rate") else 0.0
-	var walk_speed: float = float(player.call("get_actual_walk_speed")) if player.has_method("get_actual_walk_speed") else 0.0
-	var sprint_speed: float = float(player.call("get_actual_sprint_speed")) if player.has_method("get_actual_sprint_speed") else 0.0
-	var gold: int = int(player.call("get_gold")) if player.has_method("get_gold") else 0
-	var gems: int = int(player.call("get_gems")) if player.has_method("get_gems") else 0
+	var current_health: float = float(PlayerManager.get_current_health())
+	var max_health: float = float(PlayerManager.get_max_health())
+	var current_mana: float = float(PlayerManager.get_current_mana())
+	var max_mana: float = float(PlayerManager.get_max_mana())
+	var mana_regen: float = float(PlayerManager.get_mana_regen_rate()) if PlayerManager.has_method("get_mana_regen_rate") else 0.0
+	var current_ap: float = float(PlayerManager.get_current_ap())
+	var max_ap: float = float(PlayerManager.get_max_ap())
+	var ap_regen: float = float(PlayerManager.get_ap_regen_rate()) if PlayerManager.has_method("get_ap_regen_rate") else 0.0
+	var walk_speed: float = float(PlayerManager.get_actual_walk_speed()) if PlayerManager.has_method("get_actual_walk_speed") else 0.0
+	var sprint_speed: float = float(PlayerManager.get_actual_sprint_speed()) if PlayerManager.has_method("get_actual_sprint_speed") else 0.0
+	var gold: int = int(PlayerManager.get_gold()) if PlayerManager.has_method("get_gold") else 0
+	var gems: int = int(PlayerManager.get_gems()) if PlayerManager.has_method("get_gems") else 0
 
 	var lines: Array[String] = []
 	lines.append("❤️ HP %.0f / %.0f" % [current_health, max_health])

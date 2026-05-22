@@ -52,12 +52,19 @@ func _physics_process(delta: float) -> void:
 func _try_apply_contact_damage(player_target: Node3D) -> void:
 	if _contact_damage_cooldown > 0.0:
 		return
-	if not player_target.has_method("take_damage"):
-		return
 	var radius: float = max(contact_damage_radius, 0.1)
 	if global_position.distance_squared_to(player_target.global_position) > radius * radius:
 		return
-	player_target.call("take_damage", max(strength, 1))
+	var damage_amount: int = max(strength, 1)
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node") and PlayerManager.is_player_node(player_target):
+		if not PlayerManager.has_method("apply_damage_to_player"):
+			return
+		if not PlayerManager.apply_damage_to_player(damage_amount):
+			return
+	elif player_target.has_method("take_damage"):
+		player_target.call("take_damage", damage_amount)
+	else:
+		return
 	_contact_damage_cooldown = max(contact_damage_interval_seconds, 0.05)
 
 func take_damage(amount: int) -> void:
@@ -70,21 +77,18 @@ func take_damage(amount: int) -> void:
 		_die()
 
 func _get_player_target() -> Node3D:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var player_candidate: Node = tree.get_first_node_in_group("player")
-	if not player_candidate is Node3D:
-		return null
-	var player_target: Node3D = player_candidate as Node3D
-	if _is_chase_active:
-		return player_target
-	if not _is_player_in_activation_radius(player_target):
-		return null
-	if require_line_of_sight and not _has_line_of_sight_to(player_target):
-		return null
-	_is_chase_active = true
-	return player_target
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):
+		var manager_player: Node = PlayerManager.get_player_node()
+		if manager_player is Node3D:
+			var manager_target: Node3D = manager_player as Node3D
+			if _is_chase_active:
+				return manager_target
+			if not _is_player_in_activation_radius(manager_target):
+				return null
+			if require_line_of_sight and not _has_line_of_sight_to(manager_target):
+				return null
+			_is_chase_active = true
+			return manager_target
 	return null
 
 func _is_player_in_activation_radius(player_target: Node3D) -> bool:
