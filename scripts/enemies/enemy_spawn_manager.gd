@@ -224,6 +224,8 @@ func _resolve_enemy_scene_for_spawn(default_scene: PackedScene, floor_seed: int,
 	return default_scene
 
 func _get_enemy_manager_node() -> Node:
+	if not is_inside_tree():
+		return null
 	if not has_node("/root/EnemyManager"):
 		return null
 	return get_node("/root/EnemyManager")

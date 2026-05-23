@@ -1,6 +1,5 @@
 # Tracks global enemy lifecycle, registry queries, and shared enemy lookups.
 extends Node
-class_name EnemyManager
 
 # Default parameter resource for registry behavior and fallback type metadata.
 const DefaultEnemyManagerConfig: EnemyManagerConfig = preload("res://resources/enemies/default_enemy_manager_config.tres")

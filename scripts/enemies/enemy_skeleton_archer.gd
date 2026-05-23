@@ -31,6 +31,7 @@ func _ready() -> void:
 	if enemy_type_id == StringName() or enemy_type_id == &"enemy_basic":
 		enemy_type_id = &"skeleton_archer"
 	super._ready()
+	_set_behavior_state_label("Idle")
 	_ranged_attack_cooldown = 0.0
 	_seed_aim_rng()
 	_setup_windup_visuals()
@@ -38,32 +39,40 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
+		_set_behavior_state_label("Dead")
 		return
 	if _ranged_attack_cooldown > 0.0:
 		_ranged_attack_cooldown = maxf(_ranged_attack_cooldown - delta, 0.0)
 	var player_target: Node3D = _get_player_target()
 	if _is_winding_up:
+		_set_behavior_state_label("Windup Shot")
 		_process_attack_windup(delta, player_target)
 		return
 	if player_target == null:
 		if _follow_patrol_route():
+			_set_behavior_state_label("Patrolling")
 			return
+		_set_behavior_state_label("Idle")
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 		return
 	var to_target: Vector3 = player_target.global_position - global_position
 	to_target.y = 0.0
 	var distance_sq: float = to_target.length_squared()
 	if distance_sq <= 0.0001:
+		_set_behavior_state_label("Holding")
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 		_try_fire_ranged_attack(player_target)
 		return
 	var retreat_distance_sq: float = retreat_distance * retreat_distance
 	var preferred_attack_distance_sq: float = preferred_attack_distance * preferred_attack_distance
 	if distance_sq < retreat_distance_sq:
+		_set_behavior_state_label("Retreating")
 		_move_in_direction(-to_target.normalized(), maxf(speed * retreat_speed_multiplier, 0.0))
 	elif distance_sq > preferred_attack_distance_sq:
+		_set_behavior_state_label("Advancing")
 		_move_in_direction(to_target.normalized(), maxf(speed, 0.0))
 	else:
+		_set_behavior_state_label("Holding")
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 	_try_fire_ranged_attack(player_target)
 
@@ -166,6 +175,7 @@ func _start_attack_windup(player_target: Node3D) -> void:
 	_is_winding_up = true
 	_windup_target = player_target
 	_windup_timer = maxf(windup_duration_seconds, 0.01)
+	_set_behavior_state_label("Windup Shot")
 	_play_windup_visuals()
 	_update_aim_guide(player_target)
 
@@ -179,7 +189,10 @@ func _finish_attack_windup(shot_fired: bool) -> void:
 	_reset_windup_visuals()
 	_reset_aim_guide()
 	if shot_fired:
+		_set_behavior_state_label("Recovering")
 		_ranged_attack_cooldown = maxf(ranged_attack_interval_seconds, 0.05)
+	else:
+		_set_behavior_state_label("Holding")
 
 func _setup_windup_visuals() -> void:
 	if _mesh_instance == null:
