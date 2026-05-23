@@ -16,11 +16,15 @@ signal died(enemy: EnemyBasic)
 @export_flags_3d_physics var los_collision_mask: int = 1
 @export var contact_damage_interval_seconds: float = 0.8
 @export var contact_damage_radius: float = 1.4
+@export var use_patrol_route: bool = true
+@export var patrol_reach_radius: float = 0.9
 
 var _health: int = 100
 var _is_dead: bool = false
 var _is_chase_active: bool = false
 var _contact_damage_cooldown: float = 0.0
+var _patrol_route: Array[Vector3] = []
+var _patrol_target_index: int = 0
 
 func _ready() -> void:
 	contact_monitor = true
@@ -39,6 +43,8 @@ func _physics_process(delta: float) -> void:
 		_contact_damage_cooldown = max(_contact_damage_cooldown - delta, 0.0)
 	var player_target: Node3D = _get_player_target()
 	if player_target == null:
+		if _follow_patrol_route():
+			return
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 		return
 	var to_target: Vector3 = player_target.global_position - global_position
@@ -76,6 +82,39 @@ func take_damage(amount: int) -> void:
 	damaged.emit(amount, _health)
 	if _health == 0:
 		_die()
+
+func set_patrol_route(route: Array[Vector3]) -> void:
+	_patrol_route.clear()
+	for point in route:
+		_patrol_route.append(point)
+	_patrol_target_index = 0
+
+func _follow_patrol_route() -> bool:
+	if not use_patrol_route:
+		return false
+	if _patrol_route.is_empty():
+		return false
+	if _patrol_target_index < 0 or _patrol_target_index >= _patrol_route.size():
+		_patrol_target_index = 0
+
+	var target_position: Vector3 = _patrol_route[_patrol_target_index]
+	var to_target: Vector3 = target_position - global_position
+	to_target.y = 0.0
+
+	var reach_radius: float = maxf(patrol_reach_radius, 0.1)
+	if to_target.length_squared() <= reach_radius * reach_radius:
+		_patrol_target_index = (_patrol_target_index + 1) % _patrol_route.size()
+		target_position = _patrol_route[_patrol_target_index]
+		to_target = target_position - global_position
+		to_target.y = 0.0
+
+	if to_target.length_squared() <= 0.0001:
+		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
+		return true
+
+	var desired_velocity: Vector3 = to_target.normalized() * max(speed, 0.0)
+	linear_velocity = Vector3(desired_velocity.x, linear_velocity.y, desired_velocity.z)
+	return true
 
 func _get_player_target() -> Node3D:
 	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):

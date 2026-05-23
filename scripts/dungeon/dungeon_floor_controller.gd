@@ -3,14 +3,12 @@
 extends Node3D
 class_name DungeonFloorController
 
-const DungeonGenerator = preload("res://scripts/dungeon/dungeon_generator.gd")
-const DungeonBuilder3D = preload("res://scripts/dungeon/dungeon_builder_3d.gd")
-const DungeonFloorConfig = preload("res://scripts/dungeon/dungeon_floor_config.gd")
 const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
 const PlayerScene = preload("res://scenes/player/player.tscn")
 const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
 const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
 const ChestScene = preload("res://scenes/items/chest_interactable.tscn")
+const PATROL_DEBUG_VISUAL_NODE_NAME: String = "PatrolDebugVisualizer"
 
 @export var config: DungeonFloorConfig = DefaultFloorConfig
 @export var use_multimesh: bool = true
@@ -36,7 +34,7 @@ var _seed_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 			_regenerate_toggle = false
 			var floor_config := _get_config()
 			if auto_randomize_seed_on_regenerate:
-				floor_config.seed = _next_random_seed()
+				floor_config.generation_seed = _next_random_seed()
 			regenerate_now()
 
 @export var clear_current_floor: bool:
@@ -56,6 +54,8 @@ var _runtime_floor_display: int = -10
 var _runtime_progression_index: int = 0
 var _enemy_spawn_manager: Node
 var _runtime_generation_seed: int = 0
+var _runtime_layout: Dictionary = {}
+var _patrol_link_debug_visual_enabled: bool = false
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -93,18 +93,21 @@ func enter_merchant_room() -> void:
 func regenerate_now() -> void:
 	_clear_generated()
 	var floor_config := _get_config()
-	var generation_seed: int = floor_config.seed
+	var generation_seed: int = floor_config.generation_seed
 	if not Engine.is_editor_hint():
 		generation_seed = _next_random_seed()
-		floor_config.seed = generation_seed
+		floor_config.generation_seed = generation_seed
 	_runtime_generation_seed = generation_seed
 	var generator: DungeonGenerator = DungeonGenerator.new()
 	var layout: Dictionary = generator.generate(generation_seed, _build_generation_params())
+	_runtime_layout = layout
 	var builder: DungeonBuilder3D = DungeonBuilder3D.new()
 	var editor_owner: Node = null
 	if Engine.is_editor_hint() and get_tree() != null:
 		editor_owner = get_tree().edited_scene_root
 	_generated_root = builder.build(self, layout, _build_builder_params(), editor_owner)
+	if _patrol_link_debug_visual_enabled:
+		_rebuild_patrol_link_debug_visual()
 	_spawn_chests_for_floor(generation_seed)
 	_spawn_or_reposition_player()
 	_spawn_enemies_for_floor(generation_seed)
@@ -129,6 +132,10 @@ func _build_generation_params() -> Dictionary:
 		"room_keep_ratio": floor_config.room_keep_ratio,
 		"loop_percent": floor_config.loop_percent,
 		"chest_candidate_ratio": floor_config.chest_candidate_ratio,
+		"patrol_nodes_per_room_min": floor_config.patrol_nodes_per_room_min,
+		"patrol_nodes_per_room_max": floor_config.patrol_nodes_per_room_max,
+		"patrol_point_padding": floor_config.patrol_point_padding,
+		"patrol_point_jitter": floor_config.patrol_point_jitter,
 	}
 
 func _build_builder_params() -> Dictionary:
@@ -152,6 +159,8 @@ func _clear_generated() -> void:
 	if _generated_root != null and is_instance_valid(_generated_root):
 		_generated_root.queue_free()
 		_generated_root = null
+	_clear_patrol_link_debug_visual()
+	_runtime_layout.clear()
 	if is_inside_tree() and has_node("/root/InventoryManager"):
 		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
@@ -318,6 +327,211 @@ func _get_progression_manager_node() -> Node:
 	if not _has_progression_manager():
 		return null
 	return get_node("/root/GameProgressionManager")
+
+func get_patrol_debug_snapshot() -> Dictionary:
+	if _runtime_layout.is_empty():
+		return {}
+
+	var rooms: Array = _runtime_layout.get("rooms", [])
+	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
+	var room_links: Array = patrol_graph.get("room_links", [])
+
+	var room_count: int = 0
+	var patrol_node_count: int = 0
+	var topology_parts: PackedStringArray = PackedStringArray()
+
+	for room_data in rooms:
+		var room: Dictionary = room_data
+		if not room.has("metadata"):
+			continue
+		var metadata: Dictionary = room["metadata"]
+		var room_index: int = int(metadata.get("index", -1))
+		var patrol_points: PackedVector2Array = metadata.get("patrol_points", PackedVector2Array())
+		var linked_rooms: PackedInt32Array = metadata.get("patrol_linked_rooms", PackedInt32Array())
+		room_count += 1
+		patrol_node_count += patrol_points.size()
+		topology_parts.push_back("R%d(%d)->[%s]" % [room_index, patrol_points.size(), _packed_int_array_to_csv(linked_rooms)])
+
+	return {
+		"room_count": room_count,
+		"patrol_node_count": patrol_node_count,
+		"patrol_link_count": room_links.size(),
+		"topology": " | ".join(topology_parts),
+	}
+
+func run_patrol_smoke_check() -> Dictionary:
+	var report := {
+		"ok": false,
+		"error": "",
+		"room_groups": 0,
+		"patrol_markers": 0,
+		"link_markers": 0,
+		"expected_links": 0,
+		"topology": "",
+	}
+
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		report["error"] = "Generated root missing"
+		return report
+	if _runtime_layout.is_empty():
+		report["error"] = "Runtime layout missing"
+		return report
+
+	var patrol_root: Node = _generated_root.find_child("PatrolNodes", true, false)
+	if patrol_root == null:
+		report["error"] = "PatrolNodes root missing"
+		return report
+
+	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
+	var patrol_markers: Array[Node] = patrol_root.find_children("PatrolNode_*", "Marker3D", true, false)
+	var links_root: Node = patrol_root.find_child("PatrolLinks", false, false)
+	var link_markers: Array[Node] = []
+	if links_root != null:
+		link_markers = links_root.find_children("PatrolLink_*", "Marker3D", false, false)
+
+	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
+	var expected_links: Array = patrol_graph.get("room_links", [])
+	var snapshot: Dictionary = get_patrol_debug_snapshot()
+
+	report["room_groups"] = room_groups.size()
+	report["patrol_markers"] = patrol_markers.size()
+	report["link_markers"] = link_markers.size()
+	report["expected_links"] = expected_links.size()
+	report["topology"] = snapshot.get("topology", "")
+
+	if patrol_markers.is_empty():
+		report["error"] = "No patrol markers found"
+		return report
+	if link_markers.size() != expected_links.size():
+		report["error"] = "Patrol link marker count mismatch"
+		return report
+
+	for link_node in link_markers:
+		if not link_node.has_meta("from_room") or not link_node.has_meta("to_room"):
+			report["error"] = "Patrol link missing room metadata"
+			return report
+
+	report["ok"] = true
+	return report
+
+func set_patrol_link_debug_visual_enabled(enabled: bool) -> void:
+	_patrol_link_debug_visual_enabled = enabled
+	if not enabled:
+		_clear_patrol_link_debug_visual()
+		return
+	_rebuild_patrol_link_debug_visual()
+
+func is_patrol_link_debug_visual_enabled() -> bool:
+	return _patrol_link_debug_visual_enabled
+
+func _rebuild_patrol_link_debug_visual() -> void:
+	_clear_patrol_link_debug_visual()
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		return
+	if _runtime_layout.is_empty():
+		return
+
+	var patrol_root: Node = _generated_root.find_child("PatrolNodes", true, false)
+	if patrol_root == null:
+		return
+
+	var mesh: ImmediateMesh = ImmediateMesh.new()
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+
+	var line_count: int = 0
+	line_count += _append_room_patrol_loop_lines(mesh, patrol_root)
+	line_count += _append_cross_room_patrol_lines(mesh, patrol_root)
+
+	mesh.surface_end()
+	if line_count <= 0:
+		return
+
+	var mesh_instance: MeshInstance3D = MeshInstance3D.new()
+	mesh_instance.name = PATROL_DEBUG_VISUAL_NODE_NAME
+	mesh_instance.mesh = mesh
+
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.1, 0.95, 1.0, 1.0)
+	material.emission_enabled = true
+	material.emission = Color(0.1, 0.95, 1.0) * 0.6
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh_instance.material_override = material
+
+	_generated_root.add_child(mesh_instance)
+
+func _append_room_patrol_loop_lines(mesh: ImmediateMesh, patrol_root: Node) -> int:
+	var lines_added: int = 0
+	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
+	for room_group in room_groups:
+		var markers: Array[Marker3D] = _collect_sorted_patrol_markers(room_group)
+		if markers.size() < 2:
+			continue
+		for marker_index in range(markers.size() - 1):
+			_append_line_vertices(mesh, markers[marker_index].global_position, markers[marker_index + 1].global_position)
+			lines_added += 1
+		if markers.size() > 2:
+			_append_line_vertices(mesh, markers[markers.size() - 1].global_position, markers[0].global_position)
+			lines_added += 1
+	return lines_added
+
+func _append_cross_room_patrol_lines(mesh: ImmediateMesh, patrol_root: Node) -> int:
+	var lines_added: int = 0
+	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
+	var room_links: Array = patrol_graph.get("room_links", [])
+	for link_data in room_links:
+		var link: Dictionary = link_data
+		var from_room: int = int(link.get("a", -1))
+		var to_room: int = int(link.get("b", -1))
+		if from_room < 0 or to_room < 0 or from_room == to_room:
+			continue
+		var from_position: Vector3 = _resolve_room_patrol_anchor(patrol_root, from_room)
+		var to_position: Vector3 = _resolve_room_patrol_anchor(patrol_root, to_room)
+		if from_position == Vector3.INF or to_position == Vector3.INF:
+			continue
+		_append_line_vertices(mesh, from_position, to_position)
+		lines_added += 1
+	return lines_added
+
+func _resolve_room_patrol_anchor(patrol_root: Node, room_index: int) -> Vector3:
+	var room_group: Node = patrol_root.find_child("PatrolNodes_Room_%d" % room_index, false, false)
+	if room_group == null:
+		return Vector3.INF
+	var markers: Array[Marker3D] = _collect_sorted_patrol_markers(room_group)
+	if markers.is_empty():
+		return Vector3.INF
+	return markers[0].global_position
+
+func _collect_sorted_patrol_markers(room_group: Node) -> Array[Marker3D]:
+	var marker_nodes: Array[Node] = room_group.find_children("PatrolNode_*", "Marker3D", false, false)
+	var markers: Array[Marker3D] = []
+	for marker_node in marker_nodes:
+		if marker_node is Marker3D:
+			markers.append(marker_node as Marker3D)
+	markers.sort_custom(func(a: Marker3D, b: Marker3D) -> bool:
+		return a.name.naturalnocasecmp_to(b.name) < 0
+	)
+	return markers
+
+func _append_line_vertices(mesh: ImmediateMesh, from_world: Vector3, to_world: Vector3) -> void:
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		return
+	mesh.surface_add_vertex(_generated_root.to_local(from_world + Vector3.UP * 0.06))
+	mesh.surface_add_vertex(_generated_root.to_local(to_world + Vector3.UP * 0.06))
+
+func _clear_patrol_link_debug_visual() -> void:
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		return
+	var node: Node = _generated_root.find_child(PATROL_DEBUG_VISUAL_NODE_NAME, false, false)
+	if node != null and is_instance_valid(node):
+		node.queue_free()
+
+func _packed_int_array_to_csv(values: PackedInt32Array) -> String:
+	if values.is_empty():
+		return ""
+	var parts: PackedStringArray = PackedStringArray()
+	for value in values:
+		parts.push_back(str(value))
+	return ",".join(parts)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:

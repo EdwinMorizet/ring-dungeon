@@ -4,5 +4,9 @@
 
 [resource]
 script = ExtResource("1_1r7tx")
-seed = 205
+generation_seed = 205
 cell_count = 20
+patrol_nodes_per_room_min = 2
+patrol_nodes_per_room_max = 4
+patrol_point_padding = 1.2
+patrol_point_jitter = 0.35

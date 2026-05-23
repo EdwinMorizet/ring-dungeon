@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_cycqr")
-seed = 409
+generation_seed = 409
 width = 190
 height = 190
 cell_count = 20
@@ -15,3 +15,7 @@ room_area_threshold = 95.0
 room_keep_ratio = 0.4
 loop_percent = 0.1
 chest_candidate_ratio = 0.2
+patrol_nodes_per_room_min = 3
+patrol_nodes_per_room_max = 5
+patrol_point_padding = 1.0
+patrol_point_jitter = 0.4

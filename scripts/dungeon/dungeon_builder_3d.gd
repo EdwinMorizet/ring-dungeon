@@ -120,6 +120,7 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 		_spawn_mesh_tiles(wall_parent, wall_mesh, wall_transforms, editor_owner)
 
 	_spawn_room_markers(root, layout, tile_size, editor_owner)
+	_spawn_patrol_nodes(root, layout, tile_size, editor_owner)
 	_spawn_floor_exit_visuals(root, tile_size, editor_owner)
 
 	return root
@@ -232,25 +233,92 @@ func _spawn_room_markers(root: Node3D, layout: Dictionary, tile_size: float, edi
 		_spawn_marker_group(markers_root, "EnemySpawnMarkers", "EnemySpawn", spawn_markers.get("enemy", PackedVector2Array()), tile_size, editor_owner)
 		_spawn_marker_group(markers_root, "ChestCandidateMarkers", "ChestCandidate", spawn_markers.get("chest_candidate", PackedVector2Array()), tile_size, editor_owner)
 		_spawn_marker_group(markers_root, "FloorExitMarkers", "FloorExit", spawn_markers.get("floor_exit", PackedVector2Array()), tile_size, editor_owner)
-		return
-
-	var rooms: Array = layout.get("rooms", [])
-	for i in rooms.size():
-		var room: Dictionary = rooms[i]
-		if not room.has("metadata"):
-			continue
-		var metadata: Dictionary = room["metadata"]
-		var center: Vector2 = room.get("center", Vector2.ZERO)
-		if metadata.get("is_player_start", false):
-			_spawn_marker(markers_root, "PlayerStart_%d" % i, center, tile_size, editor_owner)
-		if metadata.get("is_enemy_room", false):
-			_spawn_marker(markers_root, "EnemySpawn_%d" % i, center, tile_size, editor_owner)
-		if metadata.get("is_chest_candidate", false):
-			_spawn_marker(markers_root, "ChestCandidate_%d" % i, center, tile_size, editor_owner)
-		if metadata.get("is_floor_exit", false):
-			_spawn_marker(markers_root, "FloorExit_%d" % i, center, tile_size, editor_owner)
+	else:
+		var rooms: Array = layout.get("rooms", [])
+		for i in rooms.size():
+			var room: Dictionary = rooms[i]
+			if not room.has("metadata"):
+				continue
+			var metadata: Dictionary = room["metadata"]
+			var center: Vector2 = room.get("center", Vector2.ZERO)
+			if metadata.get("is_player_start", false):
+				_spawn_marker(markers_root, "PlayerStart_%d" % i, center, tile_size, editor_owner)
+			if metadata.get("is_enemy_room", false):
+				_spawn_marker(markers_root, "EnemySpawn_%d" % i, center, tile_size, editor_owner)
+			if metadata.get("is_chest_candidate", false):
+				_spawn_marker(markers_root, "ChestCandidate_%d" % i, center, tile_size, editor_owner)
+			if metadata.get("is_floor_exit", false):
+				_spawn_marker(markers_root, "FloorExit_%d" % i, center, tile_size, editor_owner)
 	# Call _spawn_room_lights after spawning room markers
 	_spawn_room_lights(root, layout, tile_size, editor_owner)
+
+func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
+	var rooms: Array = layout.get("rooms", [])
+	if rooms.is_empty():
+		return
+
+	var patrol_root := Node3D.new()
+	patrol_root.name = "PatrolNodes"
+	root.add_child(patrol_root)
+	_assign_owner(patrol_root, editor_owner)
+
+	for i in rooms.size():
+		var room_data: Dictionary = rooms[i]
+		if not room_data.has("metadata"):
+			continue
+		var metadata: Dictionary = room_data["metadata"]
+		var patrol_points: PackedVector2Array = metadata.get("patrol_points", PackedVector2Array())
+		if patrol_points.is_empty():
+			continue
+
+		var room_group := Node3D.new()
+		room_group.name = "PatrolNodes_Room_%d" % i
+		patrol_root.add_child(room_group)
+		_assign_owner(room_group, editor_owner)
+
+		for patrol_index in range(patrol_points.size()):
+			var patrol_point: Vector2 = patrol_points[patrol_index]
+			_spawn_marker(room_group, "PatrolNode_%d_%d" % [i, patrol_index], patrol_point, tile_size, editor_owner)
+
+	_spawn_patrol_link_markers(patrol_root, layout, rooms, tile_size, editor_owner)
+
+func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: Array, tile_size: float, editor_owner: Node) -> void:
+	var patrol_graph: Dictionary = layout.get("patrol_graph", {})
+	var room_links: Array = patrol_graph.get("room_links", [])
+	if room_links.is_empty():
+		return
+
+	var links_root := Node3D.new()
+	links_root.name = "PatrolLinks"
+	patrol_root.add_child(links_root)
+	_assign_owner(links_root, editor_owner)
+
+	for link_data in room_links:
+		var room_link: Dictionary = link_data
+		var from_room: int = int(room_link.get("a", -1))
+		var to_room: int = int(room_link.get("b", -1))
+		if from_room < 0 or to_room < 0 or from_room == to_room:
+			continue
+		if from_room >= rooms.size() or to_room >= rooms.size():
+			continue
+
+		var from_center: Vector2 = _resolve_room_center(rooms, from_room)
+		var to_center: Vector2 = _resolve_room_center(rooms, to_room)
+		var midpoint: Vector2 = (from_center + to_center) * 0.5
+
+		var marker := Marker3D.new()
+		marker.name = "PatrolLink_%d_%d" % [from_room, to_room]
+		marker.position = _tile_to_world(midpoint.x, midpoint.y, tile_size, 0.7)
+		marker.set_meta("from_room", from_room)
+		marker.set_meta("to_room", to_room)
+		links_root.add_child(marker)
+		_assign_owner(marker, editor_owner)
+
+func _resolve_room_center(rooms: Array, room_index: int) -> Vector2:
+	if room_index < 0 or room_index >= rooms.size():
+		return Vector2.ZERO
+	var room_data: Dictionary = rooms[room_index]
+	return room_data.get("center", Vector2.ZERO)
 
 func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String, points: PackedVector2Array, tile_size: float, editor_owner: Node) -> void:
 	var group_root := Node3D.new()
@@ -331,7 +399,7 @@ func _spawn_room_lights(parent: Node3D, layout: Dictionary, tile_size: float, ed
 		var light := OmniLight3D.new()
 		light.name = "RoomLight"
 		light.position = _tile_to_world(center.x, center.y, tile_size, 2.0) # Adjust Y for light height
-		light.intensity = 500.0 # Adjust intensity as needed
-		light.range = 20.0 # Adjust range to fit room size
+		light.light_energy = 5.0 # Godot 4 uses light_energy for brightness.
+		light.omni_range = 20.0 # Godot 4 uses omni_range for OmniLight3D radius.
 		parent.add_child(light)
 		_assign_owner(light, editor_owner)

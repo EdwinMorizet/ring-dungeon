@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_2x5xk")
-seed = 345391817
+generation_seed = 345391817
 cell_count = 10
 spawn_radius = 1.0
 separation_iterations = 500
@@ -12,4 +12,8 @@ min_room_size = 25.0
 room_area_threshold = 50.0
 room_keep_ratio = 0.8
 loop_percent = 0.05
+patrol_nodes_per_room_min = 2
+patrol_nodes_per_room_max = 4
+patrol_point_padding = 1.2
+patrol_point_jitter = 0.35
 wall_height = 4.0

@@ -44,12 +44,13 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 		var remaining_spawns: int = target_count - _spawned_enemies.size()
 		if remaining_spawns <= 0:
 			break
+		var patrol_route: Array[Vector3] = _resolve_patrol_route_for_spawn_marker(generated_root, marker)
 		var spawns_for_marker: int = mini(_resolve_spawn_count_for_marker(), remaining_spawns)
 		for _i in range(spawns_for_marker):
 			var spawn_position: Vector3 = _resolve_spawn_position_in_circle(marker.global_position, generated_root)
 			if spawn_position == Vector3.INF:
 				continue
-			_spawn_enemy_at(parent_node, enemy_scene, spawn_position)
+			_spawn_enemy_at(parent_node, enemy_scene, spawn_position, patrol_route)
 
 	if _spawned_enemies.is_empty() and _config.allow_fallback_spawn:
 		if fallback_spawn_position.distance_to(player_spawn_position) >= _config.min_spawn_distance_from_player:
@@ -58,7 +59,7 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 				var spawn_position: Vector3 = _resolve_spawn_position_in_circle(fallback_spawn_position, generated_root)
 				if spawn_position == Vector3.INF:
 					continue
-				_spawn_enemy_at(parent_node, enemy_scene, spawn_position)
+				_spawn_enemy_at(parent_node, enemy_scene, spawn_position, [])
 
 func _resolve_spawn_position_in_circle(center_position: Vector3, generated_root: Node3D) -> Vector3:
 	var radius: float = maxf(_config.spawn_circle_radius, 0.0)
@@ -142,7 +143,7 @@ func _resolve_enemy_count(progression_index: int) -> int:
 	var safe_step: int = max(_config.progression_step_for_extra_enemy, 1)
 	var extra_enemies: int = 0
 	if progression_index > 0:
-		extra_enemies = progression_index / safe_step
+		extra_enemies = floori(float(progression_index) / float(safe_step))
 	var desired_count: int = _config.base_enemy_count + extra_enemies
 	var upper_bound: int = max(_config.max_enemy_count, _config.base_enemy_count)
 	return clampi(desired_count, 0, upper_bound)
@@ -190,7 +191,7 @@ func _select_markers(markers: Array[Marker3D], target_count: int, floor_seed: in
 		marker_pool.remove_at(picked_index)
 	return selected_markers
 
-func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position: Vector3) -> void:
+func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position: Vector3, patrol_route: Array[Vector3]) -> void:
 	var enemy_node: Node = enemy_scene.instantiate()
 	if enemy_node is RigidBody3D:
 		var enemy: RigidBody3D = enemy_node as RigidBody3D
@@ -198,6 +199,121 @@ func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position
 		enemy.global_position = spawn_position
 		enemy.linear_velocity = Vector3.ZERO
 		enemy.angular_velocity = Vector3.ZERO
+		if not patrol_route.is_empty() and enemy.has_method("set_patrol_route"):
+			enemy.call("set_patrol_route", patrol_route)
 		_spawned_enemies.append(enemy)
 		return
 	enemy_node.queue_free()
+
+func _resolve_patrol_route_for_spawn_marker(generated_root: Node3D, marker: Marker3D) -> Array[Vector3]:
+	var route: Array[Vector3] = []
+	if generated_root == null or not is_instance_valid(generated_root):
+		return route
+
+	var room_index: int = _resolve_closest_patrol_room_index(generated_root, marker.global_position)
+	if room_index < 0:
+		return route
+
+	_append_room_patrol_points(generated_root, room_index, route)
+	var linked_rooms: Array[int] = _collect_linked_room_indices(generated_root, room_index)
+	for linked_room in linked_rooms:
+		_append_first_room_patrol_point(generated_root, linked_room, route)
+
+	return route
+
+func _resolve_closest_patrol_room_index(generated_root: Node3D, spawn_position: Vector3) -> int:
+	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
+	if patrol_root == null:
+		return -1
+
+	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
+	var closest_room_index: int = -1
+	var closest_distance_sq: float = INF
+	for room_group in room_groups:
+		var room_index: int = _parse_room_index_from_group_name(room_group.name)
+		if room_index < 0:
+			continue
+		var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+		if patrol_markers.is_empty():
+			continue
+		var reference_marker: Marker3D = patrol_markers[0]
+		var distance_sq: float = reference_marker.global_position.distance_squared_to(spawn_position)
+		if distance_sq < closest_distance_sq:
+			closest_distance_sq = distance_sq
+			closest_room_index = room_index
+
+	return closest_room_index
+
+func _append_room_patrol_points(generated_root: Node3D, room_index: int, route: Array[Vector3]) -> void:
+	var room_group: Node = _find_patrol_room_group(generated_root, room_index)
+	if room_group == null:
+		return
+	var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+	for patrol_marker in patrol_markers:
+		_append_unique_route_point(route, patrol_marker.global_position)
+
+func _append_first_room_patrol_point(generated_root: Node3D, room_index: int, route: Array[Vector3]) -> void:
+	var room_group: Node = _find_patrol_room_group(generated_root, room_index)
+	if room_group == null:
+		return
+	var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+	if patrol_markers.is_empty():
+		return
+	_append_unique_route_point(route, patrol_markers[0].global_position)
+
+func _find_patrol_room_group(generated_root: Node3D, room_index: int) -> Node:
+	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
+	if patrol_root == null:
+		return null
+	return patrol_root.find_child("PatrolNodes_Room_%d" % room_index, false, false)
+
+func _collect_room_patrol_markers(room_group: Node) -> Array[Marker3D]:
+	var marker_nodes: Array[Node] = room_group.find_children("PatrolNode_*", "Marker3D", false, false)
+	var markers: Array[Marker3D] = []
+	for marker_node in marker_nodes:
+		if marker_node is Marker3D:
+			markers.append(marker_node as Marker3D)
+	markers.sort_custom(Callable(self, "_sort_markers_by_name"))
+	return markers
+
+func _collect_linked_room_indices(generated_root: Node3D, room_index: int) -> Array[int]:
+	var linked_rooms: Array[int] = []
+	var patrol_links_root: Node = generated_root.find_child("PatrolLinks", true, false)
+	if patrol_links_root == null:
+		return linked_rooms
+
+	var link_nodes: Array[Node] = patrol_links_root.find_children("PatrolLink_*", "Marker3D", false, false)
+	for link_node in link_nodes:
+		if not link_node.has_meta("from_room") or not link_node.has_meta("to_room"):
+			continue
+		var from_room: int = int(link_node.get_meta("from_room"))
+		var to_room: int = int(link_node.get_meta("to_room"))
+		if from_room == room_index:
+			_append_unique_room_id(linked_rooms, to_room)
+		elif to_room == room_index:
+			_append_unique_room_id(linked_rooms, from_room)
+
+	return linked_rooms
+
+func _parse_room_index_from_group_name(group_name: String) -> int:
+	var prefix: String = "PatrolNodes_Room_"
+	if not group_name.begins_with(prefix):
+		return -1
+	var suffix: String = group_name.substr(prefix.length())
+	if suffix.is_empty():
+		return -1
+	return int(suffix)
+
+func _append_unique_room_id(room_ids: Array[int], room_id: int) -> void:
+	if room_id < 0:
+		return
+	for existing_room_id in room_ids:
+		if existing_room_id == room_id:
+			return
+	room_ids.append(room_id)
+
+func _append_unique_route_point(route: Array[Vector3], point: Vector3) -> void:
+	for existing_point in route:
+		if existing_point.distance_squared_to(point) <= 0.01:
+			return
+	route.append(point)

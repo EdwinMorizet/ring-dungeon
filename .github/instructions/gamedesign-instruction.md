@@ -126,22 +126,30 @@ Required pipeline:
 5. Connectivity: build an MST (for example with `AStar2D`) to guarantee full reachability.
 6. Looping: re-add about 15% of non-MST Delaunay edges to reduce linearity.
 7. Corridors: carve L-shaped paths between connected rooms and fill micro-gaps where needed.
+8. Patrol nets: generate per-room patrol points and connect rooms with patrol links from MST edges only.
 
 ## Enemy Design Requirements
+
+Enemy implementation details are split into the enemy instruction family under `.github/instructions/enemies/`.
+Use the shared umbrella in `.github/instructions/enemies-simple.instructions.md` for generic rules, then follow the matching roster-specific file for the creature you are editing.
 
 General rules:
 
 - Spawn enemies in rooms.
 - Allow pursuit through corridors after aggro.
+- Allow follow patrols nodes.
 - On death, support drops from: AP, Gold, MP, Keys, HP.
+- Keep patrol behavior deterministic from floor seed so repeated runs with the same seed preserve patrol routes.
+- Prioritize chase over patrol once aggro is active; patrol is a pre-aggro/default movement mode.
 
 Enemy roster requirements:
 
-- Skeleton: basic melee grunt.
-- Skeleton Archer: basic ranged attacker.
+- Zombie: random roaming, small fov of vision, slow, numerous.
+- Skeleton: basic melee grunt, follow patrols nodes, good fov of vision.
+- Skeleton Archer: basic ranged attacker, retreat from player, follow patrols nodes.
 - Cloaked Wizard: advanced caster with `Ghost Form`, `Teleport`, and `Fireball`.
-- Bones Spider: fast swarmer with small hitbox.
-- Necromancer: summoner that raises Skeletons, Skeleton Archers, and Bones Spiders.
+- Bones Spider: fast swarmer with small hitbox, random roaming, fast, hit and run.
+- Necromancer: summoner that raises already dead Skeletons, Skeleton Archers, zombie, and Bones Spiders, flee from player.
 - Bones Golem: slow heavy unit with telegraphed ground slam or forward charge.
 
 ## Dungeon Interactables

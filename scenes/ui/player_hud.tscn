@@ -30,21 +30,21 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_crosshair")
 
-[node name="CurrencyContainer" type="MarginContainer" parent="Root"]
+[node name="CurrencyContainer" type="MarginContainer" parent="Root" unique_id=26508911]
 layout_mode = 0
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 284.0
 offset_bottom = 90.0
 
-[node name="VBox" type="VBoxContainer" parent="Root/CurrencyContainer"]
+[node name="VBox" type="VBoxContainer" parent="Root/CurrencyContainer" unique_id=1252222562]
 layout_mode = 2
 
-[node name="GoldValue" type="Label" parent="Root/CurrencyContainer/VBox"]
+[node name="GoldValue" type="Label" parent="Root/CurrencyContainer/VBox" unique_id=472409562]
 layout_mode = 2
 text = "GOLD: 0"
 
-[node name="GemsValue" type="Label" parent="Root/CurrencyContainer/VBox"]
+[node name="GemsValue" type="Label" parent="Root/CurrencyContainer/VBox" unique_id=1899902523]
 layout_mode = 2
 text = "GEMS: 0"
 
@@ -62,7 +62,7 @@ layout_mode = 2
 
 [node name="ManaLabel" type="Label" parent="Root/ManaContainer/VBox" unique_id=1942423147]
 layout_mode = 2
-text = "MANA"
+text = "🔵"
 
 [node name="ManaBar" type="ProgressBar" parent="Root/ManaContainer/VBox" unique_id=458229768]
 custom_minimum_size = Vector2(290, 18)
@@ -84,7 +84,7 @@ layout_mode = 2
 
 [node name="APLabel" type="Label" parent="Root/APContainer/VBox" unique_id=62616295]
 layout_mode = 2
-text = "AP"
+text = "⚡"
 
 [node name="APBar" type="ProgressBar" parent="Root/APContainer/VBox" unique_id=1840474784]
 custom_minimum_size = Vector2(290, 18)
@@ -108,7 +108,7 @@ layout_mode = 2
 
 [node name="HealthLabel" type="Label" parent="Root/HealthContainer/VBox" unique_id=1643062219]
 layout_mode = 2
-text = "HEALTH"
+text = "❤️"
 horizontal_alignment = 2
 
 [node name="HealthBar" type="ProgressBar" parent="Root/HealthContainer/VBox" unique_id=1373589021]

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_6m1k3")
-seed = 101
+generation_seed = 101
 width = 130
 height = 130
 cell_count = 20
@@ -15,3 +15,7 @@ room_area_threshold = 160.0
 room_keep_ratio = 0.5
 loop_percent = 0.2
 chest_candidate_ratio = 0.36
+patrol_nodes_per_room_min = 2
+patrol_nodes_per_room_max = 3
+patrol_point_padding = 1.2
+patrol_point_jitter = 0.3

@@ -17,6 +17,6 @@ anchor_bottom = 1.0
 
 [node name="FloorLabel" type="Label" parent="MarginContainer" unique_id=727806566]
 layout_mode = 2
-text = "Floor: N/A  Phase: N/A  F6: Spawn Seeded Items  F7: Print Modifier Summary  F8: Quick Validation  F9: Spawn Seeded Gold  F10: Spawn Seeded Gems"
+text = "Floor: N/A  Phase: N/A  F6: Spawn Seeded Items  F7: Print Modifier Summary  F8: Quick Validation  F9: Spawn Seeded Gold  F10: Spawn Seeded Gems  F11: Patrol Overlay  F12: Patrol Smoke"
 label_settings = SubResource("LabelSettings_ywwjp")
 horizontal_alignment = 1

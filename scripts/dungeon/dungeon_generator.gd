@@ -2,8 +2,6 @@
 extends RefCounted
 class_name DungeonGenerator
 
-const DungeonGraph = preload("res://scripts/dungeon/dungeon_graph.gd")
-
 const TILE_WALL := 0
 const TILE_FLOOR := 1
 
@@ -18,6 +16,10 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 	var room_keep_ratio: float = float(params.get("room_keep_ratio", 0.45))
 	var loop_percent: float = float(params.get("loop_percent", 0.15))
 	var chest_candidate_ratio: float = float(params.get("chest_candidate_ratio", 0.3))
+	var patrol_nodes_per_room_min: int = int(params.get("patrol_nodes_per_room_min", 2))
+	var patrol_nodes_per_room_max: int = int(params.get("patrol_nodes_per_room_max", 4))
+	var patrol_point_padding: float = float(params.get("patrol_point_padding", 1.2))
+	var patrol_point_jitter: float = float(params.get("patrol_point_jitter", 0.35))
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
@@ -51,7 +53,27 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		exit_index = _find_farthest_room_index(rooms)
 		start_index = _find_farthest_from_room_index(rooms, exit_index)
 
-	var marker_data := _annotate_rooms_with_metadata(rooms, start_index, exit_index, chest_candidate_ratio, rng)
+	var annotation_data := _annotate_rooms_with_metadata(
+		rooms,
+		start_index,
+		exit_index,
+		chest_candidate_ratio,
+		mst_edges,
+		rng,
+		patrol_nodes_per_room_min,
+		patrol_nodes_per_room_max,
+		patrol_point_padding,
+		patrol_point_jitter
+	)
+	var marker_data: Dictionary = annotation_data.get("spawn_markers", {})
+	var patrol_graph: Dictionary = annotation_data.get("patrol_graph", {})
+	var patrol_node_total: int = 0
+	var patrol_room_nodes: Dictionary = patrol_graph.get("room_nodes", {})
+	for room_key in patrol_room_nodes.keys():
+		var room_points: Variant = patrol_room_nodes[room_key]
+		if room_points is PackedVector2Array:
+			patrol_node_total += (room_points as PackedVector2Array).size()
+	var patrol_links: Array = patrol_graph.get("room_links", [])
 
 	return {
 		"grid": grid,
@@ -64,6 +86,7 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		"start_room_index": start_index,
 		"exit_room_index": exit_index,
 		"spawn_markers": marker_data,
+		"patrol_graph": patrol_graph,
 		"stats": {
 			"cells": cells.size(),
 			"separation_iterations": separation_info["iterations"],
@@ -73,7 +96,10 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 			"mst_edges": mst_edges.size(),
 			"loop_edges": maxi(0, corridor_edges.size() - mst_edges.size()),
 			"enemy_rooms": marker_data["enemy"].size(),
-			"chest_candidate_rooms": marker_data["chest_candidate"].size()
+			"chest_candidate_rooms": marker_data["chest_candidate"].size(),
+			"patrol_rooms": patrol_room_nodes.size(),
+			"patrol_nodes": patrol_node_total,
+			"patrol_room_links": patrol_links.size()
 		}
 	}
 
@@ -194,7 +220,7 @@ func _carve_l_corridor(grid: PackedInt32Array, width: int, height: int, a: Vecto
 			if _count_floor_neighbors(grid, width, height, x, y) >= 3:
 				_set_tile(grid, width, x, y, TILE_FLOOR)
 
-func _carve_hall_segment(grid: PackedInt32Array, width: int, height: int, from_x: int, to_x: int, y: int) -> void:
+func _carve_hall_segment(grid: PackedInt32Array, width: int, _height: int, from_x: int, to_x: int, y: int) -> void:
 	var step := 1 if to_x >= from_x else -1
 	var x := from_x
 	while true:
@@ -204,7 +230,7 @@ func _carve_hall_segment(grid: PackedInt32Array, width: int, height: int, from_x
 			break
 		x += step
 
-func _carve_hall_segment_vertical(grid: PackedInt32Array, width: int, height: int, from_y: int, to_y: int, x: int) -> void:
+func _carve_hall_segment_vertical(grid: PackedInt32Array, width: int, _height: int, from_y: int, to_y: int, x: int) -> void:
 	var step := 1 if to_y >= from_y else -1
 	var y := from_y
 	while true:
@@ -229,7 +255,7 @@ func _count_floor_neighbors(grid: PackedInt32Array, width: int, height: int, x: 
 func _set_tile(grid: PackedInt32Array, width: int, x: int, y: int, tile: int) -> void:
 	if x < 0 or y < 0:
 		return
-	var height := int(grid.size() / width)
+	var height := int(float(grid.size()) / float(width))
 	if x >= width or y >= height:
 		return
 	# Keep a permanent 1-tile wall border around the map.
@@ -242,7 +268,7 @@ func _set_tile(grid: PackedInt32Array, width: int, x: int, y: int, tile: int) ->
 func _get_tile(grid: PackedInt32Array, width: int, x: int, y: int) -> int:
 	if x < 0 or y < 0:
 		return TILE_WALL
-	var height := int(grid.size() / width)
+	var height := int(float(grid.size()) / float(width))
 	if x >= width or y >= height:
 		return TILE_WALL
 	var index := y * width + x
@@ -299,13 +325,25 @@ func _find_farthest_from_room_index(rooms: Array, room_index: int) -> int:
 			max_index = i
 	return max_index
 
-func _annotate_rooms_with_metadata(rooms: Array, start_index: int, exit_index: int, chest_candidate_ratio: float, rng: RandomNumberGenerator) -> Dictionary:
+func _annotate_rooms_with_metadata(
+	rooms: Array,
+	start_index: int,
+	exit_index: int,
+	chest_candidate_ratio: float,
+	mst_edges: Array,
+	rng: RandomNumberGenerator,
+	patrol_nodes_per_room_min: int,
+	patrol_nodes_per_room_max: int,
+	patrol_point_padding: float,
+	patrol_point_jitter: float
+) -> Dictionary:
 	var marker_data := {
 		"player_start": PackedVector2Array(),
 		"enemy": PackedVector2Array(),
 		"chest_candidate": PackedVector2Array(),
 		"floor_exit": PackedVector2Array(),
 	}
+	var room_adjacency: Dictionary = _build_mst_room_adjacency(rooms.size(), mst_edges)
 
 	var candidate_indices: Array[int] = []
 	for i in rooms.size():
@@ -316,6 +354,8 @@ func _annotate_rooms_with_metadata(rooms: Array, start_index: int, exit_index: i
 			"is_floor_exit": i == exit_index,
 			"is_enemy_room": i != start_index and i != exit_index,
 			"is_chest_candidate": false,
+			"patrol_points": PackedVector2Array(),
+			"patrol_linked_rooms": PackedInt32Array(),
 		}
 		room["metadata"] = metadata
 		rooms[i] = room
@@ -349,4 +389,118 @@ func _annotate_rooms_with_metadata(rooms: Array, start_index: int, exit_index: i
 		rooms[room_index] = room
 		marker_data["chest_candidate"].push_back(room["center"])
 
-	return marker_data
+	for i in rooms.size():
+		var room: Dictionary = rooms[i]
+		var metadata: Dictionary = room["metadata"]
+		var linked_rooms: PackedInt32Array = room_adjacency.get(i, PackedInt32Array())
+		var patrol_point_count: int = _resolve_patrol_point_count(patrol_nodes_per_room_min, patrol_nodes_per_room_max, rng)
+		metadata["patrol_points"] = _build_patrol_points_for_room(
+			room["rect"],
+			patrol_point_count,
+			patrol_point_padding,
+			patrol_point_jitter,
+			rng
+		)
+		metadata["patrol_linked_rooms"] = linked_rooms
+		room["metadata"] = metadata
+		rooms[i] = room
+
+	return {
+		"spawn_markers": marker_data,
+		"patrol_graph": _build_patrol_graph_payload(rooms, room_adjacency, mst_edges),
+	}
+
+func _build_mst_room_adjacency(room_count: int, mst_edges: Array) -> Dictionary:
+	var room_adjacency: Dictionary = {}
+	for room_index in room_count:
+		room_adjacency[room_index] = PackedInt32Array()
+
+	for edge_data in mst_edges:
+		var edge: Dictionary = edge_data
+		var a: int = int(edge.get("a", -1))
+		var b: int = int(edge.get("b", -1))
+		if a < 0 or b < 0 or a >= room_count or b >= room_count or a == b:
+			continue
+
+		var a_links: PackedInt32Array = room_adjacency[a]
+		_push_unique_room_index(a_links, b)
+		room_adjacency[a] = a_links
+
+		var b_links: PackedInt32Array = room_adjacency[b]
+		_push_unique_room_index(b_links, a)
+		room_adjacency[b] = b_links
+
+	return room_adjacency
+
+func _push_unique_room_index(indices: PackedInt32Array, value: int) -> void:
+	for existing in indices:
+		if existing == value:
+			return
+	indices.push_back(value)
+
+func _resolve_patrol_point_count(min_count: int, max_count: int, rng: RandomNumberGenerator) -> int:
+	var safe_min: int = max(min_count, 1)
+	var safe_max: int = max(max_count, safe_min)
+	if safe_min == safe_max:
+		return safe_min
+	return rng.randi_range(safe_min, safe_max)
+
+func _build_patrol_points_for_room(rect: Rect2, point_count: int, padding: float, jitter: float, rng: RandomNumberGenerator) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	if point_count <= 0:
+		return points
+
+	var room_center: Vector2 = rect.get_center()
+	var safe_padding: float = maxf(padding, 0.0)
+	var min_x: float = rect.position.x + safe_padding
+	var min_y: float = rect.position.y + safe_padding
+	var max_x: float = rect.position.x + rect.size.x - safe_padding
+	var max_y: float = rect.position.y + rect.size.y - safe_padding
+	if min_x > max_x:
+		min_x = room_center.x
+		max_x = room_center.x
+	if min_y > max_y:
+		min_y = room_center.y
+		max_y = room_center.y
+
+	var half_width: float = maxf((max_x - min_x) * 0.5, 0.0)
+	var half_height: float = maxf((max_y - min_y) * 0.5, 0.0)
+	var center_x: float = (min_x + max_x) * 0.5
+	var center_y: float = (min_y + max_y) * 0.5
+
+	for i in point_count:
+		var base_angle: float = TAU * (float(i) / float(max(point_count, 1)))
+		var angle: float = base_angle + rng.randf_range(-jitter, jitter)
+		var radial: float = clampf(0.35 + rng.randf() * 0.55, 0.1, 1.0)
+		var patrol_x: float = center_x + cos(angle) * half_width * radial
+		var patrol_y: float = center_y + sin(angle) * half_height * radial
+		points.push_back(Vector2(clampf(patrol_x, min_x, max_x), clampf(patrol_y, min_y, max_y)))
+
+	if points.is_empty():
+		points.push_back(room_center)
+
+	return points
+
+func _build_patrol_graph_payload(rooms: Array, room_adjacency: Dictionary, mst_edges: Array) -> Dictionary:
+	var room_nodes: Dictionary = {}
+	for i in rooms.size():
+		var room: Dictionary = rooms[i]
+		if not room.has("metadata"):
+			continue
+		var metadata: Dictionary = room["metadata"]
+		room_nodes[i] = metadata.get("patrol_points", PackedVector2Array())
+
+	var room_links: Array = []
+	for edge_data in mst_edges:
+		var edge: Dictionary = edge_data
+		var a: int = int(edge.get("a", -1))
+		var b: int = int(edge.get("b", -1))
+		if a < 0 or b < 0 or a == b:
+			continue
+		room_links.append({"a": a, "b": b})
+
+	return {
+		"room_nodes": room_nodes,
+		"room_links": room_links,
+		"room_adjacency": room_adjacency,
+	}
