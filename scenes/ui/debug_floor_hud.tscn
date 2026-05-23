@@ -17,6 +17,68 @@ anchor_bottom = 1.0
 
 [node name="FloorLabel" type="Label" parent="MarginContainer" unique_id=727806566]
 layout_mode = 2
-text = "Floor: N/A  Phase: N/A  F6: Spawn Seeded Items  F7: Print Modifier Summary  F8: Quick Validation  F9: Spawn Seeded Gold  F10: Spawn Seeded Gems  F11: Patrol Overlay  F12: Patrol Smoke"
+text = "Floor: N/A  Phase: N/A  F5: Toggle Debug Panel  F6: Spawn Items  F7: Print Summary  F8: Quick Validation  F9: Spawn Gold  F10: Spawn Gems  F11: Patrol Overlay  F12: Patrol Smoke"
 label_settings = SubResource("LabelSettings_ywwjp")
 horizontal_alignment = 1
+
+[node name="DebugPanel" type="PanelContainer" parent="." unique_id=149448529]
+visible = false
+offset_left = 20.0
+offset_top = 104.0
+offset_right = 316.0
+offset_bottom = 430.0
+
+[node name="Margin" type="MarginContainer" parent="DebugPanel" unique_id=894337180]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="DebugPanel/Margin" unique_id=1517772457]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PanelTitle" type="Label" parent="DebugPanel/Margin/VBox" unique_id=564001027]
+layout_mode = 2
+text = "Debug Console  Floor N/A"
+
+[node name="Hint" type="Label" parent="DebugPanel/Margin/VBox" unique_id=725540699]
+layout_mode = 2
+text = "Toggle with F5"
+
+[node name="Actions" type="VBoxContainer" parent="DebugPanel/Margin/VBox" unique_id=190923618]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SpawnItemsButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=203731881]
+layout_mode = 2
+text = "Spawn Seeded Items"
+
+[node name="PrintSummaryButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=564786230]
+layout_mode = 2
+text = "Print Modifier Summary"
+
+[node name="QuickValidationButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=695487837]
+layout_mode = 2
+text = "Run Quick Validation"
+
+[node name="SpawnGoldButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=947467725]
+layout_mode = 2
+text = "Spawn Seeded Gold"
+
+[node name="SpawnGemsButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=189157112]
+layout_mode = 2
+text = "Spawn Seeded Gems"
+
+[node name="PatrolOverlayButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=1052392778]
+layout_mode = 2
+text = "Patrol Overlay: Off"
+
+[node name="PatrolSmokeButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=388364150]
+layout_mode = 2
+text = "Run Patrol Smoke"
+
+[node name="RingBalanceButton" type="Button" parent="DebugPanel/Margin/VBox/Actions" unique_id=1880299508]
+layout_mode = 2
+text = "Run Ring Balance Sample"

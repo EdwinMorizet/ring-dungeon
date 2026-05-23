@@ -2,15 +2,37 @@
 
 This project exposes lightweight Rings/Bands debug utilities through both keyboard shortcuts and callable InventoryManager methods.
 
+All current gameplay-facing debug actions are now grouped in a dedicated in-game debug console panel.
+
 ## Keyboard Shortcuts (In Play Mode)
 
 From the DebugFloorHud overlay:
 
+1. F5: Toggle Debug Console panel.
 1. F6: Spawn seeded items around player.
 2. F7: Print equipped modifier summary.
 3. F8: Run quick validation (one-key self-check).
 4. F9: Spawn seeded gold pickups around player.
 5. F10: Spawn seeded gems pickups around player.
+6. F11: Toggle patrol link overlay.
+7. F12: Run patrol smoke check.
+
+## Debug Console Panel
+
+The DebugFloorHud now contains a toggleable `Debug Console` panel.
+
+1. Press F5 to show/hide it.
+2. The panel exposes buttons for all currently wired debug actions:
+- Spawn Seeded Items
+- Print Modifier Summary
+- Run Quick Validation
+- Spawn Seeded Gold
+- Spawn Seeded Gems
+- Patrol Overlay toggle
+- Run Patrol Smoke
+- Run Ring Balance Sample
+
+The panel is intended to be the single in-game surface for debug actions, while F-key shortcuts remain available for quick use.
 
 ## What Each Command Does
 
@@ -50,6 +72,21 @@ From the DebugFloorHud overlay:
 - Effect:
   - Spawns deterministic gems pickups in a ring around player.
   - Gem amounts scale lightly with floor depth.
+
+6. Toggle patrol overlay (F11)
+- Calls: `DungeonFloorController.set_patrol_link_debug_visual_enabled(enabled)`
+- Effect:
+  - Toggles patrol route debug lines for generated floor links.
+
+7. Run patrol smoke check (F12)
+- Calls: `DungeonFloorController.run_patrol_smoke_check()`
+- Effect:
+  - Prints pass/fail summary of patrol marker/link integrity.
+
+8. Run ring balance sample (Debug Console button)
+- Calls: `ItemAffixGenerator.debug_sample_ring_balance(...)` for Rare/Epic/Legendary.
+- Effect:
+  - Prints deterministic balance averages for key ring stats in console.
 
 ## Direct Script Calls
 

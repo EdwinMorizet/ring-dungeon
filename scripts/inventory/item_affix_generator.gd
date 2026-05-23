@@ -337,12 +337,25 @@ static func _apply_affix_roll(modifiers: Dictionary, affix: Dictionary, rarity: 
 	if kind == "mult":
 		var scaled_delta: float = (rolled - 1.0) * scale
 		var scaled_value: float = 1.0 + scaled_delta
+		if key == &"gravity_influence_mult":
+			scaled_value = _quantize_gravity_multiplier_step(scaled_value)
 		modifiers[key] = float(modifiers.get(key, 1.0)) * scaled_value
 		return
 	var scaled_flat: float = rolled * scale
 	if key == &"aoe_radius_flat":
 		scaled_flat = _quantize_aoe_radius_flat(scaled_flat)
 	modifiers[key] = float(modifiers.get(key, 0.0)) + scaled_flat
+
+static func _quantize_gravity_multiplier_step(value: float) -> float:
+	if value <= 0.0:
+		return 1.0
+	if is_equal_approx(value, 1.0):
+		return 1.0
+	if value > 1.0:
+		var step_count: int = maxi(int(roundf(log(value) / log(2.0))), 1)
+		return float(pow(2.0, step_count))
+	var inverse_steps: int = maxi(int(roundf(log(1.0 / value) / log(2.0))), 1)
+	return float(pow(0.5, inverse_steps))
 
 static func _quantize_aoe_radius_flat(value: float) -> float:
 	if value <= 0.0:

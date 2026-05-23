@@ -8,8 +8,8 @@ var _is_triggered: bool = false
 var _is_armed: bool = false
 
 func _ready() -> void:
-	monitoring = true
-	monitorable = true
+	set_deferred("monitoring", true)
+	set_deferred("monitorable", true)
 	body_entered.connect(_on_body_entered)
 	set_physics_process(true)
 

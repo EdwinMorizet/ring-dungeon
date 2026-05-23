@@ -25,12 +25,19 @@ enemy_type_id = "skeleton_archer"
 start_progression_index = 2
 weight = 2
 
+[sub_resource type="Resource" id="Resource_progression_three_bones_spider_spawn_type"]
+script = ExtResource("2_enemy_spawn_type_entry")
+enemy_type_id = "bones_spider"
+start_progression_index = 3
+weight = 2
+
 [resource]
 script = ExtResource("1_enemy_manager_cfg")
 enemy_scene_paths = {
 "enemy_basic": "res://scenes/enemies/enemy_basic.tscn",
+"bones_spider": "res://scenes/enemies/enemy_bones_spider.tscn",
 "skeleton": "res://scenes/enemies/enemy_skeleton.tscn",
 "skeleton_archer": "res://scenes/enemies/enemy_skeleton_archer.tscn",
 "zombie": "res://scenes/enemies/enemy_zombie.tscn"
 }
-spawn_type_entries = Array[Resource]([SubResource("Resource_fallback_enemy_basic_spawn_type"), SubResource("Resource_progression_zero_zombie_spawn_type"), SubResource("Resource_progression_one_skeleton_spawn_type"), SubResource("Resource_progression_two_skeleton_archer_spawn_type")])
+spawn_type_entries = Array[Resource]([SubResource("Resource_fallback_enemy_basic_spawn_type"), SubResource("Resource_progression_zero_zombie_spawn_type"), SubResource("Resource_progression_one_skeleton_spawn_type"), SubResource("Resource_progression_two_skeleton_archer_spawn_type"), SubResource("Resource_progression_three_bones_spider_spawn_type")])

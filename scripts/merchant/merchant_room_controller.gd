@@ -12,8 +12,8 @@ var _has_exited: bool = false
 func _ready() -> void:
 	if _exit_trigger != null:
 		_exit_trigger.body_entered.connect(_on_exit_body_entered)
-		_exit_trigger.monitoring = true
-		_exit_trigger.monitorable = true
+		_exit_trigger.set_deferred("monitoring", true)
+		_exit_trigger.set_deferred("monitorable", true)
 
 func _exit_tree() -> void:
 	if _exit_trigger != null and _exit_trigger.body_entered.is_connected(_on_exit_body_entered):
@@ -27,8 +27,8 @@ func get_player_spawn_position() -> Vector3:
 func reset_for_entry() -> void:
 	_has_exited = false
 	if _exit_trigger != null:
-		_exit_trigger.monitoring = true
-		_exit_trigger.monitorable = true
+		_exit_trigger.set_deferred("monitoring", true)
+		_exit_trigger.set_deferred("monitorable", true)
 
 func _on_exit_body_entered(body: Node) -> void:
 	if _has_exited:

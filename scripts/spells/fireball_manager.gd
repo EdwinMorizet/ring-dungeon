@@ -124,25 +124,26 @@ func _build_modified_config() -> FireballConfig:
 	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
 	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
 	modified_config.accuracy = max(_config.accuracy + accuracy_deviation, 0.0)
-	modified_config.gravity_influence = max(_config.gravity_influence * gravity_multiplier, 0.0)
+	modified_config.gravity_influence = _build_runtime_gravity_influence(gravity_multiplier)
 	modified_config.bounce_count = maxi(_config.bounce_count + bounce_bonus, 0)
 	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
 	modified_config.pierce_count = maxi(_config.pierce_count + pierce_bonus, 0)
 	modified_config.aoe = max(_config.aoe + aoe_bonus, 1.0)
-	_apply_positive_gravity_tradeoff_bonus(modified_config)
+	_apply_positive_gravity_tradeoff_bonus(modified_config, gravity_multiplier)
 	modified_config.cast_delay_seconds = get_cast_delay_seconds()
 	return modified_config
 
-func _apply_positive_gravity_tradeoff_bonus(modified_config: FireballConfig) -> void:
+func _build_runtime_gravity_influence(gravity_multiplier: float) -> float:
+	if gravity_multiplier <= 1.0:
+		return 0.0
+	return gravity_multiplier - 1.0
+
+func _apply_positive_gravity_tradeoff_bonus(modified_config: FireballConfig, gravity_multiplier: float) -> void:
 	if modified_config == null:
 		return
-	var base_gravity: float = max(_config.gravity_influence, 0.001)
-	if base_gravity <= 0.0:
+	if gravity_multiplier <= 1.0:
 		return
-	var gravity_ratio: float = modified_config.gravity_influence / base_gravity
-	if gravity_ratio <= 1.0:
-		return
-	var gravity_excess: float = gravity_ratio - 1.0
+	var gravity_excess: float = gravity_multiplier - 1.0
 	var damage_bonus_mult: float = 1.0 + gravity_excess * RingBandConstantsScript.GRAVITY_TRADEOFF_DAMAGE_GAIN_PER_EXTRA
 	var aoe_bonus_flat: float = _config.aoe * gravity_excess * RingBandConstantsScript.GRAVITY_TRADEOFF_AOE_GAIN_PER_EXTRA
 	modified_config.damage = maxi(int(roundf(float(modified_config.damage) * damage_bonus_mult)), 0)

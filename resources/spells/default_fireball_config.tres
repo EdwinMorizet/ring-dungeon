@@ -6,5 +6,5 @@
 script = ExtResource("1_ex2vi")
 gravity_influence = 0
 bounce_count = 0
-aoe = 10.0
-accuracy = 2.0
+aoe = 0.0
+mana_cost = 8.0
