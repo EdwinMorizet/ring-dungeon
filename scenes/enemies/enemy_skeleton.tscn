@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://cnv4hh5gmyjo6"]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_skeleton.gd" id="1_enemy_skeleton_script"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_skeleton"]
+radius = 0.42
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_skeleton"]
+radius = 0.42
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton"]
+albedo_color = Color(0.811, 0.808, 0.725, 1)
+roughness = 0.62
+
+[node name="EnemySkeleton" type="RigidBody3D" unique_id=170510423]
+mass = 1.15
+lock_rotation = true
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+linear_damp = 3.8
+angular_damp = 8.0
+script = ExtResource("1_enemy_skeleton_script")
+enemy_type_id = &"skeleton"
+max_health = 100
+speed = 3.4
+strength = 10
+chase_activation_radius = 15.5
+contact_damage_interval_seconds = 0.85
+contact_damage_radius = 1.35
+use_patrol_route = true
+patrol_reach_radius = 0.8
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1056703844]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_skeleton")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1457992088]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_skeleton")
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton")

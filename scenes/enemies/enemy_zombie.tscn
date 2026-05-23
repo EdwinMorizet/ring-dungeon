@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://cfrcw5nc5lbm8"]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_zombie.gd" id="1_enemy_zombie_script"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pbnra"]
+radius = 0.45
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_0d0ow"]
+radius = 0.45
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_zombie"]
+albedo_color = Color(0.302, 0.552, 0.242, 1)
+roughness = 0.55
+
+[node name="EnemyZombie" type="RigidBody3D" unique_id=102824031]
+mass = 1.25
+lock_rotation = true
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+linear_damp = 3.5
+angular_damp = 8.0
+script = ExtResource("1_enemy_zombie_script")
+enemy_type_id = &"zombie"
+max_health = 85
+speed = 2.6
+strength = 8
+chase_activation_radius = 10.5
+contact_damage_interval_seconds = 1.0
+contact_damage_radius = 1.3
+use_patrol_route = false
+roam_speed_multiplier = 0.52
+roam_interval_seconds = 1.6
+roam_radius = 5.0
+roam_reach_radius = 0.75
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1495744179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_pbnra")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1943366200]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_0d0ow")
+surface_material_override/0 = SubResource("StandardMaterial3D_zombie")

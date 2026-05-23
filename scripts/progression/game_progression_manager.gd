@@ -1,8 +1,6 @@
 # Manages run progression state, phase transitions, and floor config selection.
 extends Node
 
-const DungeonFloorConfig = preload("res://scripts/dungeon/dungeon_floor_config.gd")
-const FloorDifficultyTable = preload("res://scripts/progression/floor_difficulty_table.gd")
 # Default parameter resource for phase names and floor display baseline.
 const DefaultGameProgressionManagerConfig: GameProgressionManagerConfig = preload("res://resources/progression/default_game_progression_manager_config.tres")
 const DefaultDifficultyTable: FloorDifficultyTable = preload("res://resources/dungeon/default_floor_difficulty_table.tres")

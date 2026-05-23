@@ -21,6 +21,9 @@ func clear_spawned_enemies() -> void:
 		if enemy != null and is_instance_valid(enemy):
 			enemy.queue_free()
 	_spawned_enemies.clear()
+	var enemy_manager: Node = _get_enemy_manager_node()
+	if enemy_manager != null and enemy_manager.has_method("clear_registry"):
+		enemy_manager.call("clear_registry")
 
 func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_spawn_position: Vector3, enemy_scene: PackedScene, progression_index: int, floor_seed: int, fallback_spawn_position: Vector3) -> void:
 	clear_spawned_enemies()
@@ -50,7 +53,8 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 			var spawn_position: Vector3 = _resolve_spawn_position_in_circle(marker.global_position, generated_root)
 			if spawn_position == Vector3.INF:
 				continue
-			_spawn_enemy_at(parent_node, enemy_scene, spawn_position, patrol_route)
+			var spawn_index: int = _spawned_enemies.size()
+			_spawn_enemy_at(parent_node, enemy_scene, spawn_position, patrol_route, floor_seed, progression_index, spawn_index)
 
 	if _spawned_enemies.is_empty() and _config.allow_fallback_spawn:
 		if fallback_spawn_position.distance_to(player_spawn_position) >= _config.min_spawn_distance_from_player:
@@ -59,7 +63,8 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 				var spawn_position: Vector3 = _resolve_spawn_position_in_circle(fallback_spawn_position, generated_root)
 				if spawn_position == Vector3.INF:
 					continue
-				_spawn_enemy_at(parent_node, enemy_scene, spawn_position, [])
+				var spawn_index: int = _spawned_enemies.size()
+				_spawn_enemy_at(parent_node, enemy_scene, spawn_position, [], floor_seed, progression_index, spawn_index)
 
 func _resolve_spawn_position_in_circle(center_position: Vector3, generated_root: Node3D) -> Vector3:
 	var radius: float = maxf(_config.spawn_circle_radius, 0.0)
@@ -191,8 +196,11 @@ func _select_markers(markers: Array[Marker3D], target_count: int, floor_seed: in
 		marker_pool.remove_at(picked_index)
 	return selected_markers
 
-func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position: Vector3, patrol_route: Array[Vector3]) -> void:
-	var enemy_node: Node = enemy_scene.instantiate()
+func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position: Vector3, patrol_route: Array[Vector3], floor_seed: int, progression_index: int, spawn_index: int) -> void:
+	var resolved_enemy_scene: PackedScene = _resolve_enemy_scene_for_spawn(enemy_scene, floor_seed, progression_index, spawn_index)
+	if resolved_enemy_scene == null:
+		return
+	var enemy_node: Node = resolved_enemy_scene.instantiate()
 	if enemy_node is RigidBody3D:
 		var enemy: RigidBody3D = enemy_node as RigidBody3D
 		parent_node.add_child(enemy)
@@ -204,6 +212,21 @@ func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position
 		_spawned_enemies.append(enemy)
 		return
 	enemy_node.queue_free()
+
+func _resolve_enemy_scene_for_spawn(default_scene: PackedScene, floor_seed: int, progression_index: int, spawn_index: int) -> PackedScene:
+	if default_scene == null:
+		return null
+	var enemy_manager: Node = _get_enemy_manager_node()
+	if enemy_manager != null and enemy_manager.has_method("resolve_spawn_enemy_scene"):
+		var resolved_scene: Variant = enemy_manager.call("resolve_spawn_enemy_scene", default_scene, "", floor_seed, progression_index, spawn_index)
+		if resolved_scene is PackedScene:
+			return resolved_scene as PackedScene
+	return default_scene
+
+func _get_enemy_manager_node() -> Node:
+	if not has_node("/root/EnemyManager"):
+		return null
+	return get_node("/root/EnemyManager")
 
 func _resolve_patrol_route_for_spawn_marker(generated_root: Node3D, marker: Marker3D) -> Array[Vector3]:
 	var route: Array[Vector3] = []

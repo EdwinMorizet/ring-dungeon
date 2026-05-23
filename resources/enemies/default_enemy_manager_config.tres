@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyManagerConfig" format=3 uid="uid://bcypjd2y0p8pj"]
+
+[ext_resource type="Script" uid="uid://bp68tpgq7ymwk" path="res://scripts/enemies/enemy_manager_config.gd" id="1_enemy_manager_cfg"]
+[ext_resource type="Script" uid="uid://3g4vo8a1lplw" path="res://scripts/enemies/enemy_spawn_type_entry.gd" id="2_enemy_spawn_type_entry"]
+
+[sub_resource type="Resource" id="Resource_fallback_enemy_basic_spawn_type"]
+script = ExtResource("2_enemy_spawn_type_entry")
+enemy_type_id = "enemy_basic"
+start_progression_index = 999
+
+[sub_resource type="Resource" id="Resource_progression_zero_zombie_spawn_type"]
+script = ExtResource("2_enemy_spawn_type_entry")
+enemy_type_id = "zombie"
+weight = 6
+
+[sub_resource type="Resource" id="Resource_progression_one_skeleton_spawn_type"]
+script = ExtResource("2_enemy_spawn_type_entry")
+enemy_type_id = "skeleton"
+start_progression_index = 1
+weight = 3
+
+[sub_resource type="Resource" id="Resource_progression_two_skeleton_archer_spawn_type"]
+script = ExtResource("2_enemy_spawn_type_entry")
+enemy_type_id = "skeleton_archer"
+start_progression_index = 2
+weight = 2
+
+[resource]
+script = ExtResource("1_enemy_manager_cfg")
+enemy_scene_paths = {
+"enemy_basic": "res://scenes/enemies/enemy_basic.tscn",
+"skeleton": "res://scenes/enemies/enemy_skeleton.tscn",
+"skeleton_archer": "res://scenes/enemies/enemy_skeleton_archer.tscn",
+"zombie": "res://scenes/enemies/enemy_zombie.tscn"
+}
+spawn_type_entries = Array[Resource]([SubResource("Resource_fallback_enemy_basic_spawn_type"), SubResource("Resource_progression_zero_zombie_spawn_type"), SubResource("Resource_progression_one_skeleton_spawn_type"), SubResource("Resource_progression_two_skeleton_archer_spawn_type")])

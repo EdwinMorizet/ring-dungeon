@@ -197,8 +197,8 @@ static func _build_affix_lines(affixes: Array[Dictionary], benefit: bool) -> Arr
 		if is_benefit != benefit:
 			continue
 		var token: String = String(affix.get("token", ""))
-		var sign: String = "+" if benefit else "-"
-		lines.append("%s %s" % [sign, token])
+		var prefix: String = "+" if benefit else "-"
+		lines.append("%s %s" % [prefix, token])
 	return lines
 
 static func _build_tokens(affixes: Array[Dictionary]) -> Array[String]:
@@ -419,9 +419,9 @@ static func _pick_unique_affix(pool: Array[Dictionary], used_keys: Dictionary, r
 	used_keys[StringName(picked.get("key", &""))] = true
 	return picked
 
-static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sample_count: int = 200, seed: int = 1337) -> Dictionary:
+static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sample_count: int = 200, seed_value: int = 1337) -> Dictionary:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = seed_value
 	var total_samples: int = maxi(sample_count, 1)
 	var result: Dictionary = {
 		"rarity": int(rarity),

@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://bkq1c6fw4cl5s"]
+
+[ext_resource type="Script" path="res://scripts/vfx/skeleton_archer_shot_vfx.gd" id="1_skeleton_archer_shot_vfx_script"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_skeleton_archer_beam"]
+size = Vector3(0.08, 0.08, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton_archer_beam"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.898039, 0.545098, 0.85)
+emission_enabled = true
+emission = Color(1, 0.858824, 0.462745, 1)
+emission_energy_multiplier = 1.25
+
+[sub_resource type="SphereMesh" id="SphereMesh_skeleton_archer_impact"]
+radius = 0.12
+height = 0.24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton_archer_impact"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.94902, 0.713726, 0.9)
+emission_enabled = true
+emission = Color(1, 0.878431, 0.611765, 1)
+emission_energy_multiplier = 1.4
+
+[node name="SkeletonArcherShotVfx" type="Node3D"]
+script = ExtResource("1_skeleton_archer_shot_vfx_script")
+
+[node name="Beam" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_skeleton_archer_beam")
+cast_shadow = 0
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton_archer_beam")
+
+[node name="ImpactFlash" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_skeleton_archer_impact")
+cast_shadow = 0
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton_archer_impact")

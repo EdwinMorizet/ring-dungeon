@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://b72pq7xik53ri"]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_skeleton_archer.gd" id="1_enemy_skeleton_archer_script"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_skeleton_archer"]
+radius = 0.4
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_skeleton_archer"]
+radius = 0.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton_archer"]
+albedo_color = Color(0.62, 0.67, 0.51, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_skeleton_archer_aim_guide"]
+size = Vector3(0.04, 0.04, 1.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton_archer_aim_guide"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.905882, 0.603922, 0.72)
+emission_enabled = true
+emission = Color(1, 0.870588, 0.501961, 1)
+emission_energy_multiplier = 1.2
+
+[node name="EnemySkeletonArcher" type="RigidBody3D" unique_id=641731299]
+mass = 1.05
+lock_rotation = true
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+linear_damp = 3.6
+angular_damp = 8.0
+script = ExtResource("1_enemy_skeleton_archer_script")
+enemy_type_id = &"skeleton_archer"
+max_health = 72
+speed = 3.1
+strength = 9
+chase_activation_radius = 16.5
+contact_damage_interval_seconds = 2.0
+contact_damage_radius = 0.75
+use_patrol_route = true
+patrol_reach_radius = 0.8
+preferred_attack_distance = 9.5
+retreat_distance = 5.5
+ranged_attack_interval_seconds = 1.35
+ranged_attack_range = 13.5
+retreat_speed_multiplier = 1.15
+ranged_accuracy_degrees = 5.5
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=382913541]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_skeleton_archer")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=205680321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_skeleton_archer")
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton_archer")
+
+[node name="AimGuide" type="MeshInstance3D" parent="." unique_id=1186490274]
+visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -0.55)
+mesh = SubResource("BoxMesh_skeleton_archer_aim_guide")
+cast_shadow = 0
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton_archer_aim_guide")

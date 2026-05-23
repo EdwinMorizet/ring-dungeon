@@ -14,7 +14,6 @@ enum NearbySortMode {
 
 @export var nearby_sort_mode: NearbySortMode = NearbySortMode.RARITY_DESC
 
-@onready var _panel_root: Control = $Root
 @onready var _panel_container: PanelContainer = $Root/Panel
 @onready var _band_slots: GridContainer = $Root/Panel/Margin/VBox/HandsRow/BandHand/Slots
 @onready var _ring_slots: GridContainer = $Root/Panel/Margin/VBox/HandsRow/RingHand/Slots

@@ -7,6 +7,8 @@ const FloatingDamageNumberScene: PackedScene = preload("res://scenes/vfx/floatin
 signal damaged(amount: int, remaining_health: int)
 signal died(enemy: EnemyBasic)
 
+@export var enemy_type_id: StringName = &"enemy_basic"
+@export var enemy_variant_id: StringName = &"default"
 @export var max_health: int = 100
 @export var speed: float = 3.5
 @export var strength: int = 10
@@ -25,6 +27,7 @@ var _is_chase_active: bool = false
 var _contact_damage_cooldown: float = 0.0
 var _patrol_route: Array[Vector3] = []
 var _patrol_target_index: int = 0
+var _is_registered_with_enemy_manager: bool = false
 
 func _ready() -> void:
 	contact_monitor = true
@@ -35,6 +38,10 @@ func _ready() -> void:
 	_health = max(max_health, 1)
 	_is_chase_active = false
 	_contact_damage_cooldown = 0.0
+	_register_with_enemy_manager()
+
+func _exit_tree() -> void:
+	_unregister_from_enemy_manager()
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
@@ -44,6 +51,8 @@ func _physics_process(delta: float) -> void:
 	var player_target: Node3D = _get_player_target()
 	if player_target == null:
 		if _follow_patrol_route():
+			return
+		if _handle_idle_without_target(delta):
 			return
 		linear_velocity = Vector3(0.0, linear_velocity.y, 0.0)
 		return
@@ -88,6 +97,19 @@ func set_patrol_route(route: Array[Vector3]) -> void:
 	for point in route:
 		_patrol_route.append(point)
 	_patrol_target_index = 0
+
+func get_enemy_type_id() -> StringName:
+	if enemy_type_id == StringName():
+		return &"enemy_basic"
+	return enemy_type_id
+
+func get_enemy_variant_id() -> StringName:
+	if enemy_variant_id == StringName():
+		return &"default"
+	return enemy_variant_id
+
+func _handle_idle_without_target(_delta: float) -> bool:
+	return false
 
 func _follow_patrol_route() -> bool:
 	if not use_patrol_route:
@@ -181,12 +203,42 @@ func _spawn_damage_number(amount: int) -> void:
 
 func _die() -> void:
 	_is_dead = true
+	var enemy_manager: Node = _get_enemy_manager_node()
+	if enemy_manager != null and enemy_manager.has_method("notify_enemy_died"):
+		enemy_manager.call("notify_enemy_died", self)
 	if has_node("/root/InventoryManager"):
 		var floor_depth: int = _resolve_floor_depth()
 		var floor_seed: int = _resolve_floor_seed()
 		InventoryManager.spawn_random_drop(global_position, floor_depth, floor_seed)
 	died.emit(self)
 	queue_free()
+
+func _register_with_enemy_manager() -> void:
+	if _is_registered_with_enemy_manager:
+		return
+	var enemy_manager: Node = _get_enemy_manager_node()
+	if enemy_manager == null:
+		return
+	if not enemy_manager.has_method("register_enemy"):
+		return
+	enemy_manager.call("register_enemy", self)
+	_is_registered_with_enemy_manager = true
+
+func _unregister_from_enemy_manager() -> void:
+	if not _is_registered_with_enemy_manager:
+		return
+	var enemy_manager: Node = _get_enemy_manager_node()
+	if enemy_manager == null:
+		_is_registered_with_enemy_manager = false
+		return
+	if enemy_manager.has_method("unregister_enemy"):
+		enemy_manager.call("unregister_enemy", self)
+	_is_registered_with_enemy_manager = false
+
+func _get_enemy_manager_node() -> Node:
+	if not has_node("/root/EnemyManager"):
+		return null
+	return get_node("/root/EnemyManager")
 
 func _resolve_floor_depth() -> int:
 	if has_node("/root/GameProgressionManager") and GameProgressionManager.has_method("get_progression_index"):

@@ -7,6 +7,12 @@ applyTo: "**/*.gd, **/*.tscn, **/*.tres"
 
 Use these instructions when generating gameplay, systems, and content code for this project.
 
+## GODOT executables paths
+
+Try this paths
+- "C:\Users\maste\Documents\DEV\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
+- "C:\Users\edwin\Documents\DEV\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
+
 ## Instruction Map And Precedence
 
 Use this file as the broad gameplay umbrella. For Rings/Bands work, defer to specialized instruction files first.
