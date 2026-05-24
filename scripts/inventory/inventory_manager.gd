@@ -264,12 +264,12 @@ func get_fireball_accuracy_deviation_flat() -> float:
 			modifier += item_definition.get_modifier_float(&"accuracy_deviation_flat", 0.0)
 	return modifier
 
-func get_fireball_bounce_bonus() -> int:
-	var bonus: int = 0
+func get_fireball_bounce_chance() -> float:
+	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_int(&"bounces_flat", 0)
-	return bonus
+			bonus += item_definition.get_modifier_float(&"bounce_chance", 0.0)
+	return clampf(bonus, 0.0, RingBandConstants.MAX_BOUNCE_CHANCE)
 
 func get_fireball_split_bonus() -> int:
 	var bonus: int = 0
@@ -285,12 +285,12 @@ func get_fireball_aoe_bonus() -> float:
 			bonus += item_definition.get_modifier_float(&"aoe_radius_flat", 0.0)
 	return bonus
 
-func get_fireball_pierce_bonus() -> int:
-	var bonus: int = 0
+func get_fireball_pierce_chance() -> float:
+	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_int(&"pierce_flat", 0)
-	return bonus
+			bonus += item_definition.get_modifier_float(&"pierce_chance", 0.0)
+	return clampf(bonus, 0.0, RingBandConstants.MAX_PIERCE_CHANCE)
 
 func get_band_max_hp_bonus() -> float:
 	var bonus: float = 0.0
@@ -477,9 +477,9 @@ func debug_print_equipped_modifier_summary() -> void:
 	lines.append("gravity_influence_mult=%.3f" % get_fireball_gravity_multiplier())
 	lines.append("cast_delay_mult=%.3f" % get_fireball_cast_delay_multiplier())
 	lines.append("accuracy_deviation_flat=%+.3f" % get_fireball_accuracy_deviation_flat())
-	lines.append("bounces_flat=%d" % get_fireball_bounce_bonus())
+	lines.append("bounce_chance=%.2f" % get_fireball_bounce_chance())
 	lines.append("split_flat=%d" % get_fireball_split_bonus())
-	lines.append("pierce_flat=%d" % get_fireball_pierce_bonus())
+	lines.append("pierce_chance=%.2f" % get_fireball_pierce_chance())
 	lines.append("aoe_radius_flat=%+.3f" % get_fireball_aoe_bonus())
 	lines.append("max_hp_flat=%+.1f" % get_band_max_hp_bonus())
 	lines.append("max_mp_flat=%+.1f" % get_band_max_mp_bonus())

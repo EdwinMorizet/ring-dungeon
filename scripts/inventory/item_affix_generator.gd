@@ -9,10 +9,10 @@ const _RING_BENEFIT_POOL: Array[Dictionary] = [
 	{"key": &"gravity_influence_mult", "token": "Feathered", "kind": "mult", "min": 0.82, "max": 0.97},
 	{"key": &"cast_delay_mult", "token": "Quickcast", "kind": "mult", "min": 0.80, "max": 0.97},
 	{"key": &"accuracy_deviation_flat", "token": "Precise", "kind": "flat", "min": -0.45, "max": -0.08},
-	{"key": &"bounces_flat", "token": "Ricochet", "kind": "flat", "min": 1.0, "max": 2.0},
+	{"key": &"bounce_chance", "token": "Ricochet", "kind": "flat", "min": 0.35, "max": 0.70},
 	{"key": &"split_flat", "token": "Forking", "kind": "flat", "min": 1.0, "max": 2.0},
 	{"key": &"aoe_radius_flat", "token": "Burst", "kind": "flat", "min": 1.00, "max": 2.00},
-	{"key": &"pierce_flat", "token": "Lancing", "kind": "flat", "min": 1.0, "max": 2.0},
+	{"key": &"pierce_chance", "token": "Lancing", "kind": "flat", "min": 0.30, "max": 0.65},
 ]
 
 const _RING_TRADEOFF_POOL: Array[Dictionary] = [
@@ -54,7 +54,7 @@ const _RING_MAJOR_TRAITS: Array[Dictionary] = [
 		"token": "Cataclysm",
 		"modifiers": {
 			&"aoe_radius_flat": 1.25,
-			&"pierce_flat": 1,
+			&"pierce_chance": 0.50,
 			&"cast_delay_mult": 1.10,
 		},
 	},
@@ -179,10 +179,10 @@ static func _create_default_modifiers() -> Dictionary:
 		&"gravity_influence_mult": 1.0,
 		&"cast_delay_mult": 1.0,
 		&"accuracy_deviation_flat": 0.0,
-		&"bounces_flat": 0,
+		&"bounce_chance": 0.0,
 		&"split_flat": 0,
 		&"aoe_radius_flat": 0.0,
-		&"pierce_flat": 0,
+		&"pierce_chance": 0.0,
 		&"max_hp_flat": 0.0,
 		&"max_mp_flat": 0.0,
 		&"mana_regen_flat": 0.0,
@@ -300,7 +300,7 @@ static func _get_required_ring_tradeoff_keys(benefit_key: StringName) -> Array[S
 			return [&"accuracy_deviation_flat"]
 		&"split_flat":
 			return [&"damage_mult", &"accuracy_deviation_flat"]
-		&"pierce_flat":
+		&"pierce_chance":
 			return [&"mana_cost_mult"]
 		_:
 			return []
@@ -364,9 +364,9 @@ static func _quantize_aoe_radius_flat(value: float) -> float:
 	return max(stepped, 1.0)
 
 static func _clamp_discrete_modifiers(modifiers: Dictionary) -> void:
-	modifiers[&"bounces_flat"] = mini(maxi(int(roundf(float(modifiers.get(&"bounces_flat", 0.0)))), 0), RingBandConstants.MAX_BOUNCE_COUNT)
 	modifiers[&"split_flat"] = mini(maxi(int(roundf(float(modifiers.get(&"split_flat", 0.0)))), 0), RingBandConstants.MAX_SPLIT_COUNT)
-	modifiers[&"pierce_flat"] = mini(maxi(int(roundf(float(modifiers.get(&"pierce_flat", 0.0)))), 0), RingBandConstants.MAX_PIERCE_COUNT)
+	modifiers[&"bounce_chance"] = clampf(float(modifiers.get(&"bounce_chance", 0.0)), 0.0, RingBandConstants.MAX_BOUNCE_CHANCE)
+	modifiers[&"pierce_chance"] = clampf(float(modifiers.get(&"pierce_chance", 0.0)), 0.0, RingBandConstants.MAX_PIERCE_CHANCE)
 
 static func _apply_required_tradeoffs_for_major_trait(item: InventoryItemDefinition, major_trait: Dictionary, rarity: InventoryItemDefinition.Rarity, rng: RandomNumberGenerator) -> void:
 	if item.item_kind != InventoryItemDefinition.ItemKind.RING:
@@ -415,7 +415,7 @@ static func _is_benefit_modifier_value(key: StringName, value: float) -> bool:
 		if key == &"gravity_influence_mult":
 			return value < 1.0
 		return value > float(_create_default_modifiers().get(key, 1.0))
-	if key == &"bounces_flat" or key == &"split_flat" or key == &"pierce_flat":
+	if key == &"split_flat" or key == &"bounce_chance" or key == &"pierce_chance":
 		return value > 0.0
 	return value > 0.0
 
@@ -446,7 +446,7 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 		"avg_cast_delay_mult": 0.0,
 		"avg_accuracy_deviation_flat": 0.0,
 		"avg_split_flat": 0.0,
-		"avg_pierce_flat": 0.0,
+		"avg_pierce_chance": 0.0,
 		"avg_required_tradeoff_entries": 0.0,
 	}
 
@@ -476,7 +476,7 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 		delay_sum += float(modifiers.get(&"cast_delay_mult", 1.0))
 		accuracy_sum += float(modifiers.get(&"accuracy_deviation_flat", 0.0))
 		split_sum += float(modifiers.get(&"split_flat", 0.0))
-		pierce_sum += float(modifiers.get(&"pierce_flat", 0.0))
+		pierce_sum += float(modifiers.get(&"pierce_chance", 0.0))
 
 	var inv_count: float = 1.0 / float(total_samples)
 	result["avg_damage_mult"] = damage_sum * inv_count
@@ -486,6 +486,6 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 	result["avg_cast_delay_mult"] = delay_sum * inv_count
 	result["avg_accuracy_deviation_flat"] = accuracy_sum * inv_count
 	result["avg_split_flat"] = split_sum * inv_count
-	result["avg_pierce_flat"] = pierce_sum * inv_count
+	result["avg_pierce_chance"] = pierce_sum * inv_count
 	result["avg_required_tradeoff_entries"] = required_entries_sum * inv_count
 	return result

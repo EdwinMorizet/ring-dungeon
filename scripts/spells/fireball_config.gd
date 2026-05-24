@@ -6,10 +6,10 @@ class_name FireballConfig
 @export var speed: float = 30.0
 # Gravity multiplier applied to projectile arc simulation.
 @export var gravity_influence: float = 0.2
-# Number of wall bounces before projectile terminates.
-@export var bounce_count: int = 2
-# Number of enemy pierces before projectile terminates.
-@export var pierce_count: int = 0
+# Probability (0.0–1.0) that a wall hit triggers a bounce; halved on the projectile after each trigger.
+@export var bounce_chance: float = 0.0
+# Probability (0.0–1.0) that an enemy hit triggers a pierce; halved on the projectile after each trigger.
+@export var pierce_chance: float = 0.0
 # Number of extra split projectiles emitted per cast.
 @export var split_count: int = 0
 # Base area-of-effect radius used by explosion handling.

@@ -28,7 +28,7 @@ func _print_summary(summary: Dictionary) -> void:
 	print("avg_cast_delay_mult=%.3f" % float(summary.get("avg_cast_delay_mult", 1.0)))
 	print("avg_accuracy_deviation_flat=%+.3f" % float(summary.get("avg_accuracy_deviation_flat", 0.0)))
 	print("avg_split_flat=%.3f" % float(summary.get("avg_split_flat", 0.0)))
-	print("avg_pierce_flat=%.3f" % float(summary.get("avg_pierce_flat", 0.0)))
+	print("avg_pierce_chance=%.3f" % float(summary.get("avg_pierce_chance", 0.0)))
 	print("avg_required_tradeoff_entries=%.3f" % float(summary.get("avg_required_tradeoff_entries", 0.0)))
 
 func _rarity_label(rarity: int) -> String:

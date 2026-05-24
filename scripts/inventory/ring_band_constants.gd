@@ -35,8 +35,8 @@ const GRAVITY_TRADEOFF_DAMAGE_GAIN_PER_EXTRA: float = 0.25
 const GRAVITY_TRADEOFF_AOE_GAIN_PER_EXTRA: float = 0.18
 
 const MAX_SPLIT_COUNT: int = 3
-const MAX_PIERCE_COUNT: int = 5
-const MAX_BOUNCE_COUNT: int = 8
+const MAX_BOUNCE_CHANCE: float = 1.0
+const MAX_PIERCE_CHANCE: float = 1.0
 
 const RARITY_COLORS: Dictionary = {
 	InventoryItemDefinition.Rarity.COMMON: Color(0.95, 0.95, 0.95, 1.0),

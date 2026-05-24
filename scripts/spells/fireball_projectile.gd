@@ -12,8 +12,8 @@ const AOE_BURST_SCENE: PackedScene = preload("res://scenes/vfx/fireball_aoe_burs
 
 var _config: FireballConfig = DEFAULT_FIREBALL_CONFIG
 var _spawn_direction: Vector3 = Vector3.FORWARD
-var _remaining_bounces: int = 0
-var _remaining_pierces: int = 0
+var _current_bounce_chance: float = 0.0
+var _current_pierce_chance: float = 0.0
 var _detonated: bool = false
 var _shooter: PhysicsBody3D
 var _velocity_before_impact: Vector3 = Vector3.ZERO
@@ -49,8 +49,8 @@ func _exit_tree() -> void:
 		body_entered.disconnect(_on_body_entered)
 
 func _apply_config() -> void:
-	_remaining_bounces = max(_config.bounce_count, 0)
-	_remaining_pierces = max(_config.pierce_count, 0)
+	_current_bounce_chance = clampf(_config.bounce_chance, 0.0, 1.0)
+	_current_pierce_chance = clampf(_config.pierce_chance, 0.0, 1.0)
 	gravity_scale = max(_config.gravity_influence, 0.0)
 	linear_velocity = _spawn_direction * _config.speed
 
@@ -73,8 +73,8 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body.has_method("take_damage"):
 		body.call("take_damage", _config.damage)
-		if _remaining_pierces > 0:
-			_remaining_pierces -= 1
+		if randf() < _current_pierce_chance:
+			_current_pierce_chance *= 0.5
 			_apply_aoe_damage(body, true)
 			if body is PhysicsBody3D:
 				add_collision_exception_with(body as PhysicsBody3D)
@@ -85,8 +85,8 @@ func _on_body_entered(body: Node) -> void:
 			return
 		_detonate(body, false)
 		return
-	if _remaining_bounces > 0:
-		_remaining_bounces -= 1
+	if randf() < _current_bounce_chance:
+		_current_bounce_chance *= 0.5
 		_apply_aoe_damage(null, true)
 		return
 	_detonate(null, false)

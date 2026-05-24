@@ -16,12 +16,8 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 - 🚀 Projectile Speed (`proj_speed_mult`)
 - 🧲 Gravity (`gravity_influence_mult`)
 - ⏱ Cast Delay (`cast_delay_mult`)
-- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
-- 🪃 Bounce (`bounces_flat`)
-- ✨ Split Projectile (`split_flat`)
-- 💣 AoE Radius (`aoe_radius_flat`)
-- 🗡 Pierce (`pierce_flat`)
-- ❤️ Max HP (`max_hp_flat`)
+- 🪃 Bounce (`bounce_chance`)
+- 🗡 Pierce (`pierce_chance`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
 - ⚡ Max AP (`max_ap_flat`)
@@ -48,7 +44,7 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
   - Better `mana_cost_mult` (lower cost) decreases `damage_mult`.
   - Better `proj_speed_mult` worsens `accuracy_deviation_flat`.
   - Higher `split_flat` decreases `damage_mult` and worsens `accuracy_deviation_flat`.
-  - Higher `pierce_flat` increases `mana_cost_mult`.
+  - Higher `pierce_chance` increases `mana_cost_mult`.
 - Slot domain tests:
   - Ring cannot equip in band slots.
   - Band cannot equip in ring slots.
@@ -61,9 +57,11 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
   - Cast delay clamps to minimum floor.
   - Accuracy deviation can go positive or negative.
 - Projectile interaction tests:
-  - Lesser explosion while bounce/pierce remains.
-  - Greater explosion on terminal collision.
-  - Correct bounce/pierce decrement and continuation.
+  - Lesser explosion fires when bounce or pierce RNG roll succeeds.
+  - Greater explosion fires when bounce or pierce RNG roll fails (terminal hit).
+  - After a successful pierce roll, `_current_pierce_chance` is halved on that projectile instance only.
+  - After a successful bounce roll, `_current_bounce_chance` is halved on that projectile instance only.
+  - Split projectiles own independent chance vars; halving one does not affect siblings.
   - Self-damage immunity/reduction behavior is enforced.
 
 ## Regression Checks

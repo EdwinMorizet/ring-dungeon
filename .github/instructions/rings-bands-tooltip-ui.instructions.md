@@ -16,12 +16,8 @@ Prefix every stat line with the canonical stat emoji.
 - 🚀 Projectile Speed (`proj_speed_mult`)
 - 🧲 Gravity (`gravity_influence_mult`)
 - ⏱ Cast Delay (`cast_delay_mult`)
-- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
-- 🪃 Bounce (`bounces_flat`)
-- ✨ Split Projectile (`split_flat`)
-- 💣 AoE Radius (`aoe_radius_flat`)
-- 🗡 Pierce (`pierce_flat`)
-- ❤️ Max HP (`max_hp_flat`)
+- 🪃 Bounce (`bounce_chance`)
+- 🗡 Pierce (`pierce_chance`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
 - ⚡ Max AP (`max_ap_flat`)
@@ -48,7 +44,7 @@ Prefix every stat line with the canonical stat emoji.
   - `-` for negative flat or harmful increase.
 - Place emoji first, then localized stat label.
 - Distinguish flat versus multiplier clearly:
-  - Flat example: `🪃 Bounce +2`.
+  - Flat example: `🪃 Bounce +45%` (bounce_chance displayed as integer percent, e.g. 0.45 → +45%).
   - Multiplier example: `💥 Damage x1.15`.
 - Resource lines should be explicit:
   - `❤️ Max HP`, `🔵 Max MP`, `♻️ Mana Regen`, and `⚡ Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.

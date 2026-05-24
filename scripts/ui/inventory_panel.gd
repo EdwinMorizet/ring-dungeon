@@ -236,9 +236,9 @@ func _build_fireball_actual_stats_text() -> String:
 	var speed: float = float(summary.get("speed", 0.0))
 	var gravity_influence: float = float(summary.get("gravity_influence", 0.0))
 	var accuracy: float = float(summary.get("accuracy", 0.0))
-	var bounce_count: int = int(summary.get("bounce_count", 0))
+	var bounce_chance: float = float(summary.get("bounce_chance", 0.0))
 	var split_count: int = int(summary.get("split_count", 0))
-	var pierce_count: int = int(summary.get("pierce_count", 0))
+	var pierce_chance: float = float(summary.get("pierce_chance", 0.0))
 	var aoe: float = float(summary.get("aoe", 0.0))
 
 	var lines: Array[String] = []
@@ -248,9 +248,9 @@ func _build_fireball_actual_stats_text() -> String:
 	lines.append("🚀 Projectile Speed %.2f" % speed)
 	lines.append("🧲 Gravity %.3f" % gravity_influence)
 	lines.append("🎯 Spread %.2f" % accuracy)
-	lines.append("🪃 Bounce %+d" % bounce_count)
+	lines.append("🪃 Bounce %.0f%%" % (bounce_chance * 100.0))
 	lines.append("✨ Split %+d" % split_count)
-	lines.append("🗡 Pierce %+d" % pierce_count)
+	lines.append("🗡 Pierce %.0f%%" % (pierce_chance * 100.0))
 	lines.append("💣 AoE Radius %.2f" % aoe)
 	return "\n".join(lines)
 
@@ -289,10 +289,10 @@ func _build_ring_summary_text() -> String:
 	var gravity_mult: float = InventoryManager.get_fireball_gravity_multiplier()
 	var cast_delay_mult: float = InventoryManager.get_fireball_cast_delay_multiplier()
 	var accuracy_deviation: float = InventoryManager.get_fireball_accuracy_deviation_flat()
-	var bounce_bonus: int = InventoryManager.get_fireball_bounce_bonus()
+	var bounce_chance_bonus: float = InventoryManager.get_fireball_bounce_chance()
 	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
 	var aoe_bonus: float = InventoryManager.get_fireball_aoe_bonus()
-	var pierce_bonus: int = InventoryManager.get_fireball_pierce_bonus()
+	var pierce_chance_bonus: float = InventoryManager.get_fireball_pierce_chance()
 
 	if not is_equal_approx(damage_mult, 1.0):
 		lines.append(_format_mult_line(&"damage_mult", damage_mult))
@@ -306,14 +306,14 @@ func _build_ring_summary_text() -> String:
 		lines.append(_format_mult_line(&"cast_delay_mult", cast_delay_mult))
 	if not is_zero_approx(accuracy_deviation):
 		lines.append(_format_float_line(&"accuracy_deviation_flat", accuracy_deviation, 2))
-	if bounce_bonus != 0:
-		lines.append(_format_int_line(&"bounces_flat", bounce_bonus))
+	if not is_zero_approx(bounce_chance_bonus):
+		lines.append(_format_float_line(&"bounce_chance", bounce_chance_bonus * 100.0, 0))
 	if split_bonus != 0:
 		lines.append(_format_int_line(&"split_flat", split_bonus))
 	if not is_zero_approx(aoe_bonus):
 		lines.append(_format_float_line(&"aoe_radius_flat", aoe_bonus, 2))
-	if pierce_bonus != 0:
-		lines.append(_format_int_line(&"pierce_flat", pierce_bonus))
+	if not is_zero_approx(pierce_chance_bonus):
+		lines.append(_format_float_line(&"pierce_chance", pierce_chance_bonus * 100.0, 0))
 
 	if lines.is_empty():
 		return _NONE_EQUIPPED_TEXT

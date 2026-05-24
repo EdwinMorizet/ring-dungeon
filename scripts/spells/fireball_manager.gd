@@ -47,9 +47,9 @@ func get_runtime_stat_summary() -> Dictionary:
 			"speed": 0.0,
 			"gravity_influence": 0.0,
 			"accuracy": 0.0,
-			"bounce_count": 0,
+			"bounce_chance": 0.0,
 			"split_count": 0,
-			"pierce_count": 0,
+			"pierce_chance": 0.0,
 			"aoe": 0.0,
 		}
 	return {
@@ -59,9 +59,9 @@ func get_runtime_stat_summary() -> Dictionary:
 		"speed": modified_config.speed,
 		"gravity_influence": modified_config.gravity_influence,
 		"accuracy": modified_config.accuracy,
-		"bounce_count": modified_config.bounce_count,
+		"bounce_chance": modified_config.bounce_chance,
 		"split_count": modified_config.split_count,
-		"pierce_count": modified_config.pierce_count,
+		"pierce_chance": modified_config.pierce_chance,
 		"aoe": modified_config.aoe,
 	}
 
@@ -117,17 +117,17 @@ func _build_modified_config() -> FireballConfig:
 	var speed_multiplier: float = InventoryManager.get_fireball_projectile_speed_multiplier()
 	var gravity_multiplier: float = InventoryManager.get_fireball_gravity_multiplier()
 	var accuracy_deviation: float = InventoryManager.get_fireball_accuracy_deviation_flat()
-	var bounce_bonus: int = InventoryManager.get_fireball_bounce_bonus()
+	var bounce_chance: float = InventoryManager.get_fireball_bounce_chance()
 	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
-	var pierce_bonus: int = InventoryManager.get_fireball_pierce_bonus()
+	var pierce_chance: float = InventoryManager.get_fireball_pierce_chance()
 	var aoe_bonus: float = InventoryManager.get_fireball_aoe_bonus()
 	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
 	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
 	modified_config.accuracy = max(_config.accuracy + accuracy_deviation, 0.0)
 	modified_config.gravity_influence = _build_runtime_gravity_influence(gravity_multiplier)
-	modified_config.bounce_count = maxi(_config.bounce_count + bounce_bonus, 0)
+	modified_config.bounce_chance = clampf(_config.bounce_chance + bounce_chance, 0.0, RingBandConstantsScript.MAX_BOUNCE_CHANCE)
 	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
-	modified_config.pierce_count = maxi(_config.pierce_count + pierce_bonus, 0)
+	modified_config.pierce_chance = clampf(_config.pierce_chance + pierce_chance, 0.0, RingBandConstantsScript.MAX_PIERCE_CHANCE)
 	modified_config.aoe = max(_config.aoe + aoe_bonus, 1.0)
 	_apply_positive_gravity_tradeoff_bonus(modified_config, gravity_multiplier)
 	modified_config.cast_delay_seconds = get_cast_delay_seconds()

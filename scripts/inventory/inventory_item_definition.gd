@@ -30,10 +30,10 @@ enum Rarity {
 	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
-	&"bounces_flat": 0,
+	&"bounce_chance": 0.0,
 	&"split_flat": 0,
 	&"aoe_radius_flat": 0.0,
-	&"pierce_flat": 0,
+	&"pierce_chance": 0.0,
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
@@ -48,10 +48,10 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
-	&"bounces_flat": 0,
+	&"bounce_chance": 0.0,
 	&"split_flat": 0,
 	&"aoe_radius_flat": 0.0,
-	&"pierce_flat": 0,
+	&"pierce_chance": 0.0,
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
@@ -66,10 +66,10 @@ const _STAT_EMOJI_MAP: Dictionary = {
 	&"gravity_influence_mult": "🧲",
 	&"cast_delay_mult": "⏱",
 	&"accuracy_deviation_flat": "🎯",
-	&"bounces_flat": "🪃",
+	&"bounce_chance": "🪃",
 	&"split_flat": "✨",
 	&"aoe_radius_flat": "💣",
-	&"pierce_flat": "🗡",
+	&"pierce_chance": "🗡",
 	&"max_hp_flat": "❤️",
 	&"max_mp_flat": "🔵",
 	&"mana_regen_flat": "♻️",
@@ -84,10 +84,10 @@ const _STAT_LABEL_MAP: Dictionary = {
 	&"gravity_influence_mult": "Gravity",
 	&"cast_delay_mult": "Cast Delay",
 	&"accuracy_deviation_flat": "Accuracy Deviation",
-	&"bounces_flat": "Bounce",
+	&"bounce_chance": "Bounce",
 	&"split_flat": "Split",
 	&"aoe_radius_flat": "AoE Radius",
-	&"pierce_flat": "Pierce",
+	&"pierce_chance": "Pierce",
 	&"max_hp_flat": "Max HP",
 	&"max_mp_flat": "Max MP",
 	&"mana_regen_flat": "Mana Regen",
@@ -186,10 +186,10 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 		&"gravity_influence_mult",
 		&"cast_delay_mult",
 		&"accuracy_deviation_flat",
-		&"bounces_flat",
+		&"bounce_chance",
 		&"split_flat",
 		&"aoe_radius_flat",
-		&"pierce_flat",
+		&"pierce_chance",
 		&"max_hp_flat",
 		&"max_mp_flat",
 		&"mana_regen_flat",
@@ -212,8 +212,10 @@ func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
 		return float(value) < float(_DEFAULT_MODIFIERS.get(key, 0.0))
 	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult":
 		return float(value) > float(_DEFAULT_MODIFIERS.get(key, 1.0))
-	if key == &"bounces_flat" or key == &"split_flat" or key == &"pierce_flat":
+	if key == &"split_flat":
 		return int(value) > 0
+	if key == &"bounce_chance" or key == &"pierce_chance":
+		return float(value) > 0.0
 	return float(value) > 0.0
 
 func _format_modifier_line(key: StringName, value: Variant) -> String:
@@ -234,14 +236,14 @@ func _format_modifier_line(key: StringName, value: Variant) -> String:
 	if key == &"accuracy_deviation_flat":
 		var spread_desc: String = "tighter spread" if float(value) < 0.0 else "wider spread"
 		return "%s %s %+.2f (%s)" % [emoji, label, float(value), spread_desc]
-	if key == &"bounces_flat":
-		return "%s %s %+d" % [emoji, label, int(value)]
+	if key == &"bounce_chance":
+		return "%s %s %+.0f%%" % [emoji, label, float(value) * 100.0]
 	if key == &"split_flat":
 		return "%s %s %+d" % [emoji, label, int(value)]
 	if key == &"aoe_radius_flat":
 		return "%s %s %+.2f" % [emoji, label, float(value)]
-	if key == &"pierce_flat":
-		return "%s %s %+d" % [emoji, label, int(value)]
+	if key == &"pierce_chance":
+		return "%s %s %+.0f%%" % [emoji, label, float(value) * 100.0]
 	if key == &"max_hp_flat":
 		return "%s %s %+.0f" % [emoji, label, float(value)]
 	if key == &"max_mp_flat":
