@@ -5,7 +5,7 @@ applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/playe
 
 # Rings And Bands Mechanics
 
-Use this file as the source of truth for the 8-finger equipment loop and all stat math linked to rings (offense) and bands (defense).
+Use this file as the source of truth for the base 8-finger equipment loop, optional merchant slot expansions, and all stat math linked to rings (offense) and bands (defense).
 
 ## Stat Emoji Legend
 
@@ -28,9 +28,13 @@ Use these emoji prefixes whenever stats are shown in UI text, debug summaries, b
 
 ## Scope And Slot Rules
 
-- Keep exactly 8 equipped slots:
+- Keep base equipped slots at 8:
   - Right hand: 4 rings (offensive/fireball modifiers).
   - Left hand: 4 bands (player defensive/core stat modifiers).
+- Allow merchant progression expansion to 10 total slots:
+  - +1 right-hand ring slot from Ring Slot Expansion offer.
+  - +1 left-hand band slot from Band Slot Expansion offer.
+- Slot expansion offers are one-time unlocks each.
 - Enforce strict slot compatibility:
   - Rings can only equip to right-hand slots.
   - Bands can only equip to left-hand slots.
@@ -115,8 +119,8 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 
 ## Runtime Stacking Math
 
-- Rings are aggregated across all 4 right-hand slots per shot.
-- Bands are aggregated across all 4 left-hand slots when player derived stats are refreshed.
+- Rings are aggregated across all active right-hand slots per shot (base 4, up to 5 with expansion).
+- Bands are aggregated across all active left-hand slots when player derived stats are refreshed (base 4, up to 5 with expansion).
 - Use these principles:
   - Multipliers combine multiplicatively unless the design explicitly defines additive conversion.
   - Flat bonuses combine additively.

@@ -29,6 +29,8 @@ Use this file as the broad gameplay umbrella. For Rings/Bands work, defer to spe
 	- `.github/instructions/inventory-system.instructions.md`
 - Chest interaction, loot rolling, and currency pickup behavior:
 	- `.github/instructions/chest-system.instructions.md`
+- Merchant interaction, offers, and buy/sell flow:
+	- `.github/instructions/merchant-system.instructions.md`
 
 When guidance overlaps:
 
@@ -99,14 +101,30 @@ For concrete slot-validation and drop-flow rules, defer to:
 
 Treat the Merchant Room as a safe inter-floor hub and support:
 
-- Standard shop: spend gold for healing, mana recovery, and standard Rings/Bands.
-- Premium trades: spend diamonds for rare high-tier Rings.
-- Blood magic trades: exchange permanent stats for powerful items.
-- Barter: trade one currently equipped Ring/Band for a new random item.
+- Merchant NPC interaction requires close range, look-at, and `interact` (`E`).
+- Merchant UI displays current player Gold/Gems, 3 offers, and player Rings/Bands sell lists.
+- Offers are buy-once during the current merchant room session.
+- Offer composition supports:
+	- generated Ring/Band offers.
+	- special modifier offers, including:
+		- Arcane Compass.
+		- Reforging Seal.
+		- Ring Slot Expansion (+1 ring slot).
+		- Band Slot Expansion (+1 band slot).
+- Buying item offers auto-equips to first free compatible slot and blocks when full.
+- Selling supports both equipped items and nearby world items.
+- Entering a new merchant room regenerates offers.
+
+Special-offer intent for current design:
+
+- Arcane Compass: exploration aid that points toward floor exit direction.
+- Reforging Seal: one-time reroll of affixes for one selected ring/band.
+- Ring/Band Slot Expansion offers: progression unlocks that expand base 8-slot loadout with one additional ring slot and one additional band slot.
 
 For item-value tuning and rarity economy balance, defer to:
 
 - `.github/instructions/rarity-affix-table.instructions.md`
+- `.github/instructions/merchant-system.instructions.md`
 
 ## Preferred Godot Architecture
 

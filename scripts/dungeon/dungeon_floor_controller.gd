@@ -86,6 +86,7 @@ func enter_merchant_room() -> void:
 
 	_merchant_room_instance.visible = true
 	_merchant_room_instance.reset_for_entry()
+	_merchant_room_instance.configure_session(_runtime_progression_index, _runtime_generation_seed)
 	var merchant_spawn: Vector3 = _merchant_room_instance.get_player_spawn_position()
 	_player_instance.global_position = merchant_spawn
 	_player_instance.velocity = Vector3.ZERO
@@ -170,6 +171,8 @@ func _clear_generated() -> void:
 func _hide_merchant_room() -> void:
 	if _merchant_room_instance != null and is_instance_valid(_merchant_room_instance):
 		_merchant_room_instance.visible = false
+	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
+		MerchantManager.close_shop()
 
 func _ensure_player_spawned() -> void:
 	if player_scene == null:
@@ -313,6 +316,8 @@ func _on_floor_exit_reached() -> void:
 	regenerate_now()
 
 func _on_merchant_exit_reached() -> void:
+	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
+		MerchantManager.close_shop()
 	var manager: Node = _get_progression_manager_node()
 	if manager != null and manager.has_method("complete_merchant_exit"):
 		manager.call("complete_merchant_exit")

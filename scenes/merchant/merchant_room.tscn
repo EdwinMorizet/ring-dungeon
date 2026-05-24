@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://b55fsbwyrgd3l" path="res://scripts/merchant/merchant_room_controller.gd" id="1_merchant"]
 [ext_resource type="Material" uid="uid://6a00rgrgv11j" path="res://materials/floor_wall.tres" id="2_3wvds"]
 [ext_resource type="Material" uid="uid://dsjoi6mvderau" path="res://materials/brick_wall.tres" id="3_4qc8a"]
+[ext_resource type="Script" path="res://scripts/merchant/merchant_npc.gd" id="4_merchant_npc"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
 size = Vector3(24, 0.2, 24)
@@ -63,6 +64,22 @@ size = Vector3(24, 3, 0.4)
 [sub_resource type="BoxShape3D" id="BoxShape3D_p36gr"]
 size = Vector3(0.4, 3, 24)
 
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_merchant"]
+radius = 0.45
+mid_height = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_merchant"]
+albedo_color = Color(0.803922, 0.694118, 0.462745, 1)
+metallic = 0.1
+roughness = 0.35
+emission_enabled = true
+emission = Color(0.380392, 0.286275, 0.121569, 1)
+emission_energy_multiplier = 0.35
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_merchant"]
+radius = 0.45
+height = 1.85
+
 [node name="MerchantRoom" type="Node3D" unique_id=828394423]
 script = ExtResource("1_merchant")
 
@@ -78,6 +95,34 @@ shape = SubResource("BoxShape3D_floor")
 
 [node name="MerchantPlayerSpawn" type="Marker3D" parent="." unique_id=454575865]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -8)
+
+[node name="MerchantNpc" type="Node3D" parent="."]
+script = ExtResource("4_merchant_npc")
+
+[node name="MerchantBody" type="MeshInstance3D" parent="MerchantNpc"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("CapsuleMesh_merchant")
+material_override = SubResource("StandardMaterial3D_merchant")
+
+[node name="MerchantCollider" type="StaticBody3D" parent="MerchantNpc"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantNpc/MerchantCollider"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+shape = SubResource("CapsuleShape3D_merchant")
+
+[node name="InteractArea" type="Area3D" parent="MerchantNpc"]
+collision_layer = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MerchantNpc/InteractArea"]
+
+[node name="PromptLabel3D" type="Label3D" parent="MerchantNpc"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.964706, 0.682353, 1)
+outline_modulate = Color(0, 0, 0, 0.85)
+text = "Press E to trade"
+outline_size = 6
 
 [node name="MerchantExitTrigger" type="Area3D" parent="." unique_id=284308934]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 8)

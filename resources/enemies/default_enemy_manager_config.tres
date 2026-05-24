@@ -34,8 +34,8 @@ weight = 2
 [resource]
 script = ExtResource("1_enemy_manager_cfg")
 enemy_scene_paths = {
-"enemy_basic": "res://scenes/enemies/enemy_basic.tscn",
 "bones_spider": "res://scenes/enemies/enemy_bones_spider.tscn",
+"enemy_basic": "res://scenes/enemies/enemy_basic.tscn",
 "skeleton": "res://scenes/enemies/enemy_skeleton.tscn",
 "skeleton_archer": "res://scenes/enemies/enemy_skeleton_archer.tscn",
 "zombie": "res://scenes/enemies/enemy_zombie.tscn"

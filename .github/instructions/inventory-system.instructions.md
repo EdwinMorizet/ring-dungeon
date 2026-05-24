@@ -26,13 +26,18 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
 
 - Keep inventory logic centralized in the InventoryManager autoload:
   - Inventory open and close state.
-  - Left hand slots (4 bands).
-  - Right hand slots (4 rings).
+  - Left hand slots (base 4 bands, expandable to 5 via merchant slot offer).
+  - Right hand slots (base 4 rings, expandable to 5 via merchant slot offer).
   - Nearby world item tracking and equip validation.
 - Keep currency ownership and flow explicit:
   - Player stores authoritative Gold and Diamonds values.
   - InventoryManager provides helper APIs to add/read player currency from other systems.
   - HUD and inventory panel read currency through player or InventoryManager-facing methods.
+- Keep merchant sell/buy inventory transitions compatible with slot rules:
+  - Selling equipped items removes slot content without dropping world replacement.
+  - Selling nearby world items removes only valid registered world items.
+  - Merchant-bought items should equip only into free compatible slots unless an explicit swap flow is designed.
+  - Block merchant item purchase when no free compatible slot exists and surface a clear reason in UI.
 - Keep pickup domains separate:
   - Ring/Band world items use inventory world item flow and equip/swap logic.
   - Gold/Diamonds use collision pickup flow with a small radius (default 0.25).
@@ -48,6 +53,10 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
 - Preserve slot-category constraints:
   - Bands can only be equipped in left-hand band slots.
   - Rings can only be equipped in right-hand ring slots.
+- Preserve slot-capacity progression constraints:
+  - Base run starts with 4 ring + 4 band slots.
+  - Merchant Ring Slot Expansion adds exactly +1 ring slot once.
+  - Merchant Band Slot Expansion adds exactly +1 band slot once.
 - Keep drag-and-drop payload handling defensive:
   - Validate dictionary payload keys and types.
   - Validate source item existence with is_instance_valid checks before equip.

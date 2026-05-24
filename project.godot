@@ -22,6 +22,7 @@ EnemySpawnManager="*res://scripts/enemies/enemy_spawn_manager.gd"
 FireballManager="*res://scripts/spells/fireball_manager.gd"
 GameProgressionManager="*res://scripts/progression/game_progression_manager.gd"
 InventoryManager="*res://scripts/inventory/inventory_manager.gd"
+MerchantManager="*res://scripts/merchant/merchant_manager.gd"
 PlayerManager="*res://scripts/player/player_manager.gd"
 
 [input]

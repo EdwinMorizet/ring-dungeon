@@ -107,6 +107,35 @@ func equip_world_item_to_slot(world_item: InventoryWorldItem, slot_kind: Invento
 	equipment_changed.emit()
 	return true
 
+func find_first_free_slot_index(slot_kind: InventoryItemDefinition.ItemKind) -> int:
+	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
+	for slot_index: int in slots.size():
+		if slots[slot_index] == null:
+			return slot_index
+	return -1
+
+func equip_item_definition_to_slot(item_definition: InventoryItemDefinition, slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> bool:
+	if item_definition == null:
+		return false
+	if not _can_item_go_to_slot_kind(item_definition, slot_kind):
+		return false
+	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
+	if slots.is_empty() or not _is_valid_slot_index(slots, slot_index):
+		return false
+	slots[slot_index] = item_definition
+	inventory_changed.emit()
+	equipment_changed.emit()
+	return true
+
+func equip_item_definition_to_first_free_slot(item_definition: InventoryItemDefinition) -> bool:
+	if item_definition == null:
+		return false
+	var slot_kind: InventoryItemDefinition.ItemKind = item_definition.item_kind
+	var first_free_index: int = find_first_free_slot_index(slot_kind)
+	if first_free_index < 0:
+		return false
+	return equip_item_definition_to_slot(item_definition, slot_kind, first_free_index)
+
 func unequip_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> bool:
 	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
 	if slots.is_empty() or not _is_valid_slot_index(slots, slot_index):
@@ -119,6 +148,33 @@ func unequip_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) 
 	inventory_changed.emit()
 	equipment_changed.emit()
 	return true
+
+func sell_equipped_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> int:
+	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
+	if slots.is_empty() or not _is_valid_slot_index(slots, slot_index):
+		return 0
+	var item_definition: InventoryItemDefinition = slots[slot_index]
+	if item_definition == null:
+		return 0
+	var sale_value: int = maxi(item_definition.gold_value, 1)
+	slots[slot_index] = null
+	add_player_gold(sale_value)
+	inventory_changed.emit()
+	equipment_changed.emit()
+	return sale_value
+
+func sell_world_item(world_item: InventoryWorldItem) -> int:
+	if world_item == null or not is_instance_valid(world_item):
+		return 0
+	if not _world_items.has(world_item):
+		return 0
+	if world_item.item_definition == null:
+		return 0
+	var sale_value: int = maxi(world_item.item_definition.gold_value, 1)
+	_unregister_world_item(world_item)
+	world_item.queue_free()
+	add_player_gold(sale_value)
+	return sale_value
 
 func register_world_item(world_item: InventoryWorldItem) -> void:
 	if world_item == null or not is_instance_valid(world_item):

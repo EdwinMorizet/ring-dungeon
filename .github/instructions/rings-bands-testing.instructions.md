@@ -1,6 +1,6 @@
 ---
-description: "Use when validating Rings and Bands generation, stacking math, deterministic seeding, or regression safety for inventory-to-combat integration. Defines tests and debug hooks for the equipment system."
-applyTo: "scripts/inventory/*.gd, scripts/spells/*.gd, scripts/player/player_fps_controller.gd, scripts/ui/player_hud.gd, scripts/dungeon/dungeon_floor_controller.gd"
+description: "Use when validating Rings and Bands generation, stacking math, deterministic seeding, or regression safety for inventory-to-combat and merchant integration. Defines tests and debug hooks for the equipment system."
+applyTo: "scripts/inventory/*.gd, scripts/spells/*.gd, scripts/player/player_fps_controller.gd, scripts/ui/player_hud.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/merchant/*.gd, scripts/ui/merchant_panel.gd"
 ---
 
 # Rings And Bands Testing
@@ -85,6 +85,18 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 - Fireball casts are rejected when mana or AP costs are not met.
 - Enemy-to-player damage path calls player `take_damage` and scales survivability with equipped HP bonuses.
 - HUD/inventory/debug stat strings keep canonical emoji prefixes for each stat key.
+- Merchant room interaction requires in-range + look-at + interact key.
+- Merchant UI opens/closes cleanly and restores input lock/mouse mode.
+- Merchant room entry regenerates exactly 3 offers.
+- Merchant offers are buy-once per session.
+- Merchant item purchases block with full compatible slots and do not consume gold on failure.
+- Merchant special modifier offers toggle placeholder unlock flags and persist for the run scope in manager state.
+- Selling equipped and nearby items updates gold, inventory state, and UI immediately.
+- Arcane Compass offer purchase toggles compass state and exit-direction guidance appears on subsequent dungeon floors.
+- Reforging Seal offer purchase grants exactly one reroll usage and consumes when reroll is performed.
+- Ring Slot Expansion offer increases right-hand slot capacity by +1 once.
+- Band Slot Expansion offer increases left-hand slot capacity by +1 once.
+- Expanded slots participate in normal equip validation and runtime stat aggregation.
 
 ## Debug Hooks To Prefer
 
