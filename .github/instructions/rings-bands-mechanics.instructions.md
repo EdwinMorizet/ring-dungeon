@@ -14,10 +14,13 @@ Use these emoji prefixes whenever stats are shown in UI text, debug summaries, b
 - `damage_mult`: 💥 Damage
 - `mana_cost_mult`: 🔷 Mana Cost
 - `proj_speed_mult`: 🚀 Projectile Speed
-- `gravity_influence_mult`: 🧲 Gravity
 - `cast_delay_mult`: ⏱ Cast Delay
+- `accuracy_deviation_flat`: 🎯 Accuracy Deviation (spread)
 - `bounce_chance`: 🪃 Bounce
+- `split_flat`: ✨ Split Projectile
+- `aoe_radius_flat`: 💣 AoE Radius
 - `pierce_chance`: 🗡 Pierce
+- `max_hp_flat`: ❤️ Max HP
 - `max_mp_flat`: 🔵 Max MP
 - `mana_regen_flat`: ♻️ Mana Regen
 - `max_ap_flat`: ⚡ Max AP
@@ -48,8 +51,9 @@ Use these emoji prefixes whenever stats are shown in UI text, debug summaries, b
 
 - Rings can modify only fireball/combat casting behavior.
 - Support these modifier categories:
-  - Multipliers: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `gravity_influence_mult`, `cast_delay_mult`.
+  - Multipliers: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `cast_delay_mult`.
   - Flats: `accuracy_deviation_flat`, `bounce_chance`, `split_flat`, `aoe_radius_flat`, `pierce_chance`.
+- Treat gravity behavior as a unique major-trait profile, not a normal rollable modifier.
 
 ### Ring Benefit To Trade-off Pairing Rules
 
@@ -93,6 +97,8 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 - Keep affix pools hand-specific:
   - Ring pools must remain fireball-focused.
   - Band pools must remain player-stat-focused.
+- Do not place gravity behavior in normal ring benefit/tradeoff pools.
+- Gravity behavior must be delivered by a unique legendary major trait marker.
 - Legendary generation should apply at least one distinct major trait behavior (for example split/pierce-centric outcomes) instead of only larger numeric rolls.
 - For ring generation, apply the benefit-to-trade-off pairing rules before filling any remaining rarity budget slots.
 
@@ -114,10 +120,11 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 - Use these principles:
   - Multipliers combine multiplicatively unless the design explicitly defines additive conversion.
   - Flat bonuses combine additively.
-  - Gravity influence uses multiplicative stacking where values below `1.0` produce a straighter arc and values above `1.0` produce a heavier drop.
-  - Gravity trade-off must stay positive: if `gravity_influence_mult` increases above `1.0`, grant a small runtime bonus to final damage and AoE.
+  - Gravity physics is sourced from a unique trait profile overlay (fixed values) when the trait is equipped.
+  - Gravity profile is non-stacking: equipping multiple gravity-trait rings yields the same gravity physics profile as one.
+  - Trait-linked `aoe_radius_flat` and `proj_speed_mult` remain normal modifiers and can still stack.
   - `aoe_radius_flat` must be quantized in 0.25 world-unit steps, with a minimum effective AoE radius of `1.0` world unit.
-    - `bounce_chance` and `pierce_chance` stack additively across equipped rings and are clamped to `MAX_BOUNCE_CHANCE` (1.0) and `MAX_PIERCE_CHANCE` (1.0). They are stored as floats (0.0–1.0) and are never rounded to integers.
+  - `bounce_chance` and `pierce_chance` stack additively across equipped rings and are clamped to `MAX_BOUNCE_CHANCE` (1.0) and `MAX_PIERCE_CHANCE` (1.0). They are stored as floats (0.0–1.0) and are never rounded to integers.
   - Accuracy deviation is additive and can be positive (worse spread) or negative (tighter spread).
   - Cast-delay handling must include a safe lower clamp to prevent zero/negative cooldown.
 - Use these baseline defaults:
@@ -162,6 +169,7 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 
 - Inventory/equipment manager owns slot state and item transitions.
 - Spell/fireball manager owns shot construction using aggregated ring modifiers.
+- Spell/fireball manager applies gravity profile overlay once if gravity trait is active.
 - Player controller (or stat service) owns derived HP/MP/AP/speed and mana regen from equipped bands.
 - Fireball casting must respect both mana and AP resource checks.
 - Enemy scripts should apply player damage through a simple typed player damage API (`take_damage`) so band HP bonuses have live combat impact.

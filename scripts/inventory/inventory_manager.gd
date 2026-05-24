@@ -236,12 +236,27 @@ func get_fireball_projectile_speed_multiplier() -> float:
 			multiplier *= max(item_definition.get_modifier_float(&"proj_speed_mult", 1.0), 0.0)
 	return multiplier
 
-func get_fireball_gravity_multiplier() -> float:
-	var multiplier: float = 1.0
+func has_fireball_gravity_trait() -> bool:
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"gravity_influence_mult", 1.0), 0.0)
-	return multiplier
+			if item_definition.get_modifier_int(RingBandConstants.GRAVITY_TRAIT_MARKER_KEY, 0) > 0:
+				return true
+	return false
+
+func get_fireball_gravity_profile() -> Dictionary:
+	if not has_fireball_gravity_trait():
+		return {
+			"active": false,
+			"gravity_influence": 0.0,
+			"linear_damp": 0.0,
+			"angular_damp": 0.0,
+		}
+	return {
+		"active": true,
+		"gravity_influence": RingBandConstants.GRAVITY_TRAIT_PROFILE_GRAVITY_INFLUENCE,
+		"linear_damp": RingBandConstants.GRAVITY_TRAIT_PROFILE_LINEAR_DAMP,
+		"angular_damp": RingBandConstants.GRAVITY_TRAIT_PROFILE_ANGULAR_DAMP,
+	}
 
 func get_fireball_mana_cost_multiplier() -> float:
 	var multiplier: float = 1.0
@@ -474,7 +489,11 @@ func debug_print_equipped_modifier_summary() -> void:
 	lines.append("damage_mult=%.3f" % get_fireball_damage_multiplier())
 	lines.append("mana_cost_mult=%.3f" % get_fireball_mana_cost_multiplier())
 	lines.append("proj_speed_mult=%.3f" % get_fireball_projectile_speed_multiplier())
-	lines.append("gravity_influence_mult=%.3f" % get_fireball_gravity_multiplier())
+	var gravity_profile: Dictionary = get_fireball_gravity_profile()
+	lines.append("gravity_trait_active=%s" % String(gravity_profile.get("active", false)))
+	lines.append("gravity_trait_gravity_influence=%.3f" % float(gravity_profile.get("gravity_influence", 0.0)))
+	lines.append("gravity_trait_linear_damp=%.3f" % float(gravity_profile.get("linear_damp", 0.0)))
+	lines.append("gravity_trait_angular_damp=%.3f" % float(gravity_profile.get("angular_damp", 0.0)))
 	lines.append("cast_delay_mult=%.3f" % get_fireball_cast_delay_multiplier())
 	lines.append("accuracy_deviation_flat=%+.3f" % get_fireball_accuracy_deviation_flat())
 	lines.append("bounce_chance=%.2f" % get_fireball_bounce_chance())

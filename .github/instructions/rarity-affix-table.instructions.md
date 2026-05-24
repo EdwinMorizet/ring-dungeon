@@ -16,10 +16,10 @@ Use canonical emoji tokens in stat tables, generated name tokens, debug previews
 - 🚀 Projectile Speed (`proj_speed_mult`)
 - ⏱ Cast Delay (`cast_delay_mult`)
 - 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
-- 🪃 Bounce (`bounces_flat`)
+- 🪃 Bounce (`bounce_chance`)
 - ✨ Split Projectile (`split_flat`)
 - 💣 AoE Radius (`aoe_radius_flat`)
-- 🗡 Pierce (`pierce_flat`)
+- 🗡 Pierce (`pierce_chance`)
 - ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
@@ -48,7 +48,7 @@ Apply these links during ring affix compilation.
 - Better `mana_cost_mult` (lower mana cost) requires lower `damage_mult`.
 - Better `proj_speed_mult` requires worse `accuracy_deviation_flat`.
 - Better `split_flat` requires lower `damage_mult` and worse `accuracy_deviation_flat`.
-- Better `pierce_flat` requires higher `mana_cost_mult`.
+- Better `pierce_chance` requires higher `mana_cost_mult`.
 - Required pairs are mandatory constraints, not optional random trade-off picks.
 
 ## Canonical Value Multipliers

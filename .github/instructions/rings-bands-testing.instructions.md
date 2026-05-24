@@ -14,10 +14,13 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 - 💥 Damage (`damage_mult`)
 - 🔷 Mana Cost (`mana_cost_mult`)
 - 🚀 Projectile Speed (`proj_speed_mult`)
-- 🧲 Gravity (`gravity_influence_mult`)
 - ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
 - 🪃 Bounce (`bounce_chance`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
 - 🗡 Pierce (`pierce_chance`)
+- ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
 - ⚡ Max AP (`max_ap_flat`)
@@ -51,8 +54,9 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
   - Swap drops replaced item to world.
 - Stacking math tests:
   - Multipliers combine as configured.
-  - Gravity multiplier combines multiplicatively and applies to runtime projectile config.
-  - Gravity above baseline (> 1.0 multiplier) provides a small runtime bonus to damage and AoE.
+  - Gravity trait profile is unique: one equipped gravity-trait ring produces the same gravity physics values as two or more equipped gravity-trait rings.
+  - Gravity profile applies fixed physics values (gravity influence and damping) when active.
+  - Trait-linked `aoe_radius_flat` and `proj_speed_mult` still aggregate through normal stacking math.
   - Flats combine additively.
   - Cast delay clamps to minimum floor.
   - Accuracy deviation can go positive or negative.
@@ -68,7 +72,9 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 
 - Equipping and unequipping updates player-derived stats immediately.
 - Fireball shot config is derived per shot and does not mutate shared default resources.
-- Fireball runtime `gravity_influence` reflects equipped ring `gravity_influence_mult` and updates after equipment changes.
+- Fireball runtime gravity profile activates when any gravity-trait ring is equipped and deactivates when none are equipped.
+- Fireball runtime summary exposes gravity trait active state and effective gravity profile values.
+- Normal affix pools never emit `gravity_influence_mult` after gravity becomes trait-only behavior.
 - World item cleanup occurs on floor reset/transition.
 - Chest spawn count/selection remains deterministic per floor seed and progression depth.
 - Chest open interaction is one-shot and requires player-in-range + interact action.

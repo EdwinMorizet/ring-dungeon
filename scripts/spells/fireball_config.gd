@@ -6,6 +6,10 @@ class_name FireballConfig
 @export var speed: float = 30.0
 # Gravity multiplier applied to projectile arc simulation.
 @export var gravity_influence: float = 0.2
+# Linear damping applied to projectile rigidbody motion.
+@export var linear_damp: float = 0.0
+# Angular damping applied to projectile rigidbody rotation.
+@export var angular_damp: float = 0.0
 # Probability (0.0–1.0) that a wall hit triggers a bounce; halved on the projectile after each trigger.
 @export var bounce_chance: float = 0.0
 # Probability (0.0–1.0) that an enemy hit triggers a pierce; halved on the projectile after each trigger.

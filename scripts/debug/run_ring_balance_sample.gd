@@ -24,7 +24,7 @@ func _print_summary(summary: Dictionary) -> void:
 	print("avg_damage_mult=%.3f" % float(summary.get("avg_damage_mult", 1.0)))
 	print("avg_mana_cost_mult=%.3f" % float(summary.get("avg_mana_cost_mult", 1.0)))
 	print("avg_proj_speed_mult=%.3f" % float(summary.get("avg_proj_speed_mult", 1.0)))
-	print("avg_gravity_influence_mult=%.3f" % float(summary.get("avg_gravity_influence_mult", 1.0)))
+	print("gravity_trait_roll_rate=%.3f" % float(summary.get("gravity_trait_roll_rate", 0.0)))
 	print("avg_cast_delay_mult=%.3f" % float(summary.get("avg_cast_delay_mult", 1.0)))
 	print("avg_accuracy_deviation_flat=%+.3f" % float(summary.get("avg_accuracy_deviation_flat", 0.0)))
 	print("avg_split_flat=%.3f" % float(summary.get("avg_split_flat", 0.0)))

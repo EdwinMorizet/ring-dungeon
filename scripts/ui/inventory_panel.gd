@@ -235,6 +235,9 @@ func _build_fireball_actual_stats_text() -> String:
 	var cast_delay: float = float(summary.get("cast_delay_seconds", 0.0))
 	var speed: float = float(summary.get("speed", 0.0))
 	var gravity_influence: float = float(summary.get("gravity_influence", 0.0))
+	var linear_damp: float = float(summary.get("linear_damp", 0.0))
+	var angular_damp: float = float(summary.get("angular_damp", 0.0))
+	var gravity_trait_active: bool = bool(summary.get("gravity_trait_active", false))
 	var accuracy: float = float(summary.get("accuracy", 0.0))
 	var bounce_chance: float = float(summary.get("bounce_chance", 0.0))
 	var split_count: int = int(summary.get("split_count", 0))
@@ -247,6 +250,9 @@ func _build_fireball_actual_stats_text() -> String:
 	lines.append("⏱ Cast Delay %.3fs" % cast_delay)
 	lines.append("🚀 Projectile Speed %.2f" % speed)
 	lines.append("🧲 Gravity %.3f" % gravity_influence)
+	lines.append("🧲 Linear Damp %.3f" % linear_damp)
+	lines.append("🧲 Angular Damp %.3f" % angular_damp)
+	lines.append("🧿 Gravity Trait %s" % ("Active" if gravity_trait_active else "Inactive"))
 	lines.append("🎯 Spread %.2f" % accuracy)
 	lines.append("🪃 Bounce %.0f%%" % (bounce_chance * 100.0))
 	lines.append("✨ Split %+d" % split_count)
@@ -286,7 +292,7 @@ func _build_ring_summary_text() -> String:
 	var damage_mult: float = InventoryManager.get_fireball_damage_multiplier()
 	var mana_cost_mult: float = InventoryManager.get_fireball_mana_cost_multiplier()
 	var proj_speed_mult: float = InventoryManager.get_fireball_projectile_speed_multiplier()
-	var gravity_mult: float = InventoryManager.get_fireball_gravity_multiplier()
+	var gravity_profile: Dictionary = InventoryManager.get_fireball_gravity_profile()
 	var cast_delay_mult: float = InventoryManager.get_fireball_cast_delay_multiplier()
 	var accuracy_deviation: float = InventoryManager.get_fireball_accuracy_deviation_flat()
 	var bounce_chance_bonus: float = InventoryManager.get_fireball_bounce_chance()
@@ -300,8 +306,11 @@ func _build_ring_summary_text() -> String:
 		lines.append(_format_mult_line(&"mana_cost_mult", mana_cost_mult))
 	if not is_equal_approx(proj_speed_mult, 1.0):
 		lines.append(_format_mult_line(&"proj_speed_mult", proj_speed_mult))
-	if not is_equal_approx(gravity_mult, 1.0):
-		lines.append(_format_mult_line(&"gravity_influence_mult", gravity_mult))
+	if bool(gravity_profile.get("active", false)):
+		lines.append("🧿 Gravity Trait Active")
+		lines.append("🧲 Trait Gravity %.2f" % float(gravity_profile.get("gravity_influence", 0.0)))
+		lines.append("🧲 Trait Linear Damp %.2f" % float(gravity_profile.get("linear_damp", 0.0)))
+		lines.append("🧲 Trait Angular Damp %.2f" % float(gravity_profile.get("angular_damp", 0.0)))
 	if not is_equal_approx(cast_delay_mult, 1.0):
 		lines.append(_format_mult_line(&"cast_delay_mult", cast_delay_mult))
 	if not is_zero_approx(accuracy_deviation):

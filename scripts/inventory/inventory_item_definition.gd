@@ -27,13 +27,13 @@ enum Rarity {
 	&"damage_mult": 1.0,
 	&"mana_cost_mult": 1.0,
 	&"proj_speed_mult": 1.0,
-	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
 	&"bounce_chance": 0.0,
 	&"split_flat": 0,
 	&"aoe_radius_flat": 0.0,
 	&"pierce_chance": 0.0,
+	&"gravity_trait_enabled": 0,
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
@@ -45,13 +45,13 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"damage_mult": 1.0,
 	&"mana_cost_mult": 1.0,
 	&"proj_speed_mult": 1.0,
-	&"gravity_influence_mult": 1.0,
 	&"cast_delay_mult": 1.0,
 	&"accuracy_deviation_flat": 0.0,
 	&"bounce_chance": 0.0,
 	&"split_flat": 0,
 	&"aoe_radius_flat": 0.0,
 	&"pierce_chance": 0.0,
+	&"gravity_trait_enabled": 0,
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
@@ -63,7 +63,6 @@ const _STAT_EMOJI_MAP: Dictionary = {
 	&"damage_mult": "💥",
 	&"mana_cost_mult": "🔷",
 	&"proj_speed_mult": "🚀",
-	&"gravity_influence_mult": "🧲",
 	&"cast_delay_mult": "⏱",
 	&"accuracy_deviation_flat": "🎯",
 	&"bounce_chance": "🪃",
@@ -81,7 +80,6 @@ const _STAT_LABEL_MAP: Dictionary = {
 	&"damage_mult": "Damage",
 	&"mana_cost_mult": "Mana Cost",
 	&"proj_speed_mult": "Projectile Speed",
-	&"gravity_influence_mult": "Gravity",
 	&"cast_delay_mult": "Cast Delay",
 	&"accuracy_deviation_flat": "Accuracy Deviation",
 	&"bounce_chance": "Bounce",
@@ -183,7 +181,6 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 		&"damage_mult",
 		&"mana_cost_mult",
 		&"proj_speed_mult",
-		&"gravity_influence_mult",
 		&"cast_delay_mult",
 		&"accuracy_deviation_flat",
 		&"bounce_chance",
@@ -208,7 +205,7 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 	return lines
 
 func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
-	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat" or key == &"gravity_influence_mult":
+	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat":
 		return float(value) < float(_DEFAULT_MODIFIERS.get(key, 0.0))
 	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult":
 		return float(value) > float(_DEFAULT_MODIFIERS.get(key, 1.0))
@@ -227,9 +224,6 @@ func _format_modifier_line(key: StringName, value: Variant) -> String:
 		return "%s %s x%.2f" % [emoji, label, float(value)]
 	if key == &"proj_speed_mult":
 		return "%s %s x%.2f" % [emoji, label, float(value)]
-	if key == &"gravity_influence_mult":
-		var gravity_desc: String = "straighter arc" if float(value) < 1.0 else "heavier drop"
-		return "%s %s x%.2f (%s)" % [emoji, label, float(value), gravity_desc]
 	if key == &"cast_delay_mult":
 		var pace: String = "faster" if float(value) < 1.0 else "slower"
 		return "%s %s x%.2f (%s)" % [emoji, label, float(value), pace]

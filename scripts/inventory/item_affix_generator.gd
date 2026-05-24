@@ -6,7 +6,6 @@ const _RING_BENEFIT_POOL: Array[Dictionary] = [
 	{"key": &"damage_mult", "token": "Ember", "kind": "mult", "min": 1.05, "max": 1.20},
 	{"key": &"mana_cost_mult", "token": "Frugal", "kind": "mult", "min": 0.80, "max": 0.97},
 	{"key": &"proj_speed_mult", "token": "Swift", "kind": "mult", "min": 1.05, "max": 1.20},
-	{"key": &"gravity_influence_mult", "token": "Feathered", "kind": "mult", "min": 0.82, "max": 0.97},
 	{"key": &"cast_delay_mult", "token": "Quickcast", "kind": "mult", "min": 0.80, "max": 0.97},
 	{"key": &"accuracy_deviation_flat", "token": "Precise", "kind": "flat", "min": -0.45, "max": -0.08},
 	{"key": &"bounce_chance", "token": "Ricochet", "kind": "flat", "min": 0.35, "max": 0.70},
@@ -18,7 +17,6 @@ const _RING_BENEFIT_POOL: Array[Dictionary] = [
 const _RING_TRADEOFF_POOL: Array[Dictionary] = [
 	{"key": &"mana_cost_mult", "token": "Draining", "kind": "mult", "min": 1.06, "max": 1.26},
 	{"key": &"cast_delay_mult", "token": "Heavy", "kind": "mult", "min": 1.05, "max": 1.20},
-	{"key": &"gravity_influence_mult", "token": "Dense", "kind": "mult", "min": 1.12, "max": 1.36},
 	{"key": &"accuracy_deviation_flat", "token": "Erratic", "kind": "flat", "min": 0.10, "max": 0.50},
 	{"key": &"proj_speed_mult", "token": "Sluggish", "kind": "mult", "min": 0.78, "max": 0.95},
 	{"key": &"damage_mult", "token": "Faint", "kind": "mult", "min": 0.88, "max": 0.98},
@@ -47,6 +45,15 @@ const _RING_MAJOR_TRAITS: Array[Dictionary] = [
 			&"split_flat": 2,
 			&"damage_mult": 1.10,
 			&"mana_cost_mult": 1.18,
+		},
+	},
+	{
+		"label": "Gravitywell",
+		"token": "Gravitywell",
+		"modifiers": {
+			&"gravity_trait_enabled": 1,
+			&"aoe_radius_flat": 1.00,
+			&"proj_speed_mult": 0.88,
 		},
 	},
 	{
@@ -176,13 +183,13 @@ static func _create_default_modifiers() -> Dictionary:
 		&"damage_mult": 1.0,
 		&"mana_cost_mult": 1.0,
 		&"proj_speed_mult": 1.0,
-		&"gravity_influence_mult": 1.0,
 		&"cast_delay_mult": 1.0,
 		&"accuracy_deviation_flat": 0.0,
 		&"bounce_chance": 0.0,
 		&"split_flat": 0,
 		&"aoe_radius_flat": 0.0,
 		&"pierce_chance": 0.0,
+		&"gravity_trait_enabled": 0,
 		&"max_hp_flat": 0.0,
 		&"max_mp_flat": 0.0,
 		&"mana_regen_flat": 0.0,
@@ -203,21 +210,11 @@ static func _build_affix_lines(affixes: Array[Dictionary], benefit: bool) -> Arr
 
 static func _build_tokens(affixes: Array[Dictionary]) -> Array[String]:
 	var tokens: Array[String] = []
-	var gravity_tokens: Array[String] = []
 	for affix: Dictionary in affixes:
 		var token: String = String(affix.get("token", ""))
 		if token.is_empty():
 			continue
-		var key: StringName = StringName(affix.get("key", &""))
-		if key == &"gravity_influence_mult":
-			gravity_tokens.append(token)
-			continue
 		tokens.append(token)
-
-	if not gravity_tokens.is_empty():
-		# Keep name compact but gravity-aware by prioritizing gravity token first.
-		gravity_tokens.append_array(tokens)
-		return gravity_tokens
 	return tokens
 
 static func _build_display_name(item: InventoryItemDefinition) -> String:
@@ -337,25 +334,12 @@ static func _apply_affix_roll(modifiers: Dictionary, affix: Dictionary, rarity: 
 	if kind == "mult":
 		var scaled_delta: float = (rolled - 1.0) * scale
 		var scaled_value: float = 1.0 + scaled_delta
-		if key == &"gravity_influence_mult":
-			scaled_value = _quantize_gravity_multiplier_step(scaled_value)
 		modifiers[key] = float(modifiers.get(key, 1.0)) * scaled_value
 		return
 	var scaled_flat: float = rolled * scale
 	if key == &"aoe_radius_flat":
 		scaled_flat = _quantize_aoe_radius_flat(scaled_flat)
 	modifiers[key] = float(modifiers.get(key, 0.0)) + scaled_flat
-
-static func _quantize_gravity_multiplier_step(value: float) -> float:
-	if value <= 0.0:
-		return 1.0
-	if is_equal_approx(value, 1.0):
-		return 1.0
-	if value > 1.0:
-		var step_count: int = maxi(int(roundf(log(value) / log(2.0))), 1)
-		return float(pow(2.0, step_count))
-	var inverse_steps: int = maxi(int(roundf(log(1.0 / value) / log(2.0))), 1)
-	return float(pow(0.5, inverse_steps))
 
 static func _quantize_aoe_radius_flat(value: float) -> float:
 	if value <= 0.0:
@@ -367,6 +351,7 @@ static func _clamp_discrete_modifiers(modifiers: Dictionary) -> void:
 	modifiers[&"split_flat"] = mini(maxi(int(roundf(float(modifiers.get(&"split_flat", 0.0)))), 0), RingBandConstants.MAX_SPLIT_COUNT)
 	modifiers[&"bounce_chance"] = clampf(float(modifiers.get(&"bounce_chance", 0.0)), 0.0, RingBandConstants.MAX_BOUNCE_CHANCE)
 	modifiers[&"pierce_chance"] = clampf(float(modifiers.get(&"pierce_chance", 0.0)), 0.0, RingBandConstants.MAX_PIERCE_CHANCE)
+	modifiers[&"gravity_trait_enabled"] = mini(maxi(int(roundf(float(modifiers.get(&"gravity_trait_enabled", 0.0)))), 0), 1)
 
 static func _apply_required_tradeoffs_for_major_trait(item: InventoryItemDefinition, major_trait: Dictionary, rarity: InventoryItemDefinition.Rarity, rng: RandomNumberGenerator) -> void:
 	if item.item_kind != InventoryItemDefinition.ItemKind.RING:
@@ -411,11 +396,11 @@ static func _build_exemption_lookup(exemptions: Variant) -> Dictionary:
 static func _is_benefit_modifier_value(key: StringName, value: float) -> bool:
 	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat":
 		return value < float(_create_default_modifiers().get(key, 0.0))
-	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult" or key == &"gravity_influence_mult":
-		if key == &"gravity_influence_mult":
-			return value < 1.0
+	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult":
 		return value > float(_create_default_modifiers().get(key, 1.0))
 	if key == &"split_flat" or key == &"bounce_chance" or key == &"pierce_chance":
+		return value > 0.0
+	if key == &"gravity_trait_enabled":
 		return value > 0.0
 	return value > 0.0
 
@@ -442,7 +427,7 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 		"avg_damage_mult": 0.0,
 		"avg_mana_cost_mult": 0.0,
 		"avg_proj_speed_mult": 0.0,
-		"avg_gravity_influence_mult": 0.0,
+		"gravity_trait_roll_rate": 0.0,
 		"avg_cast_delay_mult": 0.0,
 		"avg_accuracy_deviation_flat": 0.0,
 		"avg_split_flat": 0.0,
@@ -453,7 +438,7 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 	var damage_sum: float = 0.0
 	var mana_sum: float = 0.0
 	var speed_sum: float = 0.0
-	var gravity_sum: float = 0.0
+	var gravity_trait_count: float = 0.0
 	var delay_sum: float = 0.0
 	var accuracy_sum: float = 0.0
 	var split_sum: float = 0.0
@@ -469,10 +454,17 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 		required_entries_sum += float(required_count)
 
 		var modifiers: Dictionary = _compile_modifiers(rarity, affixes, rng)
+		if rarity == InventoryItemDefinition.Rarity.LEGENDARY:
+			var preview_item: InventoryItemDefinition = InventoryItemDefinition.new()
+			preview_item.compiled_modifiers = modifiers
+			_apply_major_trait(preview_item, _pick_major_trait(InventoryItemDefinition.ItemKind.RING, rng))
+			_clamp_discrete_modifiers(preview_item.compiled_modifiers)
+			modifiers = preview_item.compiled_modifiers
 		damage_sum += float(modifiers.get(&"damage_mult", 1.0))
 		mana_sum += float(modifiers.get(&"mana_cost_mult", 1.0))
 		speed_sum += float(modifiers.get(&"proj_speed_mult", 1.0))
-		gravity_sum += float(modifiers.get(&"gravity_influence_mult", 1.0))
+		if int(modifiers.get(&"gravity_trait_enabled", 0)) > 0:
+			gravity_trait_count += 1.0
 		delay_sum += float(modifiers.get(&"cast_delay_mult", 1.0))
 		accuracy_sum += float(modifiers.get(&"accuracy_deviation_flat", 0.0))
 		split_sum += float(modifiers.get(&"split_flat", 0.0))
@@ -482,7 +474,7 @@ static func debug_sample_ring_balance(rarity: InventoryItemDefinition.Rarity, sa
 	result["avg_damage_mult"] = damage_sum * inv_count
 	result["avg_mana_cost_mult"] = mana_sum * inv_count
 	result["avg_proj_speed_mult"] = speed_sum * inv_count
-	result["avg_gravity_influence_mult"] = gravity_sum * inv_count
+	result["gravity_trait_roll_rate"] = gravity_trait_count * inv_count
 	result["avg_cast_delay_mult"] = delay_sum * inv_count
 	result["avg_accuracy_deviation_flat"] = accuracy_sum * inv_count
 	result["avg_split_flat"] = split_sum * inv_count

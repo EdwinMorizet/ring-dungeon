@@ -52,6 +52,8 @@ func _apply_config() -> void:
 	_current_bounce_chance = clampf(_config.bounce_chance, 0.0, 1.0)
 	_current_pierce_chance = clampf(_config.pierce_chance, 0.0, 1.0)
 	gravity_scale = max(_config.gravity_influence, 0.0)
+	linear_damp = max(_config.linear_damp, 0.0)
+	angular_damp = max(_config.angular_damp, 0.0)
 	linear_velocity = _spawn_direction * _config.speed
 
 	var projectile_size: float = max(_config.size, 0.05)

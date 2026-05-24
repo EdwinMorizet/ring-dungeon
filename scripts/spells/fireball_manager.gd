@@ -46,6 +46,9 @@ func get_runtime_stat_summary() -> Dictionary:
 			"cast_delay_seconds": get_cast_delay_seconds(),
 			"speed": 0.0,
 			"gravity_influence": 0.0,
+			"linear_damp": 0.0,
+			"angular_damp": 0.0,
+			"gravity_trait_active": false,
 			"accuracy": 0.0,
 			"bounce_chance": 0.0,
 			"split_count": 0,
@@ -58,6 +61,9 @@ func get_runtime_stat_summary() -> Dictionary:
 		"cast_delay_seconds": get_cast_delay_seconds(),
 		"speed": modified_config.speed,
 		"gravity_influence": modified_config.gravity_influence,
+		"linear_damp": modified_config.linear_damp,
+		"angular_damp": modified_config.angular_damp,
+		"gravity_trait_active": bool(modified_config.get_meta("gravity_trait_active", false)),
 		"accuracy": modified_config.accuracy,
 		"bounce_chance": modified_config.bounce_chance,
 		"split_count": modified_config.split_count,
@@ -112,10 +118,11 @@ func _build_modified_config() -> FireballConfig:
 		modified_config = _config
 	if not _has_inventory_manager():
 		modified_config.cast_delay_seconds = get_cast_delay_seconds()
+		modified_config.set_meta("gravity_trait_active", false)
 		return modified_config
 	var damage_multiplier: float = InventoryManager.get_fireball_damage_multiplier()
 	var speed_multiplier: float = InventoryManager.get_fireball_projectile_speed_multiplier()
-	var gravity_multiplier: float = InventoryManager.get_fireball_gravity_multiplier()
+	var gravity_profile: Dictionary = InventoryManager.get_fireball_gravity_profile()
 	var accuracy_deviation: float = InventoryManager.get_fireball_accuracy_deviation_flat()
 	var bounce_chance: float = InventoryManager.get_fireball_bounce_chance()
 	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
@@ -124,30 +131,27 @@ func _build_modified_config() -> FireballConfig:
 	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
 	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
 	modified_config.accuracy = max(_config.accuracy + accuracy_deviation, 0.0)
-	modified_config.gravity_influence = _build_runtime_gravity_influence(gravity_multiplier)
+	modified_config.gravity_influence = max(_config.gravity_influence, 0.0)
+	modified_config.linear_damp = max(_config.linear_damp, 0.0)
+	modified_config.angular_damp = max(_config.angular_damp, 0.0)
 	modified_config.bounce_chance = clampf(_config.bounce_chance + bounce_chance, 0.0, RingBandConstantsScript.MAX_BOUNCE_CHANCE)
 	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
 	modified_config.pierce_chance = clampf(_config.pierce_chance + pierce_chance, 0.0, RingBandConstantsScript.MAX_PIERCE_CHANCE)
 	modified_config.aoe = max(_config.aoe + aoe_bonus, 1.0)
-	_apply_positive_gravity_tradeoff_bonus(modified_config, gravity_multiplier)
+	_apply_gravity_trait_profile(modified_config, gravity_profile)
 	modified_config.cast_delay_seconds = get_cast_delay_seconds()
 	return modified_config
 
-func _build_runtime_gravity_influence(gravity_multiplier: float) -> float:
-	if gravity_multiplier <= 1.0:
-		return 0.0
-	return gravity_multiplier - 1.0
-
-func _apply_positive_gravity_tradeoff_bonus(modified_config: FireballConfig, gravity_multiplier: float) -> void:
+func _apply_gravity_trait_profile(modified_config: FireballConfig, gravity_profile: Dictionary) -> void:
 	if modified_config == null:
 		return
-	if gravity_multiplier <= 1.0:
+	if not bool(gravity_profile.get("active", false)):
+		modified_config.set_meta("gravity_trait_active", false)
 		return
-	var gravity_excess: float = gravity_multiplier - 1.0
-	var damage_bonus_mult: float = 1.0 + gravity_excess * RingBandConstantsScript.GRAVITY_TRADEOFF_DAMAGE_GAIN_PER_EXTRA
-	var aoe_bonus_flat: float = _config.aoe * gravity_excess * RingBandConstantsScript.GRAVITY_TRADEOFF_AOE_GAIN_PER_EXTRA
-	modified_config.damage = maxi(int(roundf(float(modified_config.damage) * damage_bonus_mult)), 0)
-	modified_config.aoe = max(modified_config.aoe + aoe_bonus_flat, 1.0)
+	modified_config.set_meta("gravity_trait_active", true)
+	modified_config.gravity_influence = max(float(gravity_profile.get("gravity_influence", modified_config.gravity_influence)), 0.0)
+	modified_config.linear_damp = max(float(gravity_profile.get("linear_damp", modified_config.linear_damp)), 0.0)
+	modified_config.angular_damp = max(float(gravity_profile.get("angular_damp", modified_config.angular_damp)), 0.0)
 
 func _apply_accuracy(direction: Vector3, spread_degrees: float) -> Vector3:
 	var base_direction: Vector3 = direction.normalized()

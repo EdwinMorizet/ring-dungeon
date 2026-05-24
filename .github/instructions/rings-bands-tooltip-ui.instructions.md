@@ -14,10 +14,13 @@ Prefix every stat line with the canonical stat emoji.
 - 💥 Damage (`damage_mult`)
 - 🔷 Mana Cost (`mana_cost_mult`)
 - 🚀 Projectile Speed (`proj_speed_mult`)
-- 🧲 Gravity (`gravity_influence_mult`)
 - ⏱ Cast Delay (`cast_delay_mult`)
+- 🎯 Accuracy Deviation (`accuracy_deviation_flat`)
 - 🪃 Bounce (`bounce_chance`)
+- ✨ Split Projectile (`split_flat`)
+- 💣 AoE Radius (`aoe_radius_flat`)
 - 🗡 Pierce (`pierce_chance`)
+- ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
 - ⚡ Max AP (`max_ap_flat`)
@@ -46,6 +49,8 @@ Prefix every stat line with the canonical stat emoji.
 - Distinguish flat versus multiplier clearly:
   - Flat example: `🪃 Bounce +45%` (bounce_chance displayed as integer percent, e.g. 0.45 → +45%).
   - Multiplier example: `💥 Damage x1.15`.
+- Present gravity-altering behavior as a special trait line/badge, not as multiplier stack math.
+- Do not show gravity in ring aggregate summaries as `xN.NN`; instead show trait status and fixed profile values.
 - Resource lines should be explicit:
   - `❤️ Max HP`, `🔵 Max MP`, `♻️ Mana Regen`, and `⚡ Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.
 - For cast delay, show player-friendly meaning:
