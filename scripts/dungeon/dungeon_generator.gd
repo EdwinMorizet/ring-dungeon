@@ -20,11 +20,11 @@ const DEBUG_STEP_LOOP_EDGES: StringName = &"loop_edges"
 
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
 func generate(seed_value: int, params: Dictionary) -> Dictionary:
-	var width: int = int(params.get("width", 160))
-	var height: int = int(params.get("height", 160))
-	var cell_count: int = int(params.get("cell_count", 150))
-	var radius: float = float(params.get("spawn_radius", min(width, height) * 0.35))
-	var separation_iterations: int = int(params.get("separation_iterations", 200))
+	var world_width: int = int(params.get("world_width", 160))
+	var world_height: int = int(params.get("world_height", 160))
+	var cell_count: int = int(params.get("cell_count", 15))
+	var radius: float = float(params.get("spawn_radius", min(world_width, world_height) * 0.35))
+	var separation_iterations: int = int(params.get("separation_iterations", cell_count * 1.1))
 	var min_room_size: float = float(params.get("min_room_size", 12.0))
 	var room_area_threshold: float = float(params.get("room_area_threshold", 120.0))
 	var room_keep_ratio: float = float(params.get("room_keep_ratio", 0.45))
@@ -42,7 +42,7 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 
-	var cells := generate_cells(cell_count, radius, width, height, rng)
+	var cells := generate_cells(cell_count, radius, world_width, world_height, rng)
 	_record_debug_step(debug_timeline, DEBUG_STEP_GENERATE_CELLS, {"cells": cells})
 	var separation_info := separate_cells(cells, separation_iterations, rng)
 	_record_debug_step(debug_timeline, DEBUG_STEP_SEPARATE_CELLS, {"cells": cells})
@@ -70,14 +70,14 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		"loop_edges": loop_edges,
 	})
 
-	var grid := _create_grid(width, height, TILE_WALL)
+	var grid := _create_grid(world_width, world_height, TILE_WALL)
 	for room in rooms:
-		_carve_room(grid, width, height, room["rect"])
+		_carve_room(grid, world_width, world_height, room["rect"])
 	for edge in corridor_edges:
 		var a: Vector2 = centers[edge["a"]]
 		var b: Vector2 = centers[edge["b"]]
-		_carve_l_corridor(grid, width, height, a, b, rng)
-	_enforce_border_walls(grid, width, height)
+		_carve_l_corridor(grid, world_width, world_height, a, b, rng)
+	_enforce_border_walls(grid, world_width, world_height)
 
 	var exit_index := -1
 	var start_index := -1
@@ -109,8 +109,8 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 
 	return {
 		"grid": grid,
-		"width": width,
-		"height": height,
+		"width": world_width,
+		"height": world_height,
 		"rooms": rooms,
 		"edges": delaunay_edges,
 		"mst_edges": mst_edges,
@@ -142,9 +142,9 @@ func _record_debug_step(debug_timeline: DungeonGeneratorDebugTimeline, step_name
 	debug_timeline.record_step(step_name, payload)
 
 # Samples room candidate cells from a radial distribution around map center.
-func generate_cells(cell_count: int, radius: float, width: int, height: int, rng: RandomNumberGenerator) -> Array:
+func generate_cells(cell_count: int, radius: float, world_width: int, world_height: int, rng: RandomNumberGenerator) -> Array:
 	var cells: Array = []
-	var center := Vector2(width * 0.5, height * 0.5)
+	var center := Vector2(world_width * 0.5, world_height * 0.5)
 	for _i in cell_count:
 		var angle := rng.randf() * TAU
 		var dist := radius * sqrt(rng.randf())
@@ -155,6 +155,7 @@ func generate_cells(cell_count: int, radius: float, width: int, height: int, rng
 		var room_w := roundf(clampf(rng.randfn(10.0, 3.5), 4.0, 22.0))
 		var room_h := roundf(clampf(rng.randfn(10.0, 3.5), 4.0, 22.0))
 		
+
 		if int(room_h) % 2 != 0: 
 			room_h += 1
 		if int(room_w) % 2 != 0: 

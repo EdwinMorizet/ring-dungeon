@@ -13,6 +13,11 @@ class_name DungeonFloorConfig
 @export var height: int = 160
 # Number of initial room-candidate cells to generate.
 @export var cell_count: int = 150
+
+@export var room_min_size: int = 10
+@export var room_max_size: int = 40
+@export var room_size_et: int =  6
+
 # Radius from origin used for initial room placement sampling.
 @export var spawn_radius: float = 52.0
 # Iteration count for room separation relaxation.

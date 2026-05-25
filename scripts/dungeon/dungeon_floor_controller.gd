@@ -207,6 +207,8 @@ func _build_generation_params(debug_timeline: DungeonGeneratorDebugTimeline = nu
 		"width": floor_config.width,
 		"height": floor_config.height,
 		"cell_count": floor_config.cell_count,
+		"room_min_size": floor_config.room_min_size,
+		"room_max_size": floor_config.room_max_size,
 		"spawn_radius": floor_config.spawn_radius,
 		"separation_iterations": floor_config.separation_iterations,
 		"min_room_size": floor_config.min_room_size,
