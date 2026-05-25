@@ -74,7 +74,7 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body == _shooter:
 		return
-	if body.has_method("take_damage") or body.has_method("take_damage_from_source"):
+	if body is EnemyBasic or PlayerManager.is_player_node(body):
 		_apply_damage_to_target(body, _config.damage)
 		if randf() < _current_pierce_chance:
 			_current_pierce_chance *= 0.5
@@ -131,27 +131,24 @@ func _apply_aoe_damage(excluded_target: Node = null, is_lesser: bool = false) ->
 				if is_lesser:
 					continue
 				var self_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale * RingBandConstantsScript.SELF_GREATER_EXPLOSION_DAMAGE_SCALE)), 0)
-				if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node") and PlayerManager.is_player_node(collider_node):
-					if not PlayerManager.has_method("apply_damage_to_player"):
-						continue
+				if PlayerManager.is_player_node(collider_node):
 					PlayerManager.apply_damage_to_player(self_damage)
-					continue
-				if not (collider_node.has_method("take_damage") or collider_node.has_method("take_damage_from_source")):
 					continue
 				_apply_damage_to_target(collider_node, self_damage)
 				continue
-			if collider_node.has_method("take_damage") or collider_node.has_method("take_damage_from_source"):
+			if collider_node is EnemyBasic or PlayerManager.is_player_node(collider_node):
 				var scaled_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale)), 0)
 				_apply_damage_to_target(collider_node, scaled_damage)
 
 func _apply_damage_to_target(target: Node, amount: int) -> void:
 	if target == null or amount <= 0:
 		return
-	if target.has_method("take_damage_from_source"):
-		target.call("take_damage_from_source", amount, _shooter)
+	if PlayerManager.is_player_node(target):
+		PlayerManager.apply_damage_to_player(amount)
 		return
-	if target.has_method("take_damage"):
-		target.call("take_damage", amount)
+	if target is EnemyBasic:
+		var enemy_target: EnemyBasic = target as EnemyBasic
+		enemy_target.take_damage_from_source(amount, _shooter)
 
 func _spawn_aoe_burst(aoe_radius: float, is_lesser: bool) -> void:
 	if AOE_BURST_SCENE == null:
@@ -165,13 +162,13 @@ func _spawn_aoe_burst(aoe_radius: float, is_lesser: bool) -> void:
 	var instance_node: Node = AOE_BURST_SCENE.instantiate()
 	if instance_node == null:
 		return
-	if not instance_node.has_method("play"):
+	if not (instance_node is FireballAoeBurst):
 		instance_node.queue_free()
 		return
 	parent_node.add_child(instance_node)
-	if instance_node is Node3D:
-		(instance_node as Node3D).global_position = global_position
-	instance_node.call("play", aoe_radius, is_lesser)
+	var burst: FireballAoeBurst = instance_node as FireballAoeBurst
+	burst.global_position = global_position
+	burst.play(aoe_radius, is_lesser)
 
 
 func _on_timer_timeout() -> void:

@@ -165,11 +165,7 @@ func _get_world_item_rarity(world_item: InventoryWorldItem) -> int:
 func _get_world_item_distance_sq(world_item: InventoryWorldItem) -> float:
 	if world_item == null or not is_instance_valid(world_item):
 		return INF
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
-		return INF
-	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
-		return INF
-	if not PlayerManager.has_method("get_player_position"):
+	if not PlayerManager.has_live_player():
 		return INF
 	var player_position: Vector3 = PlayerManager.get_player_position()
 	return world_item.global_position.distance_squared_to(player_position)
@@ -191,25 +187,21 @@ func _refresh_actual_stats() -> void:
 		_fireball_actual_label.text = _build_fireball_actual_stats_text()
 
 func _build_player_actual_stats_text() -> String:
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
-		return "Player manager not found"
-	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
+	if not PlayerManager.has_live_player():
 		return "Player not found"
-	if not PlayerManager.has_method("get_current_health"):
-		return "Player stats unavailable"
 
-	var current_health: float = float(PlayerManager.get_current_health())
-	var max_health: float = float(PlayerManager.get_max_health())
-	var current_mana: float = float(PlayerManager.get_current_mana())
-	var max_mana: float = float(PlayerManager.get_max_mana())
-	var mana_regen: float = float(PlayerManager.get_mana_regen_rate()) if PlayerManager.has_method("get_mana_regen_rate") else 0.0
-	var current_ap: float = float(PlayerManager.get_current_ap())
-	var max_ap: float = float(PlayerManager.get_max_ap())
-	var ap_regen: float = float(PlayerManager.get_ap_regen_rate()) if PlayerManager.has_method("get_ap_regen_rate") else 0.0
-	var walk_speed: float = float(PlayerManager.get_actual_walk_speed()) if PlayerManager.has_method("get_actual_walk_speed") else 0.0
-	var sprint_speed: float = float(PlayerManager.get_actual_sprint_speed()) if PlayerManager.has_method("get_actual_sprint_speed") else 0.0
-	var gold: int = int(PlayerManager.get_gold()) if PlayerManager.has_method("get_gold") else 0
-	var gems: int = int(PlayerManager.get_gems()) if PlayerManager.has_method("get_gems") else 0
+	var current_health: float = PlayerManager.current_health
+	var max_health: float = PlayerManager.max_health
+	var current_mana: float = PlayerManager.current_mana
+	var max_mana: float = PlayerManager.max_mana
+	var mana_regen: float = PlayerManager.mana_regen_rate
+	var current_ap: float = PlayerManager.current_ap
+	var max_ap: float = PlayerManager.max_ap
+	var ap_regen: float = PlayerManager.ap_regen_rate
+	var walk_speed: float = PlayerManager.actual_walk_speed
+	var sprint_speed: float = PlayerManager.actual_sprint_speed
+	var gold: int = PlayerManager.gold
+	var gems: int = PlayerManager.gems
 
 	var lines: Array[String] = []
 	lines.append("❤️ HP %.0f / %.0f" % [current_health, max_health])
@@ -226,7 +218,7 @@ func _build_player_actual_stats_text() -> String:
 func _build_fireball_actual_stats_text() -> String:
 	if not has_node("/root/FireballManager"):
 		return "Fireball manager not found"
-	if FireballManager == null or not FireballManager.has_method("get_runtime_stat_summary"):
+	if FireballManager == null:
 		return "Fireball stats unavailable"
 	var summary: Dictionary = FireballManager.get_runtime_stat_summary()
 
@@ -269,9 +261,9 @@ func _build_band_summary_text() -> String:
 	var mana_regen_bonus: float = InventoryManager.get_mana_regen_bonus()
 	var max_ap_slots_bonus: float = InventoryManager.get_band_max_ap_bonus()
 	var speed_mult: float = InventoryManager.get_band_speed_multiplier()
-	var active_heal_bonus: float = InventoryManager.get_band_active_heal_power_bonus() if InventoryManager.has_method("get_band_active_heal_power_bonus") else 0.0
-	var active_shield_bonus: float = InventoryManager.get_band_active_shield_fill_rate_bonus() if InventoryManager.has_method("get_band_active_shield_fill_rate_bonus") else 0.0
-	var active_speed_bonus: float = InventoryManager.get_band_active_speed_bonus() if InventoryManager.has_method("get_band_active_speed_bonus") else 0.0
+	var active_heal_bonus: float = InventoryManager.get_band_active_heal_power_bonus()
+	var active_shield_bonus: float = InventoryManager.get_band_active_shield_fill_rate_bonus()
+	var active_speed_bonus: float = InventoryManager.get_band_active_speed_bonus()
 
 	if not is_zero_approx(max_hp_bonus):
 		lines.append(_format_float_line(&"max_hp_flat", max_hp_bonus, 0))

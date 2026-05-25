@@ -117,14 +117,13 @@ func _apply_ranged_damage(player_target: Node3D) -> bool:
 		if not player_target.is_ancestor_of(collider_node):
 			return false
 	var damage_amount: int = max(strength, 1)
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node") and PlayerManager.is_player_node(player_target):
-		if not PlayerManager.has_method("apply_damage_to_player"):
-			return false
+	if PlayerManager.is_player_node(player_target):
 		return bool(PlayerManager.apply_damage_to_player(damage_amount))
-	if player_target.has_method("take_damage"):
-		player_target.call("take_damage", damage_amount)
-		return true
-	return false
+	var player_controller: PlayerFpsControllerScript = player_target as PlayerFpsControllerScript
+	if player_controller == null:
+		return false
+	player_controller.take_damage(damage_amount)
+	return true
 
 func _apply_accuracy_to_direction(direction: Vector3) -> Vector3:
 	var yaw_offset: float = deg_to_rad(_aim_rng.randf_range(-ranged_accuracy_degrees, ranged_accuracy_degrees))
@@ -154,8 +153,9 @@ func _spawn_shot_vfx(origin: Vector3, hit_position: Vector3) -> void:
 		return
 	var shot_vfx: Node3D = instance_node as Node3D
 	parent_node.add_child(shot_vfx)
-	if shot_vfx.has_method("play"):
-		shot_vfx.call("play", origin, hit_position)
+	var shot_vfx_controller: SkeletonArcherShotVfx = shot_vfx as SkeletonArcherShotVfx
+	if shot_vfx_controller != null:
+		shot_vfx_controller.play(origin, hit_position)
 
 func _process_attack_windup(delta: float, player_target: Node3D) -> void:
 	if player_target == null or _windup_target == null or player_target != _windup_target:

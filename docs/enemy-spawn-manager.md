@@ -127,13 +127,13 @@ The manager uses these links to append the first patrol point from neighboring r
 
 ## Enemy Scene Requirements
 
-The manager can spawn any scene that instantiates to `RigidBody3D`.
+The manager now requires spawned scenes to instantiate to `EnemyBasic` (or a subclass).
 
-Optional integration points:
+Integration contract:
 
-1. If the spawned enemy has `set_patrol_route(waypoints: Array[Vector3])`, the manager will pass the computed patrol route.
+1. Spawned enemies must support `set_patrol_route(waypoints: Array[Vector3])`.
 2. Enemy scene choice can be overridden by `EnemyManager` at spawn time.
-3. If the resolved scene does not instantiate to `RigidBody3D`, the instance is freed immediately.
+3. If the resolved scene does not instantiate to `EnemyBasic`, the instance is freed immediately.
 
 ## EnemyManager Interaction
 
@@ -254,7 +254,7 @@ EnemySpawnManager.reset_default_config()
 3. Add `EnemySpawn_*` markers to the generated dungeon output.
 4. Add `PatrolNodes` and `PatrolLinks` only if patrol behavior is needed.
 5. Ensure the fallback position is on valid floor geometry.
-6. Ensure spawned enemy scenes instantiate to `RigidBody3D`.
+6. Ensure spawned enemy scenes instantiate to `EnemyBasic`.
 7. Ensure `EnemyManager` can resolve spawn scenes for the progression bands you want.
 8. Tune the config resource instead of hardcoding new values in the manager.
 
@@ -276,9 +276,10 @@ Check:
 Check:
 
 1. The scene implements `set_patrol_route(...)`.
-2. `PatrolNodes` exists in the generated dungeon.
-3. Room groups follow the `PatrolNodes_Room_<index>` naming pattern.
-4. Patrol markers are named `PatrolNode_*`.
+2. The scene inherits from `EnemyBasic`.
+3. `PatrolNodes` exists in the generated dungeon.
+4. Room groups follow the `PatrolNodes_Room_<index>` naming pattern.
+5. Patrol markers are named `PatrolNode_*`.
 
 ### Wrong enemy types appear
 

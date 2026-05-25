@@ -11,9 +11,6 @@ const DEGREES_TO_RADIANS: float = PI / 180.0
 var _config: FireballConfig = DefaultFireballConfig
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
-func _has_inventory_manager() -> bool:
-	return has_node("/root/InventoryManager") and InventoryManager != null
-
 func _ready() -> void:
 	_rng.randomize()
 
@@ -25,14 +22,10 @@ func reset_default_config() -> void:
 	_config = DefaultFireballConfig
 
 func get_mana_cost() -> float:
-	if not _has_inventory_manager():
-		return max(_config.mana_cost, 0.0)
 	var mana_cost_multiplier: float = InventoryManager.get_fireball_mana_cost_multiplier()
 	return max(_config.mana_cost * mana_cost_multiplier, 0.0)
 
 func get_cast_delay_seconds() -> float:
-	if not _has_inventory_manager():
-		return max(_config.cast_delay_seconds, RingBandConstantsScript.CAST_DELAY_MIN_SECONDS)
 	var cast_delay_multiplier: float = InventoryManager.get_fireball_cast_delay_multiplier()
 	var effective_delay: float = _config.cast_delay_seconds * cast_delay_multiplier
 	return max(effective_delay, RingBandConstantsScript.CAST_DELAY_MIN_SECONDS)
@@ -116,10 +109,6 @@ func _build_modified_config() -> FireballConfig:
 	var modified_config: FireballConfig = _config.duplicate(true) as FireballConfig
 	if modified_config == null:
 		modified_config = _config
-	if not _has_inventory_manager():
-		modified_config.cast_delay_seconds = get_cast_delay_seconds()
-		modified_config.set_meta("gravity_trait_active", false)
-		return modified_config
 	var damage_multiplier: float = InventoryManager.get_fireball_damage_multiplier()
 	var speed_multiplier: float = InventoryManager.get_fireball_projectile_speed_multiplier()
 	var gravity_profile: Dictionary = InventoryManager.get_fireball_gravity_profile()

@@ -195,37 +195,21 @@ func _can_afford(amount: int) -> bool:
 	return _get_player_gold() >= amount
 
 func _get_player_gold() -> int:
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
-		return 0
-	if not PlayerManager.has_method("get_gold"):
-		return 0
-	return int(PlayerManager.get_gold())
+	return PlayerManager.gold
 
 func _spend_player_gold(amount: int) -> bool:
 	if amount <= 0:
 		return true
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
-		return false
-	if not PlayerManager.has_method("get_gold") or not PlayerManager.has_method("set_gold"):
-		return false
-	var current_gold: int = int(PlayerManager.get_gold())
+	var current_gold: int = PlayerManager.gold
 	if current_gold < amount:
 		return false
 	PlayerManager.set_gold(current_gold - amount)
 	return true
 
 func _has_free_slot_for(item_kind: InventoryItemDefinition.ItemKind) -> bool:
-	if not has_node("/root/InventoryManager") or InventoryManager == null:
-		return false
-	if not InventoryManager.has_method("find_first_free_slot_index"):
-		return false
 	return int(InventoryManager.find_first_free_slot_index(item_kind)) >= 0
 
 func _equip_item_offer(item_definition: InventoryItemDefinition) -> bool:
 	if item_definition == null:
-		return false
-	if not has_node("/root/InventoryManager") or InventoryManager == null:
-		return false
-	if not InventoryManager.has_method("equip_item_definition_to_first_free_slot"):
 		return false
 	return bool(InventoryManager.equip_item_definition_to_first_free_slot(item_definition))

@@ -34,26 +34,20 @@ func _ready() -> void:
 	set_gems(current_gems)
 
 func _process(_delta: float) -> void:
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
+	if not PlayerManager.has_live_player():
 		return
-	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
-		return
-	if PlayerManager.has_method("get_current_health") and PlayerManager.has_method("get_max_health"):
-		var health_current_value: float = float(PlayerManager.get_current_health())
-		var health_max_value: float = float(PlayerManager.get_max_health())
-		set_health(health_current_value, health_max_value)
-	if PlayerManager.has_method("get_current_mana") and PlayerManager.has_method("get_max_mana"):
-		var current_value: float = float(PlayerManager.get_current_mana())
-		var max_value: float = float(PlayerManager.get_max_mana())
-		set_mana(current_value, max_value)
-	if _ap_bar != null and PlayerManager.has_method("get_current_ap") and PlayerManager.has_method("get_max_ap"):
-		var ap_current_value: float = float(PlayerManager.get_current_ap())
-		var ap_max_value: float = float(PlayerManager.get_max_ap())
+	var health_current_value: float = PlayerManager.current_health
+	var health_max_value: float = PlayerManager.max_health
+	set_health(health_current_value, health_max_value)
+	var current_value: float = PlayerManager.current_mana
+	var max_value: float = PlayerManager.max_mana
+	set_mana(current_value, max_value)
+	if _ap_bar != null:
+		var ap_current_value: float = PlayerManager.current_ap
+		var ap_max_value: float = PlayerManager.max_ap
 		set_ap(ap_current_value, ap_max_value)
-	if PlayerManager.has_method("get_gold"):
-		set_gold(int(PlayerManager.get_gold()))
-	if PlayerManager.has_method("get_gems"):
-		set_gems(int(PlayerManager.get_gems()))
+	set_gold(PlayerManager.gold)
+	set_gems(PlayerManager.gems)
 
 func set_health(value: float, maximum: float = -1.0) -> void:
 	if maximum > 0.0:

@@ -200,6 +200,17 @@ Constants:
 - `GRAVITY_TRADEOFF_DAMAGE_GAIN_PER_EXTRA = 0.25`
 - `GRAVITY_TRADEOFF_AOE_GAIN_PER_EXTRA = 0.18`
 
+### Projectile collision targeting contract
+
+Fireball direct-hit and AoE damage application now targets concrete gameplay types instead of reflective/group checks:
+
+- Player damage path: `PlayerManager.is_player_node(...)` then `PlayerManager.apply_damage_to_player(...)`.
+- Enemy damage path: `target is EnemyBasic` then `EnemyBasic.take_damage_from_source(...)`.
+
+Practical implication:
+
+- Enemy scenes must inherit from `EnemyBasic` to receive fireball collision and explosion damage.
+
 ## 10. Deterministic Generation Notes
 
 Drops can be deterministic per floor run when a floor seed is provided.

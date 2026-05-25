@@ -244,8 +244,9 @@ func spawn_currency_pickup(currency_kind: int, amount: int, spawn_position: Vect
 	var pickup: Node3D = instance_node as Node3D
 	resolved_parent.add_child(pickup)
 	pickup.global_position = spawn_position
-	if pickup.has_method("configure"):
-		pickup.call("configure", currency_kind, amount)
+	var currency_pickup: CurrencyPickup = pickup as CurrencyPickup
+	if currency_pickup != null:
+		currency_pickup.configure(currency_kind, amount)
 	return pickup
 
 func spawn_gold_pickup(amount: int, spawn_position: Vector3, parent_node: Node = null) -> Node3D:
@@ -255,28 +256,20 @@ func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node =
 	return spawn_currency_pickup(CURRENCY_KIND_GEMS, amount, spawn_position, parent_node)
 
 func add_player_gold(amount: int) -> int:
-	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("add_gold"):
-		return 0
 	var added: int = int(PlayerManager.add_gold(maxi(amount, 0)))
 	inventory_changed.emit()
 	return added
 
 func add_player_gems(amount: int) -> int:
-	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("add_gems"):
-		return 0
 	var added: int = int(PlayerManager.add_gems(maxi(amount, 0)))
 	inventory_changed.emit()
 	return added
 
 func get_player_gold() -> int:
-	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("get_gold"):
-		return 0
-	return int(PlayerManager.get_gold())
+	return PlayerManager.gold
 
 func get_player_gems() -> int:
-	if not has_node("/root/PlayerManager") or PlayerManager == null or not PlayerManager.has_method("get_gems"):
-		return 0
-	return int(PlayerManager.get_gems())
+	return PlayerManager.gems
 
 func get_fireball_damage_multiplier() -> float:
 	var multiplier: float = 1.0
@@ -435,11 +428,10 @@ func get_fireball_accuracy_bonus() -> float:
 func _refresh_player_reference() -> void:
 	if _player != null and is_instance_valid(_player):
 		return
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):
-		var manager_player: Node = PlayerManager.get_player_node()
-		if manager_player is Node3D:
-			_player = manager_player as Node3D
-			return
+	var manager_player: Node = PlayerManager.get_player_node()
+	if manager_player is Node3D:
+		_player = manager_player as Node3D
+		return
 	_player = null
 
 func _resolve_player_node() -> Node:

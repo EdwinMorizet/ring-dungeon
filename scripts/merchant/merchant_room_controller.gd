@@ -37,14 +37,12 @@ func reset_for_entry() -> void:
 	if _exit_trigger != null:
 		_exit_trigger.set_deferred("monitoring", true)
 		_exit_trigger.set_deferred("monitorable", true)
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
-		MerchantManager.close_shop()
+	MerchantManager.close_shop()
 
 func configure_session(progression_index: int, floor_seed: int) -> void:
 	_progression_index = maxi(progression_index, 0)
 	_floor_seed = max(floor_seed, 1)
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("begin_merchant_session"):
-		MerchantManager.begin_merchant_session(_progression_index, _floor_seed)
+	MerchantManager.begin_merchant_session(_progression_index, _floor_seed)
 
 func _on_exit_body_entered(body: Node) -> void:
 	if _has_exited:
@@ -58,5 +56,4 @@ func _on_exit_body_entered(body: Node) -> void:
 
 func _on_merchant_interact_requested() -> void:
 	merchant_interaction_requested.emit()
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("request_open_shop"):
-		MerchantManager.request_open_shop()
+	MerchantManager.request_open_shop()

@@ -162,17 +162,16 @@ func _clear_generated() -> void:
 		_generated_root = null
 	_clear_patrol_link_debug_visual()
 	_runtime_layout.clear()
-	if is_inside_tree() and has_node("/root/InventoryManager"):
+	if is_inside_tree():
 		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
-	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager) and _enemy_spawn_manager.has_method("clear_spawned_enemies"):
-		_enemy_spawn_manager.clear_spawned_enemies()
+	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
+		EnemySpawnManager.clear_spawned_enemies()
 
 func _hide_merchant_room() -> void:
 	if _merchant_room_instance != null and is_instance_valid(_merchant_room_instance):
 		_merchant_room_instance.visible = false
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
-		MerchantManager.close_shop()
+	MerchantManager.close_shop()
 
 func _ensure_player_spawned() -> void:
 	if player_scene == null:
@@ -220,11 +219,8 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager == null or not is_instance_valid(_enemy_spawn_manager):
 		return
-	if not _enemy_spawn_manager.has_method("spawn_enemies_for_floor"):
-		return
 	var player_spawn_position: Vector3 = _find_player_spawn_position()
-	_enemy_spawn_manager.call(
-		"spawn_enemies_for_floor",
+	EnemySpawnManager.spawn_enemies_for_floor(
 		self,
 		_generated_root,
 		player_spawn_position,
@@ -268,13 +264,12 @@ func _spawn_chests_for_floor(generation_seed: int) -> void:
 		if not chest_node is Node3D:
 			chest_node.queue_free()
 			continue
-		var chest: Node3D = chest_node as Node3D
+		var chest: ChestInteractable = chest_node as ChestInteractable
 		chest.name = "ChestInteractable_%d" % spawn_index
 		_generated_root.add_child(chest)
 		chest.global_position = marker.global_position + Vector3.UP * 0.42
 		var chest_seed: int = _build_chest_seed(generation_seed, marker.global_position, spawn_index)
-		if chest.has_method("configure"):
-			chest.call("configure", _runtime_progression_index, generation_seed, chest_seed)
+		chest.configure(_runtime_progression_index, generation_seed, chest_seed)
 
 func _build_chest_seed(generation_seed: int, marker_position: Vector3, spawn_index: int) -> int:
 	var quantized_x: int = int(roundf(marker_position.x * 100.0))
@@ -309,29 +304,21 @@ func _connect_floor_exit_trigger() -> void:
 			exit_trigger.connect("exit_reached", callback)
 
 func _on_floor_exit_reached() -> void:
-	var manager: Node = _get_progression_manager_node()
-	if manager != null and manager.has_method("complete_floor_exit"):
-		manager.call("complete_floor_exit")
+	if _has_progression_manager():
+		GameProgressionManager.complete_floor_exit()
 		return
 	regenerate_now()
 
 func _on_merchant_exit_reached() -> void:
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
-		MerchantManager.close_shop()
-	var manager: Node = _get_progression_manager_node()
-	if manager != null and manager.has_method("complete_merchant_exit"):
-		manager.call("complete_merchant_exit")
+	MerchantManager.close_shop()
+	if _has_progression_manager():
+		GameProgressionManager.complete_merchant_exit()
 		return
 	_hide_merchant_room()
 	regenerate_now()
 
 func _has_progression_manager() -> bool:
 	return has_node("/root/GameProgressionManager")
-
-func _get_progression_manager_node() -> Node:
-	if not _has_progression_manager():
-		return null
-	return get_node("/root/GameProgressionManager")
 
 func get_patrol_debug_snapshot() -> Dictionary:
 	if _runtime_layout.is_empty():

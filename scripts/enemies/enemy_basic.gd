@@ -3,6 +3,7 @@ extends RigidBody3D
 class_name EnemyBasic
 
 const FloatingDamageNumberScene: PackedScene = preload("res://scenes/vfx/floating_damage_number.tscn")
+const PlayerFpsControllerScript = preload("res://scripts/player/player_fps_controller.gd")
 const _OVERHEAD_BAR_WIDTH: float = 1.25
 const _OVERHEAD_BAR_HEIGHT: float = 0.08
 const _OVERHEAD_BAR_DEPTH: float = 0.05
@@ -105,15 +106,14 @@ func _try_apply_contact_damage(player_target: Node3D) -> void:
 	if global_position.distance_squared_to(player_target.global_position) > radius * radius:
 		return
 	var damage_amount: int = max(strength, 1)
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node") and PlayerManager.is_player_node(player_target):
-		if not PlayerManager.has_method("apply_damage_to_player"):
-			return
+	if PlayerManager.is_player_node(player_target):
 		if not PlayerManager.apply_damage_to_player(damage_amount):
 			return
-	elif player_target.has_method("take_damage"):
-		player_target.call("take_damage", damage_amount)
 	else:
-		return
+		var player_controller: PlayerFpsControllerScript = player_target as PlayerFpsControllerScript
+		if player_controller == null:
+			return
+		player_controller.take_damage(damage_amount)
 	_contact_damage_cooldown = max(contact_damage_interval_seconds, 0.05)
 
 func take_damage(amount: int) -> void:
@@ -139,9 +139,8 @@ func _process_incoming_damage(amount: int, source: Node = null) -> void:
 func _is_damage_from_player(source: Node) -> bool:
 	if source == null:
 		return false
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node"):
-		if bool(PlayerManager.is_player_node(source)):
-			return true
+	if bool(PlayerManager.is_player_node(source)):
+		return true
 	var player_target: Node3D = _get_player_node_from_manager()
 	if player_target == null:
 		return false
@@ -410,8 +409,6 @@ func _get_player_target() -> Node3D:
 	return null
 
 func _get_player_node_from_manager() -> Node3D:
-	if not (has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node")):
-		return null
 	var manager_player: Node = PlayerManager.get_player_node()
 	if not (manager_player is Node3D):
 		return null
@@ -456,12 +453,11 @@ func _spawn_damage_number(amount: int) -> void:
 	if parent_node == null:
 		parent_node = tree.root
 	var instance_node: Node = FloatingDamageNumberScene.instantiate()
-	if instance_node is Node3D:
-		var damage_number: Node3D = instance_node as Node3D
+	if instance_node is FloatingDamageNumber:
+		var damage_number: FloatingDamageNumber = instance_node as FloatingDamageNumber
 		parent_node.add_child(damage_number)
 		var spawn_position: Vector3 = global_position + Vector3.UP * damage_number_height
-		if damage_number.has_method("show_damage"):
-			damage_number.call("show_damage", amount, spawn_position)
+		damage_number.show_damage(amount, spawn_position)
 	else:
 		instance_node.queue_free()
 
@@ -470,12 +466,11 @@ func _die() -> void:
 	_set_behavior_state_label("Dead")
 	_update_overhead_ui()
 	var enemy_manager: Node = _get_enemy_manager_node()
-	if enemy_manager != null and enemy_manager.has_method("notify_enemy_died"):
-		enemy_manager.call("notify_enemy_died", self)
-	if has_node("/root/InventoryManager"):
-		var floor_depth: int = _resolve_floor_depth()
-		var floor_seed: int = _resolve_floor_seed()
-		InventoryManager.spawn_random_drop(global_position, floor_depth, floor_seed)
+	if enemy_manager != null:
+		EnemyManager.notify_enemy_died(self)
+	var floor_depth: int = _resolve_floor_depth()
+	var floor_seed: int = _resolve_floor_seed()
+	InventoryManager.spawn_random_drop(global_position, floor_depth, floor_seed)
 	died.emit(self)
 	queue_free()
 
@@ -485,9 +480,7 @@ func _register_with_enemy_manager() -> void:
 	var enemy_manager: Node = _get_enemy_manager_node()
 	if enemy_manager == null:
 		return
-	if not enemy_manager.has_method("register_enemy"):
-		return
-	enemy_manager.call("register_enemy", self)
+	EnemyManager.register_enemy(self)
 	_is_registered_with_enemy_manager = true
 
 func _unregister_from_enemy_manager() -> void:
@@ -497,8 +490,7 @@ func _unregister_from_enemy_manager() -> void:
 	if enemy_manager == null:
 		_is_registered_with_enemy_manager = false
 		return
-	if enemy_manager.has_method("unregister_enemy"):
-		enemy_manager.call("unregister_enemy", self)
+	EnemyManager.unregister_enemy(self)
 	_is_registered_with_enemy_manager = false
 
 func _get_enemy_manager_node() -> Node:
@@ -507,7 +499,7 @@ func _get_enemy_manager_node() -> Node:
 	return get_node("/root/EnemyManager")
 
 func _resolve_floor_depth() -> int:
-	if has_node("/root/GameProgressionManager") and GameProgressionManager.has_method("get_progression_index"):
+	if has_node("/root/GameProgressionManager"):
 		return int(GameProgressionManager.get_progression_index())
 	return 0
 
@@ -519,6 +511,7 @@ func _resolve_floor_seed() -> int:
 	if current_scene == null:
 		return 0
 	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if controller_node != null and controller_node.has_method("get_current_floor_seed"):
-		return int(controller_node.call("get_current_floor_seed"))
+	if controller_node is DungeonFloorController:
+		var floor_controller: DungeonFloorController = controller_node as DungeonFloorController
+		return int(floor_controller.get_current_floor_seed())
 	return 0

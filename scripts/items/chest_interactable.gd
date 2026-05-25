@@ -127,17 +127,7 @@ func _compute_is_player_looking_at_chest() -> bool:
 	return look_dot >= clampf(interact_look_dot_threshold, -1.0, 0.99)
 
 func _get_player_node() -> Node3D:
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):
-		var player_from_manager: Variant = PlayerManager.call("get_player_node")
-		if player_from_manager is Node3D:
-			return player_from_manager as Node3D
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var player_candidate: Node = tree.get_first_node_in_group("player")
-	if player_candidate is Node3D:
-		return player_candidate as Node3D
-	return null
+	return PlayerManager.get_player_node()
 
 func _get_active_camera() -> Camera3D:
 	var viewport: Viewport = get_viewport()
@@ -149,11 +139,7 @@ func _update_prompt_visual(delta: float) -> void:
 	if _prompt_label == null or not _prompt_label.visible:
 		return
 	_prompt_anim_time += maxf(delta, 0.0)
-	if not has_node("/root/PlayerManager") or PlayerManager == null:
-		return
-	if not PlayerManager.has_method("has_live_player") or not PlayerManager.has_live_player():
-		return
-	if not PlayerManager.has_method("get_player_position"):
+	if not PlayerManager.has_live_player():
 		return
 	var player_position: Vector3 = PlayerManager.get_player_position()
 	var max_radius: float = maxf(interact_radius, 0.2)
@@ -167,8 +153,6 @@ func _update_prompt_visual(delta: float) -> void:
 	_prompt_label.modulate = next_color
 
 func _spawn_loot_from_roll() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
 	var loot_type: LootType = _roll_loot_type()
 	var rolled_gold: int = 0
 	var rolled_gems: int = 0

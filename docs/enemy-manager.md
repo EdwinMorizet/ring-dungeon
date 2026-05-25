@@ -186,8 +186,8 @@ This keeps runtime lookups fast while still allowing config swaps during develop
 | --- | --- |
 | `max_tracked_enemies` | Hard cap for live-enemy registry growth. |
 | `auto_prune_invalid_entries` | Removes stale enemy references during queries. |
-| `default_enemy_type_id` | Fallback type id for enemies that do not expose their own type accessor. |
-| `default_enemy_variant_id` | Fallback variant id for enemies that do not expose their own variant accessor. |
+| `default_enemy_type_id` | Fallback type id used only when the resolver receives a null enemy reference. |
+| `default_enemy_variant_id` | Shared default variant id for systems that need a baseline variant label. |
 | `default_spawn_type_id` | Final fallback type when no explicit or weighted type resolves. |
 | `enemy_scene_paths` | Type-id-to-scene-path lookup used during spawn resolution. |
 | `spawn_type_entries` | Weighted progression-aware list of enemy type entries. |
@@ -201,7 +201,7 @@ Enemy scripts should:
 1. register with `EnemyManager` when ready
 2. unregister when leaving the tree
 3. notify death when they die
-4. expose `get_enemy_type_id()` when they support custom type ids
+4. implement `get_enemy_type_id()` and return a stable non-empty type id
 
 ### Spawn manager
 

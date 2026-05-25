@@ -63,8 +63,6 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body == null or not body.is_in_group("player"):
 		return
-	if not has_node("/root/InventoryManager"):
-		return
 	var collected_amount: int = 0
 	if currency_kind == CurrencyKind.GEMS:
 		collected_amount = InventoryManager.add_player_gems(amount)

@@ -22,52 +22,48 @@ var _is_debug_panel_visible: bool = false
 func _ready() -> void:
 	_wire_debug_panel_actions()
 	_set_debug_panel_visible(false)
-	var manager: Node = _get_manager()
-	if manager != null:
-		if not manager.floor_changed.is_connected(_on_floor_changed):
-			manager.floor_changed.connect(_on_floor_changed)
-		if not manager.phase_changed.is_connected(_on_phase_changed):
-			manager.phase_changed.connect(_on_phase_changed)
-		_refresh(manager)
+	if _has_progression_manager():
+		if not GameProgressionManager.floor_changed.is_connected(_on_floor_changed):
+			GameProgressionManager.floor_changed.connect(_on_floor_changed)
+		if not GameProgressionManager.phase_changed.is_connected(_on_phase_changed):
+			GameProgressionManager.phase_changed.connect(_on_phase_changed)
+		_refresh()
 	else:
 		_refresh_status_without_manager()
 
 func _exit_tree() -> void:
-	var manager: Node = _get_manager()
-	if manager == null:
+	if not _has_progression_manager():
 		return
-	if manager.floor_changed.is_connected(_on_floor_changed):
-		manager.floor_changed.disconnect(_on_floor_changed)
-	if manager.phase_changed.is_connected(_on_phase_changed):
-		manager.phase_changed.disconnect(_on_phase_changed)
+	if GameProgressionManager.floor_changed.is_connected(_on_floor_changed):
+		GameProgressionManager.floor_changed.disconnect(_on_floor_changed)
+	if GameProgressionManager.phase_changed.is_connected(_on_phase_changed):
+		GameProgressionManager.phase_changed.disconnect(_on_phase_changed)
 
 func _on_floor_changed(_display_floor: int, _progression_index: int, _config_path: String) -> void:
-	var manager: Node = _get_manager()
-	if manager != null:
-		_refresh(manager)
+	if _has_progression_manager():
+		_refresh()
 
 func _on_phase_changed(_phase: StringName) -> void:
-	var manager: Node = _get_manager()
-	if manager != null:
-		_refresh(manager)
+	if _has_progression_manager():
+		_refresh()
 
-func _refresh(manager: Node) -> void:
+func _refresh() -> void:
 	_label.text = "Floor: %d  Phase: %s  Index: %d  F5: Toggle Debug Panel  F6: Spawn Items  F7: Print Summary  F8: Quick Validation" % [
-		int(manager.call("get_display_floor")),
-		String(manager.call("get_phase")),
-		int(manager.call("get_progression_index")),
+		int(GameProgressionManager.get_display_floor()),
+		String(GameProgressionManager.get_phase()),
+		int(GameProgressionManager.get_progression_index()),
 	]
 	_label.text += "  F9: Spawn Gold  F10: Spawn Gems  F11: Patrol Overlay  F12: Patrol Smoke"
 	if _show_patrol_debug:
 		var patrol_debug_line: String = _build_patrol_debug_line()
 		if not patrol_debug_line.is_empty():
 			_label.text += "\n" + patrol_debug_line
-	_refresh_panel_title(manager)
+	_refresh_panel_title()
 
 func _refresh_status_without_manager() -> void:
 	_label.text = "Floor: N/A  Phase: N/A  F5: Toggle Debug Panel  F6: Spawn Items  F7: Print Summary  F8: Quick Validation"
 	_label.text += "  F9: Spawn Gold  F10: Spawn Gems  F11: Patrol Overlay  F12: Patrol Smoke"
-	_refresh_panel_title(null)
+	_refresh_panel_title()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:
@@ -120,9 +116,8 @@ func _wire_debug_panel_actions() -> void:
 
 func _toggle_debug_panel() -> void:
 	_set_debug_panel_visible(not _is_debug_panel_visible)
-	var manager: Node = _get_manager()
-	if manager != null:
-		_refresh(manager)
+	if _has_progression_manager():
+		_refresh()
 	else:
 		_refresh_status_without_manager()
 
@@ -131,15 +126,15 @@ func _set_debug_panel_visible(isVisible: bool) -> void:
 	if _debug_panel != null:
 		_debug_panel.visible = isVisible
 
-func _refresh_panel_title(manager: Node) -> void:
+func _refresh_panel_title() -> void:
 	if _panel_title_label == null:
 		return
-	if manager == null:
+	if not _has_progression_manager():
 		_panel_title_label.text = "Debug Console  Floor N/A"
 		return
 	_panel_title_label.text = "Debug Console  Floor %d  Index %d" % [
-		int(manager.call("get_display_floor")),
-		int(manager.call("get_progression_index")),
+		int(GameProgressionManager.get_display_floor()),
+		int(GameProgressionManager.get_progression_index()),
 	]
 
 func _run_ring_balance_sample() -> void:
@@ -180,71 +175,52 @@ func _rarity_label(rarity: int) -> String:
 			return "Common"
 
 func _spawn_debug_items() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
-	var manager: Node = _get_manager()
 	var floor_depth: int = 0
-	if manager != null:
-		floor_depth = int(manager.call("get_progression_index"))
+	if _has_progression_manager():
+		floor_depth = int(GameProgressionManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_items(8, floor_depth, 1337, 2.2)
 
 func _print_modifier_summary() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
 	InventoryManager.debug_print_equipped_modifier_summary()
 
 func _run_quick_validation() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
-	var manager: Node = _get_manager()
 	var floor_depth: int = 0
-	if manager != null:
-		floor_depth = int(manager.call("get_progression_index"))
+	if _has_progression_manager():
+		floor_depth = int(GameProgressionManager.get_progression_index())
 	InventoryManager.debug_run_quick_validation(floor_depth, 1337)
 
 func _spawn_debug_gold() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
-	var manager: Node = _get_manager()
 	var floor_depth: int = 0
-	if manager != null:
-		floor_depth = int(manager.call("get_progression_index"))
+	if _has_progression_manager():
+		floor_depth = int(GameProgressionManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_gold(8, floor_depth, 2027, 2.2)
 
 func _spawn_debug_gems() -> void:
-	if not has_node("/root/InventoryManager"):
-		return
-	var manager: Node = _get_manager()
 	var floor_depth: int = 0
-	if manager != null:
-		floor_depth = int(manager.call("get_progression_index"))
+	if _has_progression_manager():
+		floor_depth = int(GameProgressionManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_gems(8, floor_depth, 3037, 2.2)
 
-func _get_manager() -> Node:
-	if has_node("/root/GameProgressionManager"):
-		var node: Node = get_node("/root/GameProgressionManager")
-		if node.has_method("get_display_floor") and node.has_method("get_progression_index") and node.has_method("get_phase"):
-			return node
-	return null
+func _has_progression_manager() -> bool:
+	return has_node("/root/GameProgressionManager")
 
 func _toggle_patrol_overlay() -> void:
 	_show_patrol_debug = not _show_patrol_debug
-	var controller: Node = _get_floor_controller()
-	if controller != null and controller.has_method("set_patrol_link_debug_visual_enabled"):
-		controller.call("set_patrol_link_debug_visual_enabled", _show_patrol_debug)
+	var controller: DungeonFloorController = _get_floor_controller()
+	if controller != null:
+		controller.set_patrol_link_debug_visual_enabled(_show_patrol_debug)
 	if _patrol_overlay_button != null:
 		_patrol_overlay_button.text = "Patrol Overlay: %s" % ("On" if _show_patrol_debug else "Off")
-	var manager: Node = _get_manager()
-	if manager != null:
-		_refresh(manager)
+	if _has_progression_manager():
+		_refresh()
 	else:
 		_refresh_status_without_manager()
 
 func _build_patrol_debug_line() -> String:
-	var controller: Node = _get_floor_controller()
-	if controller == null or not controller.has_method("get_patrol_debug_snapshot"):
+	var controller: DungeonFloorController = _get_floor_controller()
+	if controller == null:
 		return "Patrol: unavailable"
-	var snapshot: Dictionary = controller.call("get_patrol_debug_snapshot")
+	var snapshot: Dictionary = controller.get_patrol_debug_snapshot()
 	if snapshot.is_empty():
 		return "Patrol: no runtime layout"
 	return "Patrol: Rooms=%d Nodes=%d Links=%d | %s" % [
@@ -255,11 +231,11 @@ func _build_patrol_debug_line() -> String:
 	]
 
 func _run_patrol_smoke_check() -> void:
-	var controller: Node = _get_floor_controller()
-	if controller == null or not controller.has_method("run_patrol_smoke_check"):
+	var controller: DungeonFloorController = _get_floor_controller()
+	if controller == null:
 		print("[PatrolSmoke] missing DungeonFloorController or helper method")
 		return
-	var report: Dictionary = controller.call("run_patrol_smoke_check")
+	var report: Dictionary = controller.run_patrol_smoke_check()
 	var ok: bool = bool(report.get("ok", false))
 	var status: String = "PASS" if ok else "FAIL"
 	print(
@@ -273,18 +249,17 @@ func _run_patrol_smoke_check() -> void:
 		]
 	)
 	if _show_patrol_debug:
-		var manager: Node = _get_manager()
-		if manager != null:
-			_refresh(manager)
+		if _has_progression_manager():
+			_refresh()
 
-func _get_floor_controller() -> Node:
+func _get_floor_controller() -> DungeonFloorController:
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return null
 	var current_scene: Node = tree.current_scene
 	if current_scene == null:
 		return null
-	var controller: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if controller == null:
+	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
+	if not (controller_node is DungeonFloorController):
 		return null
-	return controller
+	return controller_node as DungeonFloorController

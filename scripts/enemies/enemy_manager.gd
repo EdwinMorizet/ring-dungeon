@@ -200,9 +200,7 @@ func _remove_enemy(enemy: EnemyBasic) -> bool:
 func _resolve_enemy_type_id(enemy: EnemyBasic) -> StringName:
 	if enemy == null:
 		return get_default_enemy_type_id()
-	if enemy.has_method("get_enemy_type_id"):
-		return enemy.call("get_enemy_type_id")
-	return get_default_enemy_type_id()
+	return enemy.get_enemy_type_id()
 
 func _is_enemy_valid(enemy: EnemyBasic) -> bool:
 	return enemy != null and is_instance_valid(enemy)

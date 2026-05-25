@@ -23,40 +23,34 @@ func _ready() -> void:
 	visible = false
 	if _close_button != null and not _close_button.pressed.is_connected(_on_close_pressed):
 		_close_button.pressed.connect(_on_close_pressed)
-	if has_node("/root/MerchantManager") and MerchantManager != null:
-		if not MerchantManager.shop_open_changed.is_connected(_on_shop_open_changed):
-			MerchantManager.shop_open_changed.connect(_on_shop_open_changed)
-		if not MerchantManager.offers_changed.is_connected(_on_offers_changed):
-			MerchantManager.offers_changed.connect(_on_offers_changed)
-		if not MerchantManager.special_unlocks_changed.is_connected(_on_special_unlocks_changed):
-			MerchantManager.special_unlocks_changed.connect(_on_special_unlocks_changed)
-	if has_node("/root/InventoryManager") and InventoryManager != null:
-		if not InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
-			InventoryManager.inventory_changed.connect(_on_inventory_changed)
-		if not InventoryManager.nearby_items_changed.is_connected(_on_nearby_items_changed):
-			InventoryManager.nearby_items_changed.connect(_on_nearby_items_changed)
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_signal("currency_changed"):
-		if not PlayerManager.currency_changed.is_connected(_on_currency_changed):
-			PlayerManager.currency_changed.connect(_on_currency_changed)
+	if not MerchantManager.shop_open_changed.is_connected(_on_shop_open_changed):
+		MerchantManager.shop_open_changed.connect(_on_shop_open_changed)
+	if not MerchantManager.offers_changed.is_connected(_on_offers_changed):
+		MerchantManager.offers_changed.connect(_on_offers_changed)
+	if not MerchantManager.special_unlocks_changed.is_connected(_on_special_unlocks_changed):
+		MerchantManager.special_unlocks_changed.connect(_on_special_unlocks_changed)
+	if not InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
+		InventoryManager.inventory_changed.connect(_on_inventory_changed)
+	if not InventoryManager.nearby_items_changed.is_connected(_on_nearby_items_changed):
+		InventoryManager.nearby_items_changed.connect(_on_nearby_items_changed)
+	if not PlayerManager.currency_changed.is_connected(_on_currency_changed):
+		PlayerManager.currency_changed.connect(_on_currency_changed)
 	_refresh_all()
 
 func _exit_tree() -> void:
 	_release_input_lock()
-	if has_node("/root/MerchantManager") and MerchantManager != null:
-		if MerchantManager.shop_open_changed.is_connected(_on_shop_open_changed):
-			MerchantManager.shop_open_changed.disconnect(_on_shop_open_changed)
-		if MerchantManager.offers_changed.is_connected(_on_offers_changed):
-			MerchantManager.offers_changed.disconnect(_on_offers_changed)
-		if MerchantManager.special_unlocks_changed.is_connected(_on_special_unlocks_changed):
-			MerchantManager.special_unlocks_changed.disconnect(_on_special_unlocks_changed)
-	if has_node("/root/InventoryManager") and InventoryManager != null:
-		if InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
-			InventoryManager.inventory_changed.disconnect(_on_inventory_changed)
-		if InventoryManager.nearby_items_changed.is_connected(_on_nearby_items_changed):
-			InventoryManager.nearby_items_changed.disconnect(_on_nearby_items_changed)
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_signal("currency_changed"):
-		if PlayerManager.currency_changed.is_connected(_on_currency_changed):
-			PlayerManager.currency_changed.disconnect(_on_currency_changed)
+	if MerchantManager.shop_open_changed.is_connected(_on_shop_open_changed):
+		MerchantManager.shop_open_changed.disconnect(_on_shop_open_changed)
+	if MerchantManager.offers_changed.is_connected(_on_offers_changed):
+		MerchantManager.offers_changed.disconnect(_on_offers_changed)
+	if MerchantManager.special_unlocks_changed.is_connected(_on_special_unlocks_changed):
+		MerchantManager.special_unlocks_changed.disconnect(_on_special_unlocks_changed)
+	if InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
+		InventoryManager.inventory_changed.disconnect(_on_inventory_changed)
+	if InventoryManager.nearby_items_changed.is_connected(_on_nearby_items_changed):
+		InventoryManager.nearby_items_changed.disconnect(_on_nearby_items_changed)
+	if PlayerManager.currency_changed.is_connected(_on_currency_changed):
+		PlayerManager.currency_changed.disconnect(_on_currency_changed)
 
 func _input(event: InputEvent) -> void:
 	if not visible:
@@ -101,8 +95,7 @@ func _on_close_pressed() -> void:
 	_close_shop()
 
 func _close_shop() -> void:
-	if has_node("/root/MerchantManager") and MerchantManager != null and MerchantManager.has_method("close_shop"):
-		MerchantManager.close_shop()
+	MerchantManager.close_shop()
 
 func _refresh_all() -> void:
 	_refresh_currency()
@@ -111,24 +104,13 @@ func _refresh_all() -> void:
 	_refresh_unlocks()
 
 func _refresh_currency() -> void:
-	var gold: int = 0
-	var gems: int = 0
-	if has_node("/root/InventoryManager") and InventoryManager != null:
-		if InventoryManager.has_method("get_player_gold"):
-			gold = int(InventoryManager.get_player_gold())
-		if InventoryManager.has_method("get_player_gems"):
-			gems = int(InventoryManager.get_player_gems())
+	var gold: int = InventoryManager.get_player_gold()
+	var gems: int = InventoryManager.get_player_gems()
 	_gold_label.text = "🪙 Gold: %d" % gold
 	_gems_label.text = "💎 Gems: %d" % gems
 
 func _refresh_offers() -> void:
 	_clear_container(_offer_list)
-	if not has_node("/root/MerchantManager") or MerchantManager == null:
-		_add_info_label(_offer_list, "Merchant manager unavailable")
-		return
-	if not MerchantManager.has_method("get_offers"):
-		_add_info_label(_offer_list, "Offers unavailable")
-		return
 	var offers: Array[Dictionary] = MerchantManager.get_offers()
 	if offers.is_empty():
 		_add_info_label(_offer_list, "No offers available")
@@ -192,9 +174,7 @@ func _build_offer_entry(offer_index: int, offer: Dictionary) -> Control:
 		buy_button.disabled = true
 		reason_label.text = "Already purchased"
 	else:
-		var block_reason: String = ""
-		if MerchantManager.has_method("get_offer_purchase_block_reason"):
-			block_reason = String(MerchantManager.get_offer_purchase_block_reason(offer_index))
+		var block_reason: String = String(MerchantManager.get_offer_purchase_block_reason(offer_index))
 		if block_reason.is_empty():
 			buy_button.disabled = false
 			reason_label.text = ""
@@ -218,11 +198,6 @@ func _build_item_offer_summary(item_definition: InventoryItemDefinition, price_g
 func _refresh_owned_lists() -> void:
 	_clear_container(_ring_list)
 	_clear_container(_band_list)
-	if not has_node("/root/InventoryManager") or InventoryManager == null:
-		_add_info_label(_ring_list, "Inventory manager unavailable")
-		_add_info_label(_band_list, "Inventory manager unavailable")
-		return
-
 	var left_slots: Array[InventoryItemDefinition] = InventoryManager.get_left_hand_slots()
 	var right_slots: Array[InventoryItemDefinition] = InventoryManager.get_right_hand_slots()
 
@@ -290,19 +265,11 @@ func _build_sell_world_entry(world_item: InventoryWorldItem) -> Control:
 	return row
 
 func _refresh_unlocks() -> void:
-	if not has_node("/root/MerchantManager") or MerchantManager == null:
-		_unlocks_label.text = "Unlocks: unavailable"
-		return
-	if not MerchantManager.has_method("is_special_modifier_unlocked"):
-		_unlocks_label.text = "Unlocks: unavailable"
-		return
 	var bag_unlocked: bool = bool(MerchantManager.is_special_modifier_unlocked(MerchantManager.SPECIAL_BAG_ID))
 	var map_unlocked: bool = bool(MerchantManager.is_special_modifier_unlocked(MerchantManager.SPECIAL_MAP_ID))
 	_unlocks_label.text = "Special Unlocks: Bag [%s] | Dungeon Map [%s]" % ["ON" if bag_unlocked else "OFF", "ON" if map_unlocked else "OFF"]
 
 func _on_buy_offer_pressed(offer_index: int) -> void:
-	if not has_node("/root/MerchantManager") or MerchantManager == null or not MerchantManager.has_method("buy_offer"):
-		return
 	var result: Dictionary = MerchantManager.buy_offer(offer_index)
 	if bool(result.get("ok", false)):
 		var gold_spent: int = int(result.get("gold_spent", 0))
@@ -315,8 +282,6 @@ func _on_buy_offer_pressed(offer_index: int) -> void:
 	_refresh_all()
 
 func _on_sell_equipped_pressed(item_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> void:
-	if not has_node("/root/InventoryManager") or InventoryManager == null or not InventoryManager.has_method("sell_equipped_item"):
-		return
 	var sold_for: int = int(InventoryManager.sell_equipped_item(item_kind, slot_index))
 	if sold_for <= 0:
 		_status_label.text = "Sell failed"
@@ -327,8 +292,6 @@ func _on_sell_equipped_pressed(item_kind: InventoryItemDefinition.ItemKind, slot
 	_refresh_all()
 
 func _on_sell_world_pressed(world_item: InventoryWorldItem) -> void:
-	if not has_node("/root/InventoryManager") or InventoryManager == null or not InventoryManager.has_method("sell_world_item"):
-		return
 	var sold_for: int = int(InventoryManager.sell_world_item(world_item))
 	if sold_for <= 0:
 		_status_label.text = "Sell failed"
@@ -341,22 +304,19 @@ func _on_sell_world_pressed(world_item: InventoryWorldItem) -> void:
 func _acquire_input_lock() -> void:
 	if _lock_active:
 		return
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("push_input_lock"):
-		PlayerManager.push_input_lock(MERCHANT_LOCK_ID)
+	PlayerManager.push_input_lock(MERCHANT_LOCK_ID)
 	_lock_active = true
 
 func _release_input_lock() -> void:
 	if not _lock_active:
 		return
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("pop_input_lock"):
-		PlayerManager.pop_input_lock(MERCHANT_LOCK_ID)
+	PlayerManager.pop_input_lock(MERCHANT_LOCK_ID)
 	_lock_active = false
 
 func _sync_mouse_mode_after_close() -> void:
-	if has_node("/root/InventoryManager") and InventoryManager != null and InventoryManager.has_method("is_inventory_open"):
-		if InventoryManager.is_inventory_open():
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-			return
+	if InventoryManager.is_inventory_open():
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		return
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 func _add_info_label(container: VBoxContainer, text_value: String) -> void:

@@ -22,8 +22,8 @@ func clear_spawned_enemies() -> void:
 			enemy.queue_free()
 	_spawned_enemies.clear()
 	var enemy_manager: Node = _get_enemy_manager_node()
-	if enemy_manager != null and enemy_manager.has_method("clear_registry"):
-		enemy_manager.call("clear_registry")
+	if enemy_manager != null:
+		EnemyManager.clear_registry()
 
 func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_spawn_position: Vector3, enemy_scene: PackedScene, progression_index: int, floor_seed: int, fallback_spawn_position: Vector3) -> void:
 	clear_spawned_enemies()
@@ -201,14 +201,14 @@ func _spawn_enemy_at(parent_node: Node, enemy_scene: PackedScene, spawn_position
 	if resolved_enemy_scene == null:
 		return
 	var enemy_node: Node = resolved_enemy_scene.instantiate()
-	if enemy_node is RigidBody3D:
-		var enemy: RigidBody3D = enemy_node as RigidBody3D
+	if enemy_node is EnemyBasic:
+		var enemy: EnemyBasic = enemy_node as EnemyBasic
 		parent_node.add_child(enemy)
 		enemy.global_position = spawn_position
 		enemy.linear_velocity = Vector3.ZERO
 		enemy.angular_velocity = Vector3.ZERO
-		if not patrol_route.is_empty() and enemy.has_method("set_patrol_route"):
-			enemy.call("set_patrol_route", patrol_route)
+		if not patrol_route.is_empty():
+			enemy.set_patrol_route(patrol_route)
 		_spawned_enemies.append(enemy)
 		return
 	enemy_node.queue_free()
@@ -217,8 +217,8 @@ func _resolve_enemy_scene_for_spawn(default_scene: PackedScene, floor_seed: int,
 	if default_scene == null:
 		return null
 	var enemy_manager: Node = _get_enemy_manager_node()
-	if enemy_manager != null and enemy_manager.has_method("resolve_spawn_enemy_scene"):
-		var resolved_scene: Variant = enemy_manager.call("resolve_spawn_enemy_scene", default_scene, "", floor_seed, progression_index, spawn_index)
+	if enemy_manager != null:
+		var resolved_scene: PackedScene = EnemyManager.resolve_spawn_enemy_scene(default_scene, "", floor_seed, progression_index, spawn_index)
 		if resolved_scene is PackedScene:
 			return resolved_scene as PackedScene
 	return default_scene
