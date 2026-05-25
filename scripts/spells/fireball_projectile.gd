@@ -74,8 +74,8 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body == _shooter:
 		return
-	if body.has_method("take_damage"):
-		body.call("take_damage", _config.damage)
+	if body.has_method("take_damage") or body.has_method("take_damage_from_source"):
+		_apply_damage_to_target(body, _config.damage)
 		if randf() < _current_pierce_chance:
 			_current_pierce_chance *= 0.5
 			_apply_aoe_damage(body, true)
@@ -136,13 +136,22 @@ func _apply_aoe_damage(excluded_target: Node = null, is_lesser: bool = false) ->
 						continue
 					PlayerManager.apply_damage_to_player(self_damage)
 					continue
-				if not collider_node.has_method("take_damage"):
+				if not (collider_node.has_method("take_damage") or collider_node.has_method("take_damage_from_source")):
 					continue
-				collider_node.call("take_damage", self_damage)
+				_apply_damage_to_target(collider_node, self_damage)
 				continue
-			if collider_node.has_method("take_damage"):
+			if collider_node.has_method("take_damage") or collider_node.has_method("take_damage_from_source"):
 				var scaled_damage: int = maxi(int(roundf(float(_config.damage) * damage_scale)), 0)
-				collider_node.call("take_damage", scaled_damage)
+				_apply_damage_to_target(collider_node, scaled_damage)
+
+func _apply_damage_to_target(target: Node, amount: int) -> void:
+	if target == null or amount <= 0:
+		return
+	if target.has_method("take_damage_from_source"):
+		target.call("take_damage_from_source", amount, _shooter)
+		return
+	if target.has_method("take_damage"):
+		target.call("take_damage", amount)
 
 func _spawn_aoe_burst(aoe_radius: float, is_lesser: bool) -> void:
 	if AOE_BURST_SCENE == null:

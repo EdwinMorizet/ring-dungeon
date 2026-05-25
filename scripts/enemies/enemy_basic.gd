@@ -31,6 +31,7 @@ signal died(enemy: EnemyBasic)
 var _health: int = 100
 var _is_dead: bool = false
 var _is_chase_active: bool = false
+var last_player_position: Vector3 = Vector3.INF
 var _contact_damage_cooldown: float = 0.0
 var _patrol_route: Array[Vector3] = []
 var _patrol_target_index: int = 0
@@ -55,6 +56,7 @@ func _ready() -> void:
 	can_sleep = false
 	_health = max(max_health, 1)
 	_is_chase_active = false
+	last_player_position = Vector3.INF
 	_contact_damage_cooldown = 0.0
 	_set_behavior_state_label("Idle")
 	_setup_overhead_ui()
@@ -115,14 +117,47 @@ func _try_apply_contact_damage(player_target: Node3D) -> void:
 	_contact_damage_cooldown = max(contact_damage_interval_seconds, 0.05)
 
 func take_damage(amount: int) -> void:
+	_process_incoming_damage(amount, null)
+
+func take_damage_from_source(amount: int, source: Node = null) -> void:
+	_process_incoming_damage(amount, source)
+
+func _process_incoming_damage(amount: int, source: Node = null) -> void:
 	if _is_dead or amount <= 0:
 		return
+	if _is_damage_from_player(source):
+		if not _is_chase_active:
+			_is_chase_active = true
+		_update_last_player_position_from_damage_source(source)
 	_health = max(_health - amount, 0)
 	_spawn_damage_number(amount)
 	damaged.emit(amount, _health)
 	_update_overhead_ui()
 	if _health == 0:
 		_die()
+
+func _is_damage_from_player(source: Node) -> bool:
+	if source == null:
+		return false
+	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("is_player_node"):
+		if bool(PlayerManager.is_player_node(source)):
+			return true
+	var player_target: Node3D = _get_player_node_from_manager()
+	if player_target == null:
+		return false
+	if source == player_target:
+		return true
+	if source is Node and player_target.is_ancestor_of(source):
+		return true
+	return false
+
+func _update_last_player_position_from_damage_source(source: Node) -> void:
+	if source is Node3D:
+		last_player_position = (source as Node3D).global_position
+		return
+	var player_target: Node3D = _get_player_node_from_manager()
+	if player_target != null:
+		last_player_position = player_target.global_position
 
 func set_patrol_route(route: Array[Vector3]) -> void:
 	_patrol_route.clear()
@@ -360,19 +395,27 @@ func _follow_patrol_route() -> bool:
 	return true
 
 func _get_player_target() -> Node3D:
-	if has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node"):
-		var manager_player: Node = PlayerManager.get_player_node()
-		if manager_player is Node3D:
-			var manager_target: Node3D = manager_player as Node3D
-			if _is_chase_active:
-				return manager_target
-			if not _is_player_in_activation_radius(manager_target):
-				return null
-			if require_line_of_sight and not _has_line_of_sight_to(manager_target):
-				return null
-			_is_chase_active = true
+	var manager_target: Node3D = _get_player_node_from_manager()
+	if manager_target != null:
+		if _is_chase_active:
+			last_player_position = manager_target.global_position
 			return manager_target
+		if not _is_player_in_activation_radius(manager_target):
+			return null
+		if require_line_of_sight and not _has_line_of_sight_to(manager_target):
+			return null
+		_is_chase_active = true
+		last_player_position = manager_target.global_position
+		return manager_target
 	return null
+
+func _get_player_node_from_manager() -> Node3D:
+	if not (has_node("/root/PlayerManager") and PlayerManager != null and PlayerManager.has_method("get_player_node")):
+		return null
+	var manager_player: Node = PlayerManager.get_player_node()
+	if not (manager_player is Node3D):
+		return null
+	return manager_player as Node3D
 
 func _is_player_in_activation_radius(player_target: Node3D) -> bool:
 	var radius: float = maxf(chase_activation_radius, 0.0)
