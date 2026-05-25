@@ -23,8 +23,11 @@ Use canonical emoji tokens in stat tables, generated name tokens, debug previews
 - ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
-- ⚡ Max AP (`max_ap_flat`)
+- ⚡ Max AP Slots (`max_ap_slots`)
 - 👟 Move Speed (`speed_mult`)
+- 💚 Healing Power (`active_heal_power_flat`)
+- 🛡 Shield Fill Rate (`active_shield_fill_rate_flat`)
+- ⚡ Speed Burst (`active_speed_mult_flat`)
 
 ## Canonical Rarity Weights
 
@@ -78,16 +81,31 @@ The GDD defines these ranges, but some source values are embedded as images. Kee
 - `GREATER_EXPLOSION_AOE_SCALE`
 - `SELF_GREATER_EXPLOSION_DAMAGE_SCALE`
 
+## Required Band Active Tunables
+
+- `ACTIVE_RIGHT_LONG_PRESS_SECONDS`
+- `ACTIVE_HEAL_BASE_HP_PER_SECOND`
+- `ACTIVE_HEAL_BASE_MANA_PER_SECOND`
+- `ACTIVE_HEAL_COOLDOWN_SECONDS`
+- `ACTIVE_SHIELD_BASE_FILLS_PER_SECOND`
+- `ACTIVE_SHIELD_MANA_PER_SLOT`
+- `ACTIVE_SHIELD_COOLDOWN_SECONDS`
+- `ACTIVE_SPEED_BASE_BONUS_MULT`
+- `ACTIVE_SPEED_DURATION_SECONDS`
+- `ACTIVE_SPEED_MANA_COST`
+- `ACTIVE_SPEED_COOLDOWN_SECONDS`
+
 ## Generation Table Rules
 
 - Keep hand-specific pools:
   - Rings: offensive/fireball affixes.
-  - Bands: defensive/player-stat affixes.
+  - Bands: passive defensive/player-stat affixes plus at most one active trait affix per item.
 - Never hardcode rarity logic in multiple places.
 - Store rarity metadata in one table and query by enum/string key.
 - Use weighted roll helper functions instead of duplicated `match` trees.
 - Keep floor-depth scaling as a pure function of depth and base weights.
 - For rings, resolve required trade-off pairs first, then fill remaining budget with optional affixes.
+- For bands, `max_ap_slots` rolls should compile as integer slot capacity and stack additively.
 
 ## Naming And Gold Value
 

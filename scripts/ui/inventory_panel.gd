@@ -267,8 +267,11 @@ func _build_band_summary_text() -> String:
 	var max_hp_bonus: float = InventoryManager.get_band_max_hp_bonus()
 	var max_mp_bonus: float = InventoryManager.get_band_max_mp_bonus()
 	var mana_regen_bonus: float = InventoryManager.get_mana_regen_bonus()
-	var max_ap_bonus: float = InventoryManager.get_band_max_ap_bonus()
+	var max_ap_slots_bonus: float = InventoryManager.get_band_max_ap_bonus()
 	var speed_mult: float = InventoryManager.get_band_speed_multiplier()
+	var active_heal_bonus: float = InventoryManager.get_band_active_heal_power_bonus() if InventoryManager.has_method("get_band_active_heal_power_bonus") else 0.0
+	var active_shield_bonus: float = InventoryManager.get_band_active_shield_fill_rate_bonus() if InventoryManager.has_method("get_band_active_shield_fill_rate_bonus") else 0.0
+	var active_speed_bonus: float = InventoryManager.get_band_active_speed_bonus() if InventoryManager.has_method("get_band_active_speed_bonus") else 0.0
 
 	if not is_zero_approx(max_hp_bonus):
 		lines.append(_format_float_line(&"max_hp_flat", max_hp_bonus, 0))
@@ -276,10 +279,16 @@ func _build_band_summary_text() -> String:
 		lines.append(_format_float_line(&"max_mp_flat", max_mp_bonus, 0))
 	if not is_zero_approx(mana_regen_bonus):
 		lines.append(_format_float_line(&"mana_regen_flat", mana_regen_bonus, 1))
-	if not is_zero_approx(max_ap_bonus):
-		lines.append(_format_float_line(&"max_ap_flat", max_ap_bonus, 0))
+	if not is_zero_approx(max_ap_slots_bonus):
+		lines.append(_format_float_line(&"max_ap_slots", max_ap_slots_bonus, 0))
 	if not is_equal_approx(speed_mult, 1.0):
 		lines.append(_format_mult_line(&"speed_mult", speed_mult))
+	if not is_zero_approx(active_heal_bonus):
+		lines.append(_format_float_line(&"active_heal_power_flat", active_heal_bonus, 1))
+	if not is_zero_approx(active_shield_bonus):
+		lines.append(_format_float_line(&"active_shield_fill_rate_flat", active_shield_bonus, 2))
+	if not is_zero_approx(active_speed_bonus):
+		lines.append(_format_float_line(&"active_speed_mult_flat", active_speed_bonus * 100.0, 0))
 
 	if lines.is_empty():
 		return _NONE_EQUIPPED_TEXT

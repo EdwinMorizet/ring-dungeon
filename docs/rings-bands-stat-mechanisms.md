@@ -41,8 +41,11 @@ Default values are neutral baselines.
 - `max_hp_flat` (default `0.0`): adds HP cap.
 - `max_mp_flat` (default `0.0`): adds MP cap.
 - `mana_regen_flat` (default `0.0`): adds mana regen.
-- `max_ap_flat` (default `0.0`): adds AP cap.
+- `max_ap_slots` (default `0`): adds AP slot capacity.
 - `speed_mult` (default `1.0`): multiplies move speed.
+- `active_heal_power_flat` (default `0.0`): right-long healing power bonus.
+- `active_shield_fill_rate_flat` (default `0.0`): right-long AP slot fill rate bonus.
+- `active_speed_mult_flat` (default `0.0`): right-single speed burst bonus.
 
 ## 3. Rarity Roll Logic
 
@@ -153,6 +156,7 @@ Equipment is separated by slot side:
 Aggregation model in `InventoryManager`:
 - Multipliers are multiplied together.
 - Flat values are summed.
+- Active trait values from multiple bands are summed.
 
 Examples:
 - `get_fireball_damage_multiplier()` multiplies all right-hand `damage_mult` values.
@@ -177,6 +181,14 @@ Applied transforms:
 Cast resources/cadence:
 - `mana_cost = max(base_mana_cost * mana_cost_mult, 0)`
 - `cast_delay = max(base_cast_delay * cast_delay_mult, CAST_DELAY_MIN_SECONDS)`
+
+Input + AP model:
+- Fireball cast uses left mouse single click.
+- Left mouse long press is detected for future band-system hooks.
+- Right mouse single click triggers single-press band active traits.
+- Right mouse long press channels long-press band active traits.
+- AP is slot-based, starts at 0, does not regenerate, and is consumed on enemy hit-block only.
+- Fireball never spends AP slots.
 
 ### Positive gravity tradeoff compensation
 

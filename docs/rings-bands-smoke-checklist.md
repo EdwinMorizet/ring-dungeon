@@ -18,7 +18,7 @@ Use this checklist for a fast in-editor validation pass.
 3. Press F7 once.
 4. Expected:
 - Console prints a summary block beginning with `[RingsBands] Equipped Summary`.
-- Aggregate keys are present: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `cast_delay_mult`, `accuracy_deviation_flat`, `bounces_flat`, `split_flat`, `pierce_flat`, `aoe_radius_flat`, `max_hp_flat`, `max_mp_flat`, `max_ap_flat`, `speed_mult`.
+- Aggregate keys are present: `damage_mult`, `mana_cost_mult`, `proj_speed_mult`, `cast_delay_mult`, `accuracy_deviation_flat`, `bounce_chance`, `split_flat`, `pierce_chance`, `aoe_radius_flat`, `max_hp_flat`, `max_mp_flat`, `max_ap_slots`, `speed_mult`, and active trait keys.
 
 ## B. Inventory Tooltip Validation
 
@@ -63,11 +63,31 @@ Use this checklist for a fast in-editor validation pass.
 2. Fire repeatedly at enemy and wall targets.
 3. Expected:
 - Mana consumption reflects modifier changes.
+- Fireball triggers on left mouse single click.
 - Fire cadence changes with cast-delay modifiers but never reaches zero-delay spam.
 - Spread tightens for negative accuracy deviation and widens for positive deviation.
 - Bounce/pierce/split effects visibly apply.
 
-## F. Explosion Interaction Validation
+## F. AP Slot And Active Trait Validation
+
+1. Start a run with no AP-slot bands equipped.
+2. Expected:
+- AP gauge is hidden.
+- Enemy hit damages HP directly.
+
+3. Equip a band with AP slot bonus and receive enemy hits.
+4. Expected:
+- AP gauge becomes visible.
+- Each enemy hit consumes one filled AP slot and ignores that hit.
+- AP slots do not regenerate passively.
+
+5. Equip speed/heal/shield active bands.
+6. Expected:
+- Right mouse single click triggers speed burst.
+- Right mouse long press channels heal/shield effects while held.
+- Long/single active effects respect mana and cooldowns.
+
+## G. Explosion Interaction Validation
 
 1. Create a setup with bounce/pierce available.
 2. Hit non-terminal collisions first.
@@ -83,7 +103,7 @@ Use this checklist for a fast in-editor validation pass.
 - Lesser explosions do not self-damage.
 - Greater explosions apply reduced self-damage only.
 
-## G. Transition Hygiene Validation
+## H. Transition Hygiene Validation
 
 1. Leave floor to merchant and return to next floor.
 2. Expected:
@@ -93,5 +113,5 @@ Use this checklist for a fast in-editor validation pass.
 ## Pass Criteria
 
 1. No script/runtime errors in console.
-2. All expected behaviors in sections A-G are observed.
+2. All expected behaviors in sections A-H are observed.
 3. No hard-locks, projectile runaway loops, or broken inventory interactions.

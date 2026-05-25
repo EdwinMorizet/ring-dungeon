@@ -23,8 +23,11 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 - ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
-- ⚡ Max AP (`max_ap_flat`)
+- ⚡ Max AP Slots (`max_ap_slots`)
 - 👟 Move Speed (`speed_mult`)
+- 💚 Healing Power (`active_heal_power_flat`)
+- 🛡 Shield Fill Rate (`active_shield_fill_rate_flat`)
+- ⚡ Speed Burst (`active_speed_mult_flat`)
 
 ## Determinism Requirements
 
@@ -81,8 +84,15 @@ Use this mapping when asserting formatted stat output (HUD/tooltip/debug text).
 - Currency pickup collision radius behavior remains stable (target 0.25 default for gold/diamond pickups).
 - Gold and Diamonds values update immediately in player state and UI after pickup.
 - Band `mana_regen_flat` updates mana regeneration in live gameplay and reflects in HUD values.
-- Band `max_hp_flat` and `max_ap_flat` affect runtime resource caps immediately after equipment changes.
-- Fireball casts are rejected when mana or AP costs are not met.
+- Band `max_hp_flat` and `max_ap_slots` affect runtime resource caps immediately after equipment changes.
+- Fireball casts are rejected when mana costs are not met.
+- AP slots start at zero and AP gauge remains hidden until max slots becomes positive.
+- One filled AP slot blocks one enemy hit and consumes exactly one slot.
+- AP slots never regenerate passively.
+- Right-click single press triggers single-press active trait behavior.
+- Right-click long press triggers long-press active trait behavior while held.
+- Active trait cooldowns block retrigger until cooldown elapses.
+- Left-click single press casts fireball and left-click long press is still detected by input logic.
 - Enemy-to-player damage path calls player `take_damage` and scales survivability with equipped HP bonuses.
 - HUD/inventory/debug stat strings keep canonical emoji prefixes for each stat key.
 - Merchant room interaction requires in-range + look-at + interact key.

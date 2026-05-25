@@ -23,8 +23,11 @@ Prefix every stat line with the canonical stat emoji.
 - ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
-- ⚡ Max AP (`max_ap_flat`)
+- ⚡ Max AP Slots (`max_ap_slots`)
 - 👟 Move Speed (`speed_mult`)
+- 💚 Healing Power (`active_heal_power_flat`)
+- 🛡 Shield Fill Rate (`active_shield_fill_rate_flat`)
+- ⚡ Speed Burst (`active_speed_mult_flat`)
 
 ## Tooltip Content Order
 
@@ -52,7 +55,11 @@ Prefix every stat line with the canonical stat emoji.
 - Present gravity-altering behavior as a special trait line/badge, not as multiplier stack math.
 - Do not show gravity in ring aggregate summaries as `xN.NN`; instead show trait status and fixed profile values.
 - Resource lines should be explicit:
-  - `❤️ Max HP`, `🔵 Max MP`, `♻️ Mana Regen`, and `⚡ Max AP` should remain consistently named across tooltip and HUD-adjacent summaries.
+  - `❤️ Max HP`, `🔵 Max MP`, `♻️ Mana Regen`, and `⚡ Max AP Slots` should remain consistently named across tooltip and HUD-adjacent summaries.
+- Active trait lines should include trigger and cadence hints:
+  - `💚 Healing Power`: Right long press, mana per second.
+  - `🛡 Shield Fill Rate`: Right long press, slot fill cadence and heavy mana use.
+  - `⚡ Speed Burst`: Right single press, timed duration and cooldown.
 - For cast delay, show player-friendly meaning:
   - `⏱` Lower delay is faster fire rate.
 - For accuracy deviation, include direction language:

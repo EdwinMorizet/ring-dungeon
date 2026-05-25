@@ -377,12 +377,16 @@ func get_band_max_mp_bonus() -> float:
 			bonus += item_definition.get_modifier_float(&"max_mp_flat", 0.0)
 	return bonus
 
-func get_band_max_ap_bonus() -> float:
-	var bonus: float = 0.0
+func get_band_max_ap_slots_bonus() -> int:
+	var bonus: int = 0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"max_ap_flat", 0.0)
+			bonus += item_definition.get_modifier_int(&"max_ap_slots", 0)
 	return bonus
+
+func get_band_max_ap_bonus() -> float:
+	# Backward-compatible alias for older callers.
+	return float(get_band_max_ap_slots_bonus())
 
 func get_band_speed_multiplier() -> float:
 	var multiplier: float = 1.0
@@ -399,6 +403,27 @@ func get_mana_regen_bonus() -> float:
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
 			bonus += item_definition.get_modifier_float(&"mana_regen_flat", 0.0)
+	return bonus
+
+func get_band_active_heal_power_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"active_heal_power_flat", 0.0)
+	return bonus
+
+func get_band_active_shield_fill_rate_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"active_shield_fill_rate_flat", 0.0)
+	return bonus
+
+func get_band_active_speed_bonus() -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _left_hand_slots:
+		if item_definition != null:
+			bonus += item_definition.get_modifier_float(&"active_speed_mult_flat", 0.0)
 	return bonus
 
 func get_fireball_speed_multiplier() -> float:
@@ -559,8 +584,11 @@ func debug_print_equipped_modifier_summary() -> void:
 	lines.append("max_hp_flat=%+.1f" % get_band_max_hp_bonus())
 	lines.append("max_mp_flat=%+.1f" % get_band_max_mp_bonus())
 	lines.append("mana_regen_flat=%+.1f" % get_mana_regen_bonus())
-	lines.append("max_ap_flat=%+.1f" % get_band_max_ap_bonus())
+	lines.append("max_ap_slots=%+d" % get_band_max_ap_slots_bonus())
 	lines.append("speed_mult=%.3f" % get_band_speed_multiplier())
+	lines.append("active_heal_power_flat=%+.2f" % get_band_active_heal_power_bonus())
+	lines.append("active_shield_fill_rate_flat=%+.2f" % get_band_active_shield_fill_rate_bonus())
+	lines.append("active_speed_mult_flat=%+.2f" % get_band_active_speed_bonus())
 	print("\n".join(lines))
 
 func debug_run_quick_validation(floor_depth: int = 0, floor_seed: int = 1337) -> void:

@@ -26,15 +26,20 @@ const _BAND_BENEFIT_POOL: Array[Dictionary] = [
 	{"key": &"max_hp_flat", "token": "Stalwart", "kind": "flat", "min": 14.0, "max": 36.0},
 	{"key": &"max_mp_flat", "token": "Sage", "kind": "flat", "min": 12.0, "max": 32.0},
 	{"key": &"mana_regen_flat", "token": "Arcane", "kind": "flat", "min": 2.0, "max": 6.0},
-	{"key": &"max_ap_flat", "token": "Guarded", "kind": "flat", "min": 8.0, "max": 22.0},
+	{"key": &"max_ap_slots", "token": "Guarded", "kind": "flat", "min": 1.0, "max": 3.0},
 	{"key": &"speed_mult", "token": "Fleet", "kind": "mult", "min": 1.04, "max": 1.16},
 ]
 
 const _BAND_TRADEOFF_POOL: Array[Dictionary] = [
 	{"key": &"max_hp_flat", "token": "Fragile", "kind": "flat", "min": -20.0, "max": -6.0},
 	{"key": &"max_mp_flat", "token": "Withered", "kind": "flat", "min": -18.0, "max": -6.0},
-	{"key": &"max_ap_flat", "token": "Exposed", "kind": "flat", "min": -12.0, "max": -4.0},
 	{"key": &"speed_mult", "token": "Burdened", "kind": "mult", "min": 0.82, "max": 0.97},
+]
+
+const _BAND_ACTIVE_TRAIT_POOL: Array[Dictionary] = [
+	{"key": &"active_heal_power_flat", "token": "Mending", "kind": "flat", "min": 2.0, "max": 8.0},
+	{"key": &"active_shield_fill_rate_flat", "token": "Bulwark", "kind": "flat", "min": 0.20, "max": 0.90},
+	{"key": &"active_speed_mult_flat", "token": "Surge", "kind": "flat", "min": 0.08, "max": 0.30},
 ]
 
 const _RING_MAJOR_TRAITS: Array[Dictionary] = [
@@ -73,7 +78,7 @@ const _BAND_MAJOR_TRAITS: Array[Dictionary] = [
 		"token": "Aegis",
 		"modifiers": {
 			&"max_hp_flat": 42.0,
-			&"max_ap_flat": 18.0,
+			&"max_ap_slots": 2,
 			&"speed_mult": 0.94,
 		},
 	},
@@ -99,6 +104,12 @@ static func generate_item(item_kind: InventoryItemDefinition.ItemKind, floor_dep
 	item.benefit_lines = _build_affix_lines(picked_affixes, true)
 	item.tradeoff_lines = _build_affix_lines(picked_affixes, false)
 	item.affix_tokens = _build_tokens(picked_affixes)
+	if item_kind == InventoryItemDefinition.ItemKind.BAND:
+		var active_trait: Dictionary = _pick_band_active_trait(rng)
+		if not active_trait.is_empty():
+			_apply_affix_roll(item.compiled_modifiers, active_trait, rarity, rng)
+			item.affix_tokens.append(String(active_trait.get("token", "")))
+			item.benefit_lines.append("+ Active: %s" % String(active_trait.get("token", "")))
 
 	if rarity == InventoryItemDefinition.Rarity.LEGENDARY:
 		var legendary_trait := _pick_major_trait(item_kind, rng)
@@ -193,8 +204,11 @@ static func _create_default_modifiers() -> Dictionary:
 		&"max_hp_flat": 0.0,
 		&"max_mp_flat": 0.0,
 		&"mana_regen_flat": 0.0,
-		&"max_ap_flat": 0.0,
+		&"max_ap_slots": 0,
 		&"speed_mult": 1.0,
+		&"active_heal_power_flat": 0.0,
+		&"active_shield_fill_rate_flat": 0.0,
+		&"active_speed_mult_flat": 0.0,
 	}
 
 static func _build_affix_lines(affixes: Array[Dictionary], benefit: bool) -> Array[String]:
@@ -339,6 +353,8 @@ static func _apply_affix_roll(modifiers: Dictionary, affix: Dictionary, rarity: 
 	var scaled_flat: float = rolled * scale
 	if key == &"aoe_radius_flat":
 		scaled_flat = _quantize_aoe_radius_flat(scaled_flat)
+	if key == &"max_ap_slots":
+		scaled_flat = float(maxi(int(roundf(scaled_flat)), 0))
 	modifiers[key] = float(modifiers.get(key, 0.0)) + scaled_flat
 
 static func _quantize_aoe_radius_flat(value: float) -> float:
@@ -351,7 +367,13 @@ static func _clamp_discrete_modifiers(modifiers: Dictionary) -> void:
 	modifiers[&"split_flat"] = mini(maxi(int(roundf(float(modifiers.get(&"split_flat", 0.0)))), 0), RingBandConstants.MAX_SPLIT_COUNT)
 	modifiers[&"bounce_chance"] = clampf(float(modifiers.get(&"bounce_chance", 0.0)), 0.0, RingBandConstants.MAX_BOUNCE_CHANCE)
 	modifiers[&"pierce_chance"] = clampf(float(modifiers.get(&"pierce_chance", 0.0)), 0.0, RingBandConstants.MAX_PIERCE_CHANCE)
+	modifiers[&"max_ap_slots"] = maxi(int(roundf(float(modifiers.get(&"max_ap_slots", 0.0)))), 0)
 	modifiers[&"gravity_trait_enabled"] = mini(maxi(int(roundf(float(modifiers.get(&"gravity_trait_enabled", 0.0)))), 0), 1)
+
+static func _pick_band_active_trait(rng: RandomNumberGenerator) -> Dictionary:
+	if _BAND_ACTIVE_TRAIT_POOL.is_empty():
+		return {}
+	return _BAND_ACTIVE_TRAIT_POOL[rng.randi_range(0, _BAND_ACTIVE_TRAIT_POOL.size() - 1)].duplicate(true)
 
 static func _apply_required_tradeoffs_for_major_trait(item: InventoryItemDefinition, major_trait: Dictionary, rarity: InventoryItemDefinition.Rarity, rng: RandomNumberGenerator) -> void:
 	if item.item_kind != InventoryItemDefinition.ItemKind.RING:

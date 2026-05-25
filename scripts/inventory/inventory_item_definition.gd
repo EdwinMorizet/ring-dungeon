@@ -37,8 +37,11 @@ enum Rarity {
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
-	&"max_ap_flat": 0.0,
+	&"max_ap_slots": 0,
 	&"speed_mult": 1.0,
+	&"active_heal_power_flat": 0.0,
+	&"active_shield_fill_rate_flat": 0.0,
+	&"active_speed_mult_flat": 0.0,
 }
 
 const _DEFAULT_MODIFIERS: Dictionary = {
@@ -55,8 +58,11 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"max_hp_flat": 0.0,
 	&"max_mp_flat": 0.0,
 	&"mana_regen_flat": 0.0,
-	&"max_ap_flat": 0.0,
+	&"max_ap_slots": 0,
 	&"speed_mult": 1.0,
+	&"active_heal_power_flat": 0.0,
+	&"active_shield_fill_rate_flat": 0.0,
+	&"active_speed_mult_flat": 0.0,
 }
 
 const _STAT_EMOJI_MAP: Dictionary = {
@@ -72,8 +78,11 @@ const _STAT_EMOJI_MAP: Dictionary = {
 	&"max_hp_flat": "❤️",
 	&"max_mp_flat": "🔵",
 	&"mana_regen_flat": "♻️",
-	&"max_ap_flat": "⚡",
+	&"max_ap_slots": "⚡",
 	&"speed_mult": "👟",
+	&"active_heal_power_flat": "💚",
+	&"active_shield_fill_rate_flat": "🛡",
+	&"active_speed_mult_flat": "⚡",
 }
 
 const _STAT_LABEL_MAP: Dictionary = {
@@ -89,8 +98,11 @@ const _STAT_LABEL_MAP: Dictionary = {
 	&"max_hp_flat": "Max HP",
 	&"max_mp_flat": "Max MP",
 	&"mana_regen_flat": "Mana Regen",
-	&"max_ap_flat": "Max AP",
+	&"max_ap_slots": "Max AP Slots",
 	&"speed_mult": "Move Speed",
+	&"active_heal_power_flat": "Healing Power",
+	&"active_shield_fill_rate_flat": "Shield Fill Rate",
+	&"active_speed_mult_flat": "Speed Burst",
 }
 
 func is_ring() -> bool:
@@ -117,6 +129,18 @@ func get_rarity_label() -> String:
 
 func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
 	var value: Variant = compiled_modifiers.get(key, default_value)
+	if key == &"max_ap_slots":
+		if value is int:
+			return float(value)
+		if value is float:
+			return float(int(roundf(value)))
+		if compiled_modifiers.has(&"max_ap_flat"):
+			var legacy_value: Variant = compiled_modifiers.get(&"max_ap_flat", 0.0)
+			if legacy_value is int:
+				return float(legacy_value)
+			if legacy_value is float:
+				return float(int(roundf(legacy_value)))
+		return default_value
 	if value is int:
 		return float(value)
 	if value is float:
@@ -125,6 +149,12 @@ func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
 
 func get_modifier_int(key: StringName, default_value: int = 0) -> int:
 	var value: Variant = compiled_modifiers.get(key, default_value)
+	if key == &"max_ap_slots" and not compiled_modifiers.has(&"max_ap_slots") and compiled_modifiers.has(&"max_ap_flat"):
+		var legacy_value: Variant = compiled_modifiers.get(&"max_ap_flat", default_value)
+		if legacy_value is float:
+			return int(roundf(legacy_value))
+		if legacy_value is int:
+			return legacy_value
 	if value is float:
 		return int(roundf(value))
 	if value is int:
@@ -190,8 +220,11 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 		&"max_hp_flat",
 		&"max_mp_flat",
 		&"mana_regen_flat",
-		&"max_ap_flat",
+		&"max_ap_slots",
 		&"speed_mult",
+		&"active_heal_power_flat",
+		&"active_shield_fill_rate_flat",
+		&"active_speed_mult_flat",
 	]
 	for key: StringName in modifier_order:
 		var default_value: Variant = _DEFAULT_MODIFIERS.get(key, 0)
@@ -212,6 +245,10 @@ func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
 	if key == &"split_flat":
 		return int(value) > 0
 	if key == &"bounce_chance" or key == &"pierce_chance":
+		return float(value) > 0.0
+	if key == &"max_ap_slots":
+		return int(value) > 0
+	if key == &"active_heal_power_flat" or key == &"active_shield_fill_rate_flat" or key == &"active_speed_mult_flat":
 		return float(value) > 0.0
 	return float(value) > 0.0
 
@@ -244,8 +281,14 @@ func _format_modifier_line(key: StringName, value: Variant) -> String:
 		return "%s %s %+.0f" % [emoji, label, float(value)]
 	if key == &"mana_regen_flat":
 		return "%s %s %+.1f" % [emoji, label, float(value)]
-	if key == &"max_ap_flat":
-		return "%s %s %+.0f" % [emoji, label, float(value)]
+	if key == &"max_ap_slots":
+		return "%s %s %+d" % [emoji, label, int(value)]
 	if key == &"speed_mult":
 		return "%s %s x%.2f" % [emoji, label, float(value)]
+	if key == &"active_heal_power_flat":
+		return "%s %s %+0.1f (RMB Long)" % [emoji, label, float(value)]
+	if key == &"active_shield_fill_rate_flat":
+		return "%s %s %+0.2f/s (RMB Long)" % [emoji, label, float(value)]
+	if key == &"active_speed_mult_flat":
+		return "%s %s +%.0f%% (RMB Single)" % [emoji, label, float(value) * 100.0]
 	return "%s: %s" % [String(key), String(value)]

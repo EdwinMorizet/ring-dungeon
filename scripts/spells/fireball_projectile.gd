@@ -22,6 +22,7 @@ func configure(config: FireballConfig, origin: Vector3, direction: Vector3, shoo
 	if config != null:
 		_config = config
 	global_position = origin
+	look_at(origin+direction)
 	_spawn_direction = direction.normalized()
 	if _spawn_direction == Vector3.ZERO:
 		_spawn_direction = -global_transform.basis.z.normalized()

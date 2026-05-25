@@ -21,8 +21,11 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
 - ❤️ Max HP (`max_hp_flat`)
 - 🔵 Max MP (`max_mp_flat`)
 - ♻️ Mana Regen (`mana_regen_flat`)
-- ⚡ Max AP (`max_ap_flat`)
+- ⚡ Max AP Slots (`max_ap_slots`)
 - 👟 Move Speed (`speed_mult`)
+- 💚 Healing Power (`active_heal_power_flat`)
+- 🛡 Shield Fill Rate (`active_shield_fill_rate_flat`)
+- ⚡ Speed Burst (`active_speed_mult_flat`)
 
 - Keep inventory logic centralized in the InventoryManager autoload:
   - Inventory open and close state.
@@ -62,9 +65,12 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
   - Validate source item existence with is_instance_valid checks before equip.
 - Follow full Rings/Bands domains from the dedicated mechanics instruction:
   - Rings: offensive fireball modifiers (multipliers and flats such as damage, mana cost, speed, cast delay, spread, bounces, split, AoE radius, pierce).
-  - Bands: defensive/core player modifiers (max HP, max MP, mana regen, max AP, speed multiplier).
+  - Bands: passive defensive/core player modifiers (max HP, max MP, mana regen, max AP slots, speed multiplier) plus active trait values (heal, shield-fill, speed-burst).
 - Apply fireball modifiers per shot using derived values, and avoid mutating shared config resources in place.
-- Keep player resource ownership in player code: mana and AP are both valid cast gates when enabled by gameplay tuning.
+- Keep player resource ownership in player code:
+  - Fireball cast gate uses mana only.
+  - AP slots are consumed on enemy-hit prevention, not on cast.
+  - AP slots do not regenerate automatically.
 - Keep inventory UI scripts focused on presentation and interaction wiring; keep game-state ownership in InventoryManager.
 - Keep stat presentation emoji-first and label-consistent across inventory panel, tooltips, and HUD summaries.
 - On floor regeneration or room transitions, clear runtime world inventory items to prevent stale pickup nodes.

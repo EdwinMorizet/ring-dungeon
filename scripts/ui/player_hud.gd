@@ -4,7 +4,7 @@ class_name PlayerHud
 
 const _DEFAULT_MAX_HEALTH: float = 100.0
 const _DEFAULT_MAX_MANA: float = 100.0
-const _DEFAULT_MAX_AP: float = 100.0
+const _DEFAULT_MAX_AP: float = 0.0
 
 @export var max_health: float = _DEFAULT_MAX_HEALTH
 @export var max_mana: float = _DEFAULT_MAX_MANA
@@ -17,6 +17,7 @@ const _DEFAULT_MAX_AP: float = 100.0
 
 @onready var _health_bar: ProgressBar = $Root/HealthContainer/VBox/HealthBar
 @onready var _mana_bar: ProgressBar = $Root/ManaContainer/VBox/ManaBar
+@onready var _ap_container: CanvasItem = get_node_or_null("Root/APContainer") as CanvasItem
 @onready var _ap_bar: ProgressBar = get_node_or_null("Root/APContainer/VBox/APBar") as ProgressBar
 @onready var _gold_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GoldValue") as Label
 @onready var _gems_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GemsValue") as Label
@@ -73,10 +74,13 @@ func set_mana(value: float, maximum: float = -1.0) -> void:
 func set_ap(value: float, maximum: float = -1.0) -> void:
 	if maximum > 0.0:
 		max_ap = maximum
-	max_ap = max(max_ap, 1.0)
+	max_ap = max(max_ap, 0.0)
 	current_ap = clamp(value, 0.0, max_ap)
+	var should_show_ap: bool = max_ap > 0.0
+	if _ap_container != null:
+		_ap_container.visible = should_show_ap
 	if _ap_bar != null:
-		_ap_bar.max_value = max_ap
+		_ap_bar.max_value = max(max_ap, 1.0)
 		_ap_bar.value = current_ap
 
 func set_gold(value: int) -> void:

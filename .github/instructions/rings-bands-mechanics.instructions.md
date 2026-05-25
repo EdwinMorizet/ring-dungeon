@@ -23,8 +23,11 @@ Use these emoji prefixes whenever stats are shown in UI text, debug summaries, b
 - `max_hp_flat`: ❤️ Max HP
 - `max_mp_flat`: 🔵 Max MP
 - `mana_regen_flat`: ♻️ Mana Regen
-- `max_ap_flat`: ⚡ Max AP
+- `max_ap_slots`: ⚡ Max AP Slots
 - `speed_mult`: 👟 Move Speed
+- `active_heal_power_flat`: 💚 Healing Power (Active)
+- `active_shield_fill_rate_flat`: 🛡 Shield Fill Rate (Active)
+- `active_speed_mult_flat`: ⚡ Speed Burst (Active)
 
 ## Scope And Slot Rules
 
@@ -74,9 +77,34 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 ### Bands (Left Hand, Player Domain)
 
 - Bands can modify player core stats.
-- Support these modifier categories:
-  - Flats: `max_hp_flat`, `max_mp_flat`, `mana_regen_flat`, `max_ap_flat`.
+- Band stat payload is split into passive and active groups.
+- Passive stats are always on while equipped.
+- Active stats are triggered by player input and can have cooldowns.
+- Passive categories:
+  - Flats: `max_hp_flat`, `max_mp_flat`, `mana_regen_flat`, `max_ap_slots`.
   - Multipliers: `speed_mult`.
+- Active categories:
+  - Long press effects: `active_heal_power_flat`, `active_shield_fill_rate_flat`.
+  - Single press effects: `active_speed_mult_flat`.
+
+## Input Trigger Rules
+
+- Fireball cast is triggered by left mouse single click.
+- Left mouse long press must still be identified by input handling for band-system extension hooks.
+- Band active stats are triggered by right mouse button:
+  - Right single press triggers single-press active stats.
+  - Right long press triggers long-press active stats while held.
+- Keep input checks gated by normal control-state rules (inventory open, controls disabled, player dead).
+
+## AP Slots Rules
+
+- AP is slot-based, integer, and non-regenerating.
+- Player base AP slots start at 0.
+- AP gauge is hidden when max AP slots is 0.
+- Passive band stats increase max AP slots through `max_ap_slots`.
+- One filled AP slot ignores one enemy hit and consumes exactly one slot.
+- Empty AP slots remain available capacity while the slot-granting band is equipped.
+- Fireball does not consume AP slots.
 
 ## Rarity And Affix Budgets
 
@@ -124,6 +152,7 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 - Use these principles:
   - Multipliers combine multiplicatively unless the design explicitly defines additive conversion.
   - Flat bonuses combine additively.
+  - Active trait values from multiple equipped bands combine additively.
   - Gravity physics is sourced from a unique trait profile overlay (fixed values) when the trait is equipped.
   - Gravity profile is non-stacking: equipping multiple gravity-trait rings yields the same gravity physics profile as one.
   - Trait-linked `aoe_radius_flat` and `proj_speed_mult` remain normal modifiers and can still stack.
@@ -175,7 +204,8 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
 - Spell/fireball manager owns shot construction using aggregated ring modifiers.
 - Spell/fireball manager applies gravity profile overlay once if gravity trait is active.
 - Player controller (or stat service) owns derived HP/MP/AP/speed and mana regen from equipped bands.
-- Fireball casting must respect both mana and AP resource checks.
+- Player controller owns AP slot consumption when taking enemy hits.
+- Fireball casting must respect mana checks and never spend AP slots.
 - Enemy scripts should apply player damage through a simple typed player damage API (`take_damage`) so band HP bonuses have live combat impact.
 - UI reflects rolled affixes and trade-offs clearly, including negative stats.
 - Keep stat labels emoji-first in player-facing and debug-facing strings (for example: `💥 Damage x1.15`, `❤️ Max HP +20`).
