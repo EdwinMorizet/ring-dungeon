@@ -187,7 +187,7 @@ func _append_cell_outlines(mesh: ImmediateMesh, cell_data: Variant, color: Color
 	for cell_variant in cell_data:
 		if cell_variant is Dictionary:
 			var cell: Dictionary = cell_variant
-			_append_rect_outline(mesh, cell.get("rect", Rect2()), color, y)
+			_append_rect_outline(mesh, cell.get("rect", Rect2i()), color, y)
 
 # Appends outlines for selected rooms.
 func _append_room_outlines(mesh: ImmediateMesh, room_data: Variant, color: Color, y: float) -> void:
@@ -196,7 +196,7 @@ func _append_room_outlines(mesh: ImmediateMesh, room_data: Variant, color: Color
 	for room_variant in room_data:
 		if room_variant is Dictionary:
 			var room: Dictionary = room_variant
-			_append_rect_outline(mesh, room.get("rect", Rect2()), color, y)
+			_append_rect_outline(mesh, room.get("rect", Rect2i()), color, y)
 
 # Appends edge lines between room centers.
 func _append_room_edges(mesh: ImmediateMesh, rooms: Variant, edge_data: Variant, color: Color, y: float) -> void:
@@ -220,11 +220,12 @@ func _grid_to_world(point: Vector2, y: float) -> Vector3:
 	return Vector3(point.x * _tile_size, y, point.y * _tile_size)
 
 # Appends a rectangle outline as four line segments.
-func _append_rect_outline(mesh: ImmediateMesh, rect: Rect2, color: Color, y: float) -> void:
-	var min_x: float = rect.position.x * _tile_size
-	var min_z: float = rect.position.y * _tile_size
-	var max_x: float = (rect.position.x + rect.size.x) * _tile_size
-	var max_z: float = (rect.position.y + rect.size.y) * _tile_size
+func _append_rect_outline(mesh: ImmediateMesh, rect_data: Variant, color: Color, y: float) -> void:
+	var rect: Rect2i = _to_rect2i(rect_data)
+	var min_x: float = float(rect.position.x) * _tile_size
+	var min_z: float = float(rect.position.y) * _tile_size
+	var max_x: float = float(rect.end.x) * _tile_size
+	var max_z: float = float(rect.end.y) * _tile_size
 	var top_left: Vector3 = Vector3(min_x, y, min_z)
 	var top_right: Vector3 = Vector3(max_x, y, min_z)
 	var bottom_right: Vector3 = Vector3(max_x, y, max_z)
@@ -233,6 +234,18 @@ func _append_rect_outline(mesh: ImmediateMesh, rect: Rect2, color: Color, y: flo
 	_append_line(mesh, top_right, bottom_right, color)
 	_append_line(mesh, bottom_right, bottom_left, color)
 	_append_line(mesh, bottom_left, top_left, color)
+
+# Converts rectangle payload variants into Rect2i for integer-grid preview drawing.
+func _to_rect2i(rect_data: Variant) -> Rect2i:
+	if rect_data is Rect2i:
+		return rect_data as Rect2i
+	if rect_data is Rect2:
+		var rect: Rect2 = rect_data as Rect2
+		return Rect2i(
+			Vector2i(int(round(rect.position.x)), int(round(rect.position.y))),
+			Vector2i(int(round(rect.size.x)), int(round(rect.size.y)))
+		)
+	return Rect2i()
 
 # Writes one colored line segment into the immediate mesh.
 func _append_line(mesh: ImmediateMesh, from_point: Vector3, to_point: Vector3, color: Color) -> void:

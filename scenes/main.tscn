@@ -35,7 +35,7 @@ environment = SubResource("Environment_7mycd")
 
 [node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
 script = ExtResource("1_ig7tw")
-auto_randomize_seed_on_regenerate = true
+show_generation_debug_visualizer_in_editor = false
 metadata/_custom_type_script = "uid://bla0efmx0rcb4"
 
 [node name="DebugFloorHud" parent="." unique_id=1054138337 instance=ExtResource("2_dbgui")]

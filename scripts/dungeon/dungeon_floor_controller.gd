@@ -8,12 +8,6 @@ class_name DungeonFloorController
 
 # Default floor config resource used when no override is provided.
 const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
-# Default player scene spawned for runtime floors.
-const PlayerScene = preload("res://scenes/player/player.tscn")
-# Default enemy scene fallback used by EnemySpawnManager.
-const EnemyScene = preload("res://scenes/enemies/enemy_basic.tscn")
-# Merchant room scene used during merchant transitions.
-const MerchantRoomScene = preload("res://scenes/merchant/merchant_room.tscn")
 # Chest scene spawned at generated chest candidate markers.
 const ChestScene = preload("res://scenes/items/chest_interactable.tscn")
 # Editor-only node name used for the dungeon generation step visualizer.
@@ -23,24 +17,6 @@ const PATROL_DEBUG_VISUAL_NODE_NAME: String = "PatrolDebugVisualizer"
 
 # Inspector-configured floor generation/build resource.
 @export var config: DungeonFloorConfig = DefaultFloorConfig
-# Enables MultiMesh rendering for generated tiles.
-@export var use_multimesh: bool = true
-# Enables one merged floor collider for the generated floor bounds.
-@export var create_floor_collision: bool = true
-# Randomizes generation seed on manual regenerate in editor/runtime.
-@export var auto_randomize_seed_on_regenerate: bool = false
-# Scene used to spawn or ensure the player instance.
-@export var player_scene: PackedScene = PlayerScene
-# Fallback spawn position when player start marker is unavailable.
-@export var player_spawn_fallback: Vector3 = Vector3(0.0, 3.0, 0.0)
-# Vertical offset applied above player marker for spawn safety.
-@export var player_spawn_height_offset: float = 1.2
-# Default enemy scene passed to spawn manager as fallback.
-@export var enemy_scene: PackedScene = EnemyScene
-# Fallback enemy spawn position for spawn manager safety cases.
-@export var enemy_spawn_fallback: Vector3 = Vector3(8.0, 2.5, 8.0)
-# Scene used to instantiate the merchant room controller.
-@export var merchant_room_scene: PackedScene = MerchantRoomScene
 # Shows the editor-only dungeon generation step preview instead of building the floor scene.
 @export var show_generation_debug_visualizer_in_editor: bool = true
 # One-shot inspector action that steps generation preview backward in editor mode.
@@ -88,7 +64,7 @@ var _seed_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		if value:
 			_regenerate_toggle = false
 			var floor_config := _get_config()
-			if auto_randomize_seed_on_regenerate:
+			if floor_config.auto_randomize_seed_on_regenerate:
 				floor_config.generation_seed = _next_random_seed()
 			regenerate_now()
 
@@ -143,10 +119,11 @@ func start_progression_floor(display_floor: int, progression_index: int, floor_c
 func enter_merchant_room() -> void:
 	_clear_generated()
 	_ensure_player_spawned()
-	if merchant_room_scene == null:
+	var floor_config: DungeonFloorConfig = _get_config()
+	if floor_config.merchant_room_scene == null:
 		return
 	if _merchant_room_instance == null or not is_instance_valid(_merchant_room_instance):
-		var room_node: Node = merchant_room_scene.instantiate()
+		var room_node: Node = floor_config.merchant_room_scene.instantiate()
 		if room_node is MerchantRoomController:
 			_merchant_room_instance = room_node as MerchantRoomController
 			add_child(_merchant_room_instance)
@@ -175,7 +152,7 @@ func regenerate_now() -> void:
 	var debug_timeline: DungeonGeneratorDebugTimeline = null
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		debug_timeline = DungeonGeneratorDebugTimeline.new()
-	var layout: Dictionary = generator.generate(generation_seed, _build_generation_params(debug_timeline))
+	var layout: Dictionary = generator.generate(generation_seed, floor_config, debug_timeline)
 	_runtime_layout = layout
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		_show_generation_debug_visualizer(debug_timeline, floor_config.tile_size)
@@ -200,31 +177,6 @@ func get_runtime_progression_index() -> int:
 func get_current_floor_seed() -> int:
 	return _runtime_generation_seed
 
-# Builds parameter dictionary consumed by DungeonGenerator.generate.
-func _build_generation_params(debug_timeline: DungeonGeneratorDebugTimeline = null) -> Dictionary:
-	var floor_config := _get_config()
-	var params := {
-		"width": floor_config.width,
-		"height": floor_config.height,
-		"cell_count": floor_config.cell_count,
-		"room_min_size": floor_config.room_min_size,
-		"room_max_size": floor_config.room_max_size,
-		"spawn_radius": floor_config.spawn_radius,
-		"separation_iterations": floor_config.separation_iterations,
-		"min_room_size": floor_config.min_room_size,
-		"room_area_threshold": floor_config.room_area_threshold,
-		"room_keep_ratio": floor_config.room_keep_ratio,
-		"loop_percent": floor_config.loop_percent,
-		"chest_candidate_ratio": floor_config.chest_candidate_ratio,
-		"patrol_nodes_per_room_min": floor_config.patrol_nodes_per_room_min,
-		"patrol_nodes_per_room_max": floor_config.patrol_nodes_per_room_max,
-		"patrol_point_padding": floor_config.patrol_point_padding,
-		"patrol_point_jitter": floor_config.patrol_point_jitter,
-	}
-	if debug_timeline != null:
-		params["debug_timeline"] = debug_timeline
-	return params
-
 # Builds parameter dictionary consumed by DungeonBuilder3D.build.
 func _build_builder_params() -> Dictionary:
 	var floor_config := _get_config()
@@ -232,8 +184,8 @@ func _build_builder_params() -> Dictionary:
 		"tile_size": floor_config.tile_size,
 		"wall_height": floor_config.wall_height,
 		"floor_thickness": floor_config.floor_thickness,
-		"use_multimesh": use_multimesh,
-		"create_floor_collision": create_floor_collision,
+		"use_multimesh": floor_config.use_multimesh,
+		"create_floor_collision": floor_config.create_floor_collision,
 	}
 
 # Resolves active floor config, preferring runtime progression override when applicable.
@@ -252,7 +204,7 @@ func _clear_generated() -> void:
 	_clear_generation_debug_visualizer()
 	_clear_patrol_link_debug_visual()
 	_runtime_layout.clear()
-	if is_inside_tree():
+	if not Engine.is_editor_hint() and is_inside_tree():
 		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
@@ -266,11 +218,12 @@ func _hide_merchant_room() -> void:
 
 # Ensures a runtime player instance exists under this controller.
 func _ensure_player_spawned() -> void:
-	if player_scene == null:
+	var floor_config: DungeonFloorConfig = _get_config()
+	if floor_config.player_scene == null:
 		return
 	if _player_instance != null and is_instance_valid(_player_instance):
 		return
-	var player_node: Node = player_scene.instantiate()
+	var player_node: Node = floor_config.player_scene.instantiate()
 	if player_node is CharacterBody3D:
 		_player_instance = player_node as CharacterBody3D
 		add_child(_player_instance)
@@ -289,12 +242,13 @@ func _spawn_or_reposition_player() -> void:
 
 # Resolves player start marker position or falls back to configured spawn vector.
 func _find_player_spawn_position() -> Vector3:
+	var floor_config: DungeonFloorConfig = _get_config()
 	if _generated_root != null and is_instance_valid(_generated_root):
 		var marker_node: Node = _generated_root.find_child("PlayerStart_0", true, false)
 		if marker_node is Marker3D:
 			var marker: Marker3D = marker_node as Marker3D
-			return marker.global_position + Vector3.UP * player_spawn_height_offset
-	return player_spawn_fallback
+			return marker.global_position + Vector3.UP * floor_config.player_spawn_height_offset
+	return floor_config.player_spawn_fallback
 
 # Returns a positive random seed value, initializing RNG state lazily.
 func _next_random_seed() -> int:
@@ -308,7 +262,8 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 		return
 	if _generated_root == null or not is_instance_valid(_generated_root):
 		return
-	if enemy_scene == null:
+	var floor_config: DungeonFloorConfig = _get_config()
+	if floor_config.enemy_scene == null:
 		return
 	if _player_instance == null or not is_instance_valid(_player_instance):
 		return
@@ -320,10 +275,10 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 		self,
 		_generated_root,
 		player_spawn_position,
-		enemy_scene,
+		floor_config.enemy_scene,
 		_runtime_progression_index,
 		generation_seed,
-		enemy_spawn_fallback
+		floor_config.enemy_spawn_fallback
 	)
 
 # Spawns deterministic chest interactables at selected chest candidate markers.

@@ -36,6 +36,12 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 	var grid: PackedInt32Array = layout.get("grid", PackedInt32Array())
 	if width <= 0 or height <= 0 or grid.is_empty():
 		return root
+	var grid_offset: Vector2 = Vector2.ZERO
+	var grid_offset_data: Variant = layout.get("grid_offset", Vector2i.ZERO)
+	if grid_offset_data is Vector2i:
+		grid_offset = Vector2(grid_offset_data as Vector2i)
+	elif grid_offset_data is Vector2:
+		grid_offset = grid_offset_data as Vector2
 
 	var tile_size: float = float(params.get("tile_size", 2.0))
 	var wall_height: float = float(params.get("wall_height", 3.0))
@@ -79,14 +85,14 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 			if idx < 0 or idx >= grid.size():
 				continue
 			if grid[idx] == TILE_FLOOR:
-				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(x, y, tile_size, floor_thickness * 0.5)))
+				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, floor_thickness * 0.5)))
 				# No per-tile floor collider
 			else:
 				if _has_floor_neighbor(grid, width, height, x, y):
-					wall_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(x, y, tile_size, wall_height * 0.5)))
+					wall_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, wall_height * 0.5)))
 					wall_collision_mask[idx] = 1
 
-	_spawn_merged_wall_colliders(wall_parent, wall_collision_mask, width, height, tile_size, wall_height, editor_owner)
+	_spawn_merged_wall_colliders(wall_parent, wall_collision_mask, width, height, tile_size, wall_height, grid_offset, editor_owner)
 
 	# Add a single floor collider if requested
 	if create_floor_collision:
@@ -114,8 +120,8 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 		if found:
 			var size_x = float(max_x - min_x + 1) * tile_size
 			var size_z = float(max_y - min_y + 1) * tile_size
-			var center_x = float(min_x + max_x) * 0.5 * tile_size
-			var center_z = float(min_y + max_y) * 0.5 * tile_size
+			var center_x = (float(min_x + max_x) * 0.5 + grid_offset.x) * tile_size
+			var center_z = (float(min_y + max_y) * 0.5 + grid_offset.y) * tile_size
 			var center_y = floor_thickness * 0.5
 			_spawn_single_floor_collider(floor_parent, Vector3(size_x, floor_thickness, size_z), Vector3(center_x, center_y, center_z), editor_owner)
 
@@ -138,6 +144,7 @@ func _spawn_single_floor_collider(parent: Node3D, box_size: Vector3, center: Vec
 	var body := StaticBody3D.new()
 	body.position = center
 	var shape := CollisionShape3D.new()
+	shape.debug_fill = false
 	var box := BoxShape3D.new()
 	box.size = box_size
 	shape.shape = box
@@ -147,7 +154,7 @@ func _spawn_single_floor_collider(parent: Node3D, box_size: Vector3, center: Vec
 	_assign_owner(shape, editor_owner)
 
 # Merges adjacent wall cells into larger collision boxes to reduce collider count.
-func _spawn_merged_wall_colliders(parent: Node3D, wall_collision_mask: PackedByteArray, width: int, height: int, tile_size: float, wall_height: float, editor_owner: Node) -> void:
+func _spawn_merged_wall_colliders(parent: Node3D, wall_collision_mask: PackedByteArray, width: int, height: int, tile_size: float, wall_height: float, grid_offset: Vector2, editor_owner: Node) -> void:
 	var visited := PackedByteArray()
 	visited.resize(width * height)
 
@@ -176,16 +183,16 @@ func _spawn_merged_wall_colliders(parent: Node3D, wall_collision_mask: PackedByt
 					var mark_idx_x: int = y * width + (x + offset)
 					visited[mark_idx_x] = 1
 				var size_x: float = float(run_x) * tile_size
-				var center_x: float = (float(x) + (float(run_x - 1) * 0.5)) * tile_size
-				var center_z: float = float(y) * tile_size
+				var center_x: float = (float(x) + (float(run_x - 1) * 0.5) + grid_offset.x) * tile_size
+				var center_z: float = (float(y) + grid_offset.y) * tile_size
 				_spawn_wall_collider_box(parent, Vector3(size_x, wall_height, tile_size), Vector3(center_x, wall_height * 0.5, center_z), editor_owner)
 			else:
 				for offset in run_z:
 					var mark_idx_z: int = (y + offset) * width + x
 					visited[mark_idx_z] = 1
 				var size_z: float = float(run_z) * tile_size
-				var center_x: float = float(x) * tile_size
-				var center_z: float = (float(y) + (float(run_z - 1) * 0.5)) * tile_size
+				var center_x: float = (float(x) + grid_offset.x) * tile_size
+				var center_z: float = (float(y) + (float(run_z - 1) * 0.5) + grid_offset.y) * tile_size
 				_spawn_wall_collider_box(parent, Vector3(tile_size, wall_height, size_z), Vector3(center_x, wall_height * 0.5, center_z), editor_owner)
 
 # Spawns one static wall collision box at the given world-space center.
@@ -193,6 +200,7 @@ func _spawn_wall_collider_box(parent: Node3D, box_size: Vector3, center: Vector3
 	var body := StaticBody3D.new()
 	body.position = center
 	var shape := CollisionShape3D.new()
+	shape.debug_fill = false
 	var box := BoxShape3D.new()
 	box.size = box_size
 	shape.shape = box
@@ -380,6 +388,7 @@ func _spawn_collision_box(parent: Node3D, box_size: Vector3, tile_size: float, c
 	var body := StaticBody3D.new()
 	body.position = _tile_to_world(x, y, tile_size, center_y)
 	var shape := CollisionShape3D.new()
+	shape.debug_fill = false
 	var box := BoxShape3D.new()
 	box.size = box_size
 	shape.shape = box

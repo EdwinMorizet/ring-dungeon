@@ -19,46 +19,37 @@ const DEBUG_STEP_MST: StringName = &"mst"
 const DEBUG_STEP_LOOP_EDGES: StringName = &"loop_edges"
 
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
-func generate(seed_value: int, params: Dictionary) -> Dictionary:
-	var world_width: int = int(params.get("world_width", 160))
-	var world_height: int = int(params.get("world_height", 160))
-	var cell_count: int = int(params.get("cell_count", 15))
-	var radius: float = float(params.get("spawn_radius", min(world_width, world_height) * 0.35))
-	var separation_iterations: int = int(params.get("separation_iterations", cell_count * 1.1))
-	var min_room_size: float = float(params.get("min_room_size", 12.0))
-	var room_area_threshold: float = float(params.get("room_area_threshold", 120.0))
-	var room_keep_ratio: float = float(params.get("room_keep_ratio", 0.45))
-	var loop_percent: float = float(params.get("loop_percent", 0.15))
-	var chest_candidate_ratio: float = float(params.get("chest_candidate_ratio", 0.3))
-	var patrol_nodes_per_room_min: int = int(params.get("patrol_nodes_per_room_min", 2))
-	var patrol_nodes_per_room_max: int = int(params.get("patrol_nodes_per_room_max", 4))
-	var patrol_point_padding: float = float(params.get("patrol_point_padding", 1.2))
-	var patrol_point_jitter: float = float(params.get("patrol_point_jitter", 0.35))
-	var debug_timeline: DungeonGeneratorDebugTimeline = null
-	var debug_timeline_value: Variant = params.get("debug_timeline", null)
-	if debug_timeline_value is DungeonGeneratorDebugTimeline:
-		debug_timeline = debug_timeline_value as DungeonGeneratorDebugTimeline
+func generate(seed_value: int, config: DungeonFloorConfig, debug_timeline: DungeonGeneratorDebugTimeline = null) -> Dictionary:
+	var cell_count: int = config.cell_count
+	var loop_percent: float = config.loop_percent
+	var chest_candidate_ratio: float = config.chest_candidate_ratio
+	var patrol_nodes_per_room_min: int = config.patrol_nodes_per_room_min
+	var patrol_nodes_per_room_max: int = config.patrol_nodes_per_room_max
+	var patrol_point_padding: float = config.patrol_point_padding
+	var patrol_point_jitter: float = config.patrol_point_jitter
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 
-	var cells := generate_cells(cell_count, radius, world_width, world_height, rng)
+	var cells := generate_cells(cell_count, rng, config)
 	_record_debug_step(debug_timeline, DEBUG_STEP_GENERATE_CELLS, {"cells": cells})
-	var separation_info := separate_cells(cells, separation_iterations, rng)
+
+	separate_cells(cells, config, rng)
 	_record_debug_step(debug_timeline, DEBUG_STEP_SEPARATE_CELLS, {"cells": cells})
-	var room_info := designate_rooms(cells, min_room_size, room_area_threshold, room_keep_ratio)
-	var rooms: Array = room_info["rooms"]
+
+	var rooms := designate_rooms(cells, config)
 	_record_debug_step(debug_timeline, DEBUG_STEP_DESIGNATE_ROOMS, {"cells": cells, "rooms": rooms})
 
 	var centers := PackedVector2Array()
 	for room in rooms:
 		centers.push_back(room["center"])
-
 	var graph := DungeonGraph.new()
 	var delaunay_edges := graph.build_delaunay_edges(centers)
 	_record_debug_step(debug_timeline, DEBUG_STEP_DELAUNAY, {"rooms": rooms, "delaunay_edges": delaunay_edges})
+
 	var mst_edges := graph.build_mst(centers, delaunay_edges)
 	_record_debug_step(debug_timeline, DEBUG_STEP_MST, {"rooms": rooms, "delaunay_edges": delaunay_edges, "mst_edges": mst_edges})
+
 	var corridor_edges := graph.add_loop_edges(delaunay_edges, mst_edges, loop_percent, rng)
 	var loop_edges: Array = []
 	for edge_index in range(mst_edges.size(), corridor_edges.size()):
@@ -70,13 +61,19 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		"loop_edges": loop_edges,
 	})
 
+	var world_rect: Rect2i = _compute_rect_bounds_from_entries(rooms)
+	var world_width := int(world_rect.size.x)
+	var world_height := int(world_rect.size.y)
 	var grid := _create_grid(world_width, world_height, TILE_WALL)
+	
 	for room in rooms:
-		_carve_room(grid, world_width, world_height, room["rect"])
+		_carve_room(grid, world_rect, room["rect"])
+
 	for edge in corridor_edges:
 		var a: Vector2 = centers[edge["a"]]
 		var b: Vector2 = centers[edge["b"]]
 		_carve_l_corridor(grid, world_width, world_height, a, b, rng)
+		
 	_enforce_border_walls(grid, world_width, world_height)
 
 	var exit_index := -1
@@ -111,6 +108,7 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		"grid": grid,
 		"width": world_width,
 		"height": world_height,
+		"grid_offset": world_rect.position,
 		"rooms": rooms,
 		"edges": delaunay_edges,
 		"mst_edges": mst_edges,
@@ -121,8 +119,6 @@ func generate(seed_value: int, params: Dictionary) -> Dictionary:
 		"patrol_graph": patrol_graph,
 		"stats": {
 			"cells": cells.size(),
-			"separation_iterations": separation_info["iterations"],
-			"overlaps_remaining": separation_info["overlaps"],
 			"rooms": rooms.size(),
 			"delaunay_edges": delaunay_edges.size(),
 			"mst_edges": mst_edges.size(),
@@ -142,144 +138,116 @@ func _record_debug_step(debug_timeline: DungeonGeneratorDebugTimeline, step_name
 	debug_timeline.record_step(step_name, payload)
 
 # Samples room candidate cells from a radial distribution around map center.
-func generate_cells(cell_count: int, radius: float, world_width: int, world_height: int, rng: RandomNumberGenerator) -> Array:
+func generate_cells(cell_count: int, rng: RandomNumberGenerator, config: DungeonFloorConfig) -> Array:
 	var cells: Array = []
-	var center := Vector2(world_width * 0.5, world_height * 0.5)
+	var center := Vector2(config.width * 0.5, config.height * 0.5)
 	for _i in cell_count:
 		var angle := rng.randf() * TAU
-		var dist := radius * sqrt(rng.randf())
+		var dist : float = config.spawn_radius * sqrt(rng.randf())
 		var pos := center + Vector2(cos(angle), sin(angle)).normalized() * dist
 		
 		pos = pos.round()
-
-		var room_w := roundf(clampf(rng.randfn(10.0, 3.5), 4.0, 22.0))
-		var room_h := roundf(clampf(rng.randfn(10.0, 3.5), 4.0, 22.0))
 		
+		var mean = (config.min_room_size + config.room_max_size) * 0.5
+		var room_w := (clampf(rng.randfn(mean, config.room_size_deviation), config.min_room_size, config.room_max_size))
+		var room_h := (clampf(rng.randfn(mean, config.room_size_deviation), config.min_room_size, config.room_max_size))
 
 		if int(room_h) % 2 != 0: 
 			room_h += 1
 		if int(room_w) % 2 != 0: 
 			room_w += 1
 
-		# TODO: expose max_ratio
-		var max_ratio := 2.3
-		if room_w / room_h > max_ratio:
-			room_w = room_h * max_ratio
-		elif room_h / room_w > max_ratio:
-			room_h = room_w * max_ratio
-
-		var rect := Rect2(pos - Vector2(room_w, room_h) * 0.5, Vector2(room_w, room_h))
+		var rect_position := Vector2i(
+			int(round(pos.x - room_w * 0.5)),
+			int(round(pos.y - room_h * 0.5))
+		)
+		var rect_size := Vector2i(int(room_w), int(room_h))
+		var rect := Rect2i(rect_position, rect_size)
 		cells.append({
-			"rect": rect,
+			"rect": _snap_rect_to_grid(rect),
 			"is_room": false,
 		})
 	return cells
 
 # Resolves overlapping room candidates using iterative pairwise push separation.
-func separate_cells(cells: Array, max_iterations: int, rng:RandomNumberGenerator) -> Dictionary:	
-	var iterations: int = 0
+func separate_cells(cells: Array, config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
 	var overlaps: int = 0
-
-	for i in max_iterations:
-		iterations += 1
+	for i in config.separation_iterations:
 		overlaps = 0
-
 		for a in cells.size():
-			var _is_overlap:bool = false
-			var _overlaps_dist:float = -1
-			var _overlaps_dir:Vector2 = Vector2.ZERO
+			var _overlaps_dist: float = -1
+			var _overlaps_dir: Vector2 = Vector2.ZERO
 			for b in cells.size():
 				if a == b:
 					continue
-				#var rect_a: Rect2 = cells[a]["rect"]
-				#var rect_b: Rect2 = cells[b]["rect"]
-				var rect_a: Rect2 = cells[a]["rect"].grow(SEPARATION_MARGIN)
-				var rect_b: Rect2 = cells[b]["rect"].grow(SEPARATION_MARGIN)
+				var rect_a: Rect2i = _grow_rect_i(cells[a]["rect"], int(SEPARATION_MARGIN))
+				var rect_b: Rect2i = _grow_rect_i(cells[b]["rect"], int(SEPARATION_MARGIN))
 				if rect_a.intersects(rect_b):
-					var _dir = rect_a.position - rect_b.position
-					var _dist = _dir.length_squared()
+					var _dir := Vector2(rect_a.position - rect_b.position)
+					var _dist: float = _dir.length_squared()
 					if _dist < _overlaps_dist or _overlaps_dist == -1:
 						overlaps += 1
-						_is_overlap = true
 						_overlaps_dist = _dist
 						_overlaps_dir = _dir
-
 			if _overlaps_dist == -1:
 				continue
 			if _overlaps_dist < 0.05:
-				_overlaps_dir = Vector2(rng.randf_range(-1,1),rng.randf_range(-1,1))
+				_overlaps_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
+			if _overlaps_dir.is_zero_approx():
+				continue
 			_overlaps_dir = _overlaps_dir.normalized()
-			_overlaps_dir = Vector2(round(_overlaps_dir.x), round(_overlaps_dir.y))
-			#print(a, " ", _overlaps_dir)
-			var rect: Rect2 = cells[a]["rect"]
-			rect.position += _overlaps_dir
+			var _push_dir := Vector2i(int(round(_overlaps_dir.x)), int(round(_overlaps_dir.y)))
+			if _push_dir == Vector2i.ZERO:
+				_push_dir = Vector2i(1, 0)
+			var rect: Rect2i = cells[a]["rect"]
+			rect.position += _push_dir
 			cells[a]["rect"] = _snap_rect_to_grid(rect)
-
 		if overlaps == 0:
 			break
+# Computes a merged Rect2i bounds box from dictionary entries containing a Rect2i in "rect".
+func _compute_rect_bounds_from_entries(entries: Array) -> Rect2i:
+	var has_bounds: bool = false
+	var bounds: Rect2i = Rect2i()
+	for entry_data in entries:
+		if not entry_data is Dictionary:
+			continue
+		var entry: Dictionary = entry_data
+		var rect_data: Variant = entry.get("rect", Rect2i())
+		if not rect_data is Rect2i:
+			continue
+		var rect: Rect2i = rect_data as Rect2i
+		if not has_bounds:
+			bounds = rect
+			has_bounds = true
+		else:
+			bounds = bounds.merge(rect)
 
-	print(iterations)
-	print(overlaps)
-	# for i in max_iterations:
-	# 	iterations = i + 1
-	# 	overlaps = 0
-		
-	# 	var motions: Array[Vector2] = []
-	# 	motions.resize(cells.size())
-	# 	for k in motions.size():
-	# 		motions[k] = Vector2.ZERO
-
-	# 	for a in cells.size():
-	# 		for b in range(a + 1, cells.size()):
-	# 			var rect_a: Rect2 = cells[a]["rect"].grow(SEPARATION_MARGIN)
-	# 			var rect_b: Rect2 = cells[b]["rect"].grow(SEPARATION_MARGIN)
-	# 			if rect_a.intersects(rect_b):
-	# 				overlaps += 1
-	# 				var delta: Vector2 = rect_b.get_center() - rect_a.get_center()
-	# 				if delta.length_squared() < 0.0001:
-	# 					delta = Vector2(1.0, 0.0)
-	# 				var push: Vector2 = delta.normalized() * 0.5
-	# 				motions[a] -= push
-	# 				motions[b] += push
-
-	# 		for c in cells.size():
-	# 			if motions[c] != Vector2.ZERO:
-	# 				var rect: Rect2 = cells[c]["rect"]
-	# 				rect.position += motions[c]
-	# 				cells[c]["rect"] = rect
-
-	# 		if overlaps == 0:
-	# 			break
-
-	return {"iterations": iterations, "overlaps": overlaps}
+	if not has_bounds:
+		return Rect2i()
+	return bounds
 
 # Selects final rooms from candidates based on size, area, and keep ratio.
-func designate_rooms(cells: Array, min_room_size: float, room_area_threshold: float, room_keep_ratio: float) -> Dictionary:
+func designate_rooms(cells: Array, config:DungeonFloorConfig) -> Array:
 	var candidates: Array = []
 	for cell in cells:
-		var rect: Rect2 = cell["rect"]
-		if rect.size.x >= min_room_size and rect.size.y >= min_room_size and rect.get_area() >= room_area_threshold:
+		var rect: Rect2i = _snap_rect_to_grid(cell["rect"])
+		var ratio: float = min(rect.size.x, rect.size.y) / max(rect.size.x, rect.size.y)
+		if ratio >= config.room_keep_ratio:
 			candidates.append(cell)
 
 	if candidates.is_empty() and not cells.is_empty():
 		candidates = cells.duplicate()
 
-	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return a["rect"].get_area() > b["rect"].get_area()
-	)
-
-	var keep_count := maxi(2, int(round(float(candidates.size()) * clampf(room_keep_ratio, 0.1, 1.0))))
-	keep_count = mini(keep_count, candidates.size())
-
 	var rooms: Array = []
-	for i in keep_count:
-		var room_rect: Rect2 = _snap_rect_to_grid(candidates[i]["rect"])
+	for i in candidates.size():
+		var room_rect: Rect2i = _snap_rect_to_grid(candidates[i]["rect"])
+		var room_center: Vector2 = Vector2(room_rect.get_center())
 		rooms.append({
 			"rect": room_rect,
-			"center": room_rect.get_center(),
+			"center": room_center,
 		})
 
-	return {"rooms": rooms}
+	return rooms
 
 # Allocates and initializes a dense tile grid.
 func _create_grid(width: int, height: int, default_tile: int) -> PackedInt32Array:
@@ -290,14 +258,14 @@ func _create_grid(width: int, height: int, default_tile: int) -> PackedInt32Arra
 	return grid
 
 # Carves a rectangular room into floor tiles within safe interior bounds.
-func _carve_room(grid: PackedInt32Array, width: int, height: int, rect: Rect2) -> void:
-	var start_x := clampi(int(rect.position.x), 1, width - 2)
-	var start_y := clampi(int(rect.position.y), 1, height - 2)
-	var end_x := clampi(int(rect.position.x + rect.size.x), 1, width - 2)
-	var end_y := clampi(int(rect.position.y + rect.size.y), 1, height - 2)
+func _carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
+	var start_x: int = rect.position.x - world_rect.position.x
+	var start_y: int = rect.position.y - world_rect.position.y
+	var end_x: int = rect.end.x - world_rect.position.x
+	var end_y: int = rect.end.y - world_rect.position.y
 	for y in range(start_y, end_y):
 		for x in range(start_x, end_x):
-			_set_tile(grid, width, x, y, TILE_FLOOR)
+			_set_tile(grid, int(world_rect.size.x), int(world_rect.size.y), x, y, TILE_FLOOR)
 
 # Carves an L-shaped corridor between two room centers and smooths dense corners.
 func _carve_l_corridor(grid: PackedInt32Array, width: int, height: int, a: Vector2, b: Vector2, rng: RandomNumberGenerator) -> void:
@@ -313,7 +281,7 @@ func _carve_l_corridor(grid: PackedInt32Array, width: int, height: int, a: Vecto
 	for y in range(mini(a_cell.y, b_cell.y) - 1, maxi(a_cell.y, b_cell.y) + 2):
 		for x in range(mini(a_cell.x, b_cell.x) - 1, maxi(a_cell.x, b_cell.x) + 2):
 			if _count_floor_neighbors(grid, width, height, x, y) >= 3:
-				_set_tile(grid, width, x, y, TILE_FLOOR)
+				_set_tile(grid, width, height, x, y, TILE_FLOOR)
 
 # Carves a horizontal hallway segment with configurable thickness.
 func _carve_hall_segment(grid: PackedInt32Array, width: int, _height: int, from_x: int, to_x: int, y: int) -> void:
@@ -321,7 +289,7 @@ func _carve_hall_segment(grid: PackedInt32Array, width: int, _height: int, from_
 	var x := from_x
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, x, y + t, TILE_FLOOR)
+			_set_tile(grid, width, _height, x, y + t, TILE_FLOOR)
 		if x == to_x:
 			break
 		x += step
@@ -332,7 +300,7 @@ func _carve_hall_segment_vertical(grid: PackedInt32Array, width: int, _height: i
 	var y := from_y
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, x + t, y, TILE_FLOOR)
+			_set_tile(grid, width, _height, x + t, y, TILE_FLOOR)
 		if y == to_y:
 			break
 		y += step
@@ -351,10 +319,9 @@ func _count_floor_neighbors(grid: PackedInt32Array, width: int, height: int, x: 
 	return count
 
 # Writes a tile value with bounds checks and a permanent one-tile outer wall border.
-func _set_tile(grid: PackedInt32Array, width: int, x: int, y: int, tile: int) -> void:
+func _set_tile(grid: PackedInt32Array, width: int, height: int, x: int, y: int, tile: int) -> void:
 	if x < 0 or y < 0:
 		return
-	var height := int(float(grid.size()) / float(width))
 	if x >= width or y >= height:
 		return
 	# Keep a permanent 1-tile wall border around the map.
@@ -388,10 +355,15 @@ func _enforce_border_walls(grid: PackedInt32Array, width: int, height: int) -> v
 		grid[y * width + (width - 1)] = TILE_WALL
 
 # Snaps room rectangles to integer grid coordinates and minimum dimensions.
-func _snap_rect_to_grid(rect: Rect2) -> Rect2:
-	#var pos := Vector2(floor(rect.position.x), floor(rect.position.y))
-	#var size := Vector2(max(4.0, floor(rect.size.x)), max(4.0, floor(rect.size.y)))
-	return Rect2(rect.position.round(), rect.size.round())
+func _snap_rect_to_grid(rect: Rect2i) -> Rect2i:
+	return rect
+
+# Grows an integer-grid rectangle by a margin on all sides.
+func _grow_rect_i(rect: Rect2i, margin: int) -> Rect2i:
+	return Rect2i(
+		rect.position - Vector2i(margin, margin),
+		rect.size + Vector2i(margin * 2, margin * 2)
+	)
 
 # Finds the room farthest from the average center of all rooms.
 func _find_farthest_room_index(rooms: Array) -> int:
@@ -554,7 +526,7 @@ func _resolve_patrol_point_count(min_count: int, max_count: int, rng: RandomNumb
 	return rng.randi_range(safe_min, safe_max)
 
 # Generates patrol points inside a room rectangle with padding and angular jitter.
-func _build_patrol_points_for_room(rect: Rect2, point_count: int, padding: float, jitter: float, rng: RandomNumberGenerator) -> PackedVector2Array:
+func _build_patrol_points_for_room(rect: Rect2i, point_count: int, padding: float, jitter: float, rng: RandomNumberGenerator) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	if point_count <= 0:
 		return points

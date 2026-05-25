@@ -2,6 +2,13 @@
 extends Resource
 class_name DungeonFloorConfig
 
+# Default player scene spawned for runtime floors.
+const PlayerScene: PackedScene = preload("res://scenes/player/player.tscn")
+# Default enemy scene fallback used by EnemySpawnManager.
+const EnemyScene: PackedScene = preload("res://scenes/enemies/enemy_basic.tscn")
+# Merchant room scene used during merchant transitions.
+const MerchantRoomScene: PackedScene = preload("res://scenes/merchant/merchant_room.tscn")
+
 # Relation: Consumed by DungeonFloorController and forwarded to DungeonGenerator and DungeonBuilder3D.
 # Relation: Default instance is wired through resources/dungeon/default_floor_config.tres.
 
@@ -16,7 +23,7 @@ class_name DungeonFloorConfig
 
 @export var room_min_size: int = 10
 @export var room_max_size: int = 40
-@export var room_size_et: int =  6
+@export var room_size_deviation: int =  6
 
 # Radius from origin used for initial room placement sampling.
 @export var spawn_radius: float = 52.0
@@ -46,3 +53,21 @@ class_name DungeonFloorConfig
 @export var wall_height: float = 3.0
 # Thickness in world units used for generated floor meshes.
 @export var floor_thickness: float = 0.2
+# Enables MultiMesh rendering for generated tiles.
+@export var use_multimesh: bool = true
+# Enables one merged floor collider for the generated floor bounds.
+@export var create_floor_collision: bool = true
+# Randomizes generation seed on manual regenerate in editor/runtime.
+@export var auto_randomize_seed_on_regenerate: bool = false
+# Scene used to spawn or ensure the player instance.
+@export var player_scene: PackedScene = PlayerScene
+# Fallback spawn position when player start marker is unavailable.
+@export var player_spawn_fallback: Vector3 = Vector3(0.0, 3.0, 0.0)
+# Vertical offset applied above player marker for spawn safety.
+@export var player_spawn_height_offset: float = 1.2
+# Default enemy scene passed to spawn manager as fallback.
+@export var enemy_scene: PackedScene = EnemyScene
+# Fallback enemy spawn position for spawn manager safety cases.
+@export var enemy_spawn_fallback: Vector3 = Vector3(8.0, 2.5, 8.0)
+# Scene used to instantiate the merchant room controller.
+@export var merchant_room_scene: PackedScene = MerchantRoomScene
