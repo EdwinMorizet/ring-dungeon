@@ -30,17 +30,12 @@ fog_depth_begin = 20.0
 
 [node name="env" type="Node" parent="." unique_id=1664492510]
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="env" unique_id=1540995305]
-transform = Transform3D(0.57107186, 0.6375442, -0.5171212, 0, 0.62994415, 0.7766405, 0.8209001, -0.4435175, 0.3597434, 0, 0, 0)
-visible = false
-shadow_enabled = true
-sky_mode = 1
-
 [node name="WorldEnvironment" type="WorldEnvironment" parent="env" unique_id=1814773616]
 environment = SubResource("Environment_7mycd")
 
 [node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
 script = ExtResource("1_ig7tw")
+auto_randomize_seed_on_regenerate = true
 metadata/_custom_type_script = "uid://bla0efmx0rcb4"
 
 [node name="DebugFloorHud" parent="." unique_id=1054138337 instance=ExtResource("2_dbgui")]

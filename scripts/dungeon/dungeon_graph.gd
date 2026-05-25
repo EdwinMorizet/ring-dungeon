@@ -2,6 +2,8 @@
 extends RefCounted
 class_name DungeonGraph
 
+# Relation: Called by DungeonGenerator to produce Delaunay, MST, and optional loop edges.
+# Builds undirected weighted edges from room centers using Delaunay triangulation.
 func build_delaunay_edges(points: PackedVector2Array) -> Array:
 	if points.size() < 2:
 		return []
@@ -23,6 +25,7 @@ func build_delaunay_edges(points: PackedVector2Array) -> Array:
 
 	return edge_map.values()
 
+# Builds a minimum spanning tree from weighted edges using union-find.
 func build_mst(points: PackedVector2Array, edges: Array) -> Array:
 	if points.is_empty() or edges.is_empty():
 		return []
@@ -48,6 +51,7 @@ func build_mst(points: PackedVector2Array, edges: Array) -> Array:
 
 	return mst
 
+# Adds a randomized subset of non-MST edges to create dungeon loops.
 func add_loop_edges(edges: Array, mst_edges: Array, loop_percent: float, rng: RandomNumberGenerator) -> Array:
 	if edges.is_empty():
 		return []
@@ -79,6 +83,7 @@ func add_loop_edges(edges: Array, mst_edges: Array, loop_percent: float, rng: Ra
 
 	return result
 
+# Inserts one undirected edge in the edge map if that edge has not been registered yet.
 func _add_edge_if_missing(edge_map: Dictionary, a: int, b: int, points: PackedVector2Array) -> void:
 	if a == b:
 		return
@@ -87,6 +92,7 @@ func _add_edge_if_missing(edge_map: Dictionary, a: int, b: int, points: PackedVe
 		return
 	edge_map[key] = _make_edge(a, b, points)
 
+# Normalizes endpoint order and computes Euclidean edge weight.
 func _make_edge(a: int, b: int, points: PackedVector2Array) -> Dictionary:
 	var ai := mini(a, b)
 	var bi := maxi(a, b)
@@ -96,16 +102,19 @@ func _make_edge(a: int, b: int, points: PackedVector2Array) -> Dictionary:
 		"weight": points[ai].distance_to(points[bi])
 	}
 
+# Produces a stable key used to deduplicate undirected edges.
 func _edge_key(a: int, b: int) -> String:
 	var ai := mini(a, b)
 	var bi := maxi(a, b)
 	return "%s:%s" % [ai, bi]
 
+# Finds the representative of a union-find set with path compression.
 func _find(parent: Array[int], i: int) -> int:
 	if parent[i] != i:
 		parent[i] = _find(parent, parent[i])
 	return parent[i]
 
+# Merges two union-find sets when they are currently disconnected.
 func _union(parent: Array[int], a: int, b: int) -> void:
 	var root_a := _find(parent, a)
 	var root_b := _find(parent, b)

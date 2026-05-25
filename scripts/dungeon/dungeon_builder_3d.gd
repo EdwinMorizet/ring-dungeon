@@ -3,12 +3,19 @@
 extends RefCounted
 class_name DungeonBuilder3D
 
+# Relation: Called by DungeonFloorController with layout output from DungeonGenerator.
+# Shared floor material resource for generated floor geometry.
 const floorMat: Material = preload("res://materials/floor_wall.tres")
+# Shared wall material resource for generated wall geometry.
 const wallMat: Material = preload("res://materials/brick_wall.tres")
 
+# Floor exit trigger scene instantiated at generated floor-exit markers.
 const FloorExitTriggerScene: PackedScene = preload("res://scenes/dungeon/floor_exit_trigger.tscn")
+# Tile id for wall cells.
 const TILE_WALL := 0
+# Tile id for floor cells.
 const TILE_FLOOR := 1
+# Cardinal neighbor offsets used for adjacency checks.
 const CARDINAL_OFFSETS: Array[Vector2i] = [
 	Vector2i(1, 0),
 	Vector2i(-1, 0),
@@ -16,6 +23,7 @@ const CARDINAL_OFFSETS: Array[Vector2i] = [
 	Vector2i(0, -1),
 ]
 
+# Builds dungeon meshes, colliders, and gameplay markers under a generated root node.
 func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner: Node) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GeneratedDungeon"
@@ -125,6 +133,7 @@ func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner:
 
 	return root
 
+# Spawns one static body floor collider that covers the requested box size.
 func _spawn_single_floor_collider(parent: Node3D, box_size: Vector3, center: Vector3, editor_owner: Node) -> void:
 	var body := StaticBody3D.new()
 	body.position = center
@@ -137,6 +146,7 @@ func _spawn_single_floor_collider(parent: Node3D, box_size: Vector3, center: Vec
 	_assign_owner(body, editor_owner)
 	_assign_owner(shape, editor_owner)
 
+# Merges adjacent wall cells into larger collision boxes to reduce collider count.
 func _spawn_merged_wall_colliders(parent: Node3D, wall_collision_mask: PackedByteArray, width: int, height: int, tile_size: float, wall_height: float, editor_owner: Node) -> void:
 	var visited := PackedByteArray()
 	visited.resize(width * height)
@@ -178,6 +188,7 @@ func _spawn_merged_wall_colliders(parent: Node3D, wall_collision_mask: PackedByt
 				var center_z: float = (float(y) + (float(run_z - 1) * 0.5)) * tile_size
 				_spawn_wall_collider_box(parent, Vector3(tile_size, wall_height, size_z), Vector3(center_x, wall_height * 0.5, center_z), editor_owner)
 
+# Spawns one static wall collision box at the given world-space center.
 func _spawn_wall_collider_box(parent: Node3D, box_size: Vector3, center: Vector3, editor_owner: Node) -> void:
 	var body := StaticBody3D.new()
 	body.position = center
@@ -190,6 +201,7 @@ func _spawn_wall_collider_box(parent: Node3D, box_size: Vector3, center: Vector3
 	_assign_owner(body, editor_owner)
 	_assign_owner(shape, editor_owner)
 
+# Spawns one visible mesh tile instance at grid coordinates.
 func _spawn_tile(parent: Node3D, mesh: Mesh, tile_size: float, center_y: float, x: int, y: int, editor_owner: Node) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
@@ -197,6 +209,7 @@ func _spawn_tile(parent: Node3D, mesh: Mesh, tile_size: float, center_y: float, 
 	parent.add_child(mi)
 	_assign_owner(mi, editor_owner)
 
+# Batches tile transforms into one MultiMesh instance for rendering performance.
 func _spawn_multimesh_tiles(parent: Node3D, mesh: Mesh, transforms: Array[Transform3D], editor_owner: Node, name: String) -> void:
 	if transforms.is_empty():
 		return
@@ -213,6 +226,7 @@ func _spawn_multimesh_tiles(parent: Node3D, mesh: Mesh, transforms: Array[Transf
 	parent.add_child(instance)
 	_assign_owner(instance, editor_owner)
 
+# Spawns individual mesh instances for each tile transform.
 func _spawn_mesh_tiles(parent: Node3D, mesh: Mesh, transforms: Array[Transform3D], editor_owner: Node) -> void:
 	for transform in transforms:
 		var mi := MeshInstance3D.new()
@@ -221,6 +235,7 @@ func _spawn_mesh_tiles(parent: Node3D, mesh: Mesh, transforms: Array[Transform3D
 		parent.add_child(mi)
 		_assign_owner(mi, editor_owner)
 
+# Spawns gameplay marker groups for player start, enemies, chests, and floor exit.
 func _spawn_room_markers(root: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
 	var markers_root := Node3D.new()
 	markers_root.name = "SpawnMarkers"
@@ -252,6 +267,7 @@ func _spawn_room_markers(root: Node3D, layout: Dictionary, tile_size: float, edi
 	# Call _spawn_room_lights after spawning room markers
 	_spawn_room_lights(root, layout, tile_size, editor_owner)
 
+# Spawns per-room patrol marker groups from room metadata.
 func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
 	var rooms: Array = layout.get("rooms", [])
 	if rooms.is_empty():
@@ -282,6 +298,7 @@ func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, edi
 
 	_spawn_patrol_link_markers(patrol_root, layout, rooms, tile_size, editor_owner)
 
+# Spawns marker nodes representing MST-derived cross-room patrol links.
 func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: Array, tile_size: float, editor_owner: Node) -> void:
 	var patrol_graph: Dictionary = layout.get("patrol_graph", {})
 	var room_links: Array = patrol_graph.get("room_links", [])
@@ -314,12 +331,14 @@ func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: 
 		links_root.add_child(marker)
 		_assign_owner(marker, editor_owner)
 
+# Resolves a room center from room array data with bounds safety.
 func _resolve_room_center(rooms: Array, room_index: int) -> Vector2:
 	if room_index < 0 or room_index >= rooms.size():
 		return Vector2.ZERO
 	var room_data: Dictionary = rooms[room_index]
 	return room_data.get("center", Vector2.ZERO)
 
+# Spawns a named marker group and all marker children for provided points.
 func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String, points: PackedVector2Array, tile_size: float, editor_owner: Node) -> void:
 	var group_root := Node3D.new()
 	group_root.name = group_name
@@ -328,6 +347,7 @@ func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String
 	for i in range(points.size()):
 		_spawn_marker(group_root, "%s_%d" % [marker_prefix, i], points[i], tile_size, editor_owner)
 
+# Spawns one marker node from grid-space coordinates.
 func _spawn_marker(parent: Node3D, marker_name: String, point: Vector2, tile_size: float, editor_owner: Node) -> void:
 	var marker := Marker3D.new()
 	marker.name = marker_name
@@ -335,6 +355,7 @@ func _spawn_marker(parent: Node3D, marker_name: String, point: Vector2, tile_siz
 	parent.add_child(marker)
 	_assign_owner(marker, editor_owner)
 
+# Instantiates and places the floor-exit trigger at the first floor-exit marker.
 func _spawn_floor_exit_visuals(root: Node3D, _tile_size: float, editor_owner: Node) -> void:
 	var marker_node: Node = root.find_child("FloorExit_0", true, false)
 	if not marker_node is Marker3D:
@@ -354,6 +375,7 @@ func _spawn_floor_exit_visuals(root: Node3D, _tile_size: float, editor_owner: No
 	root.add_child(trigger)
 	_assign_owner_recursive(trigger, editor_owner)
 
+# Spawns a generic collision box at grid-space coordinates.
 func _spawn_collision_box(parent: Node3D, box_size: Vector3, tile_size: float, center_y: float, x: int, y: int, editor_owner: Node) -> void:
 	var body := StaticBody3D.new()
 	body.position = _tile_to_world(x, y, tile_size, center_y)
@@ -366,6 +388,7 @@ func _spawn_collision_box(parent: Node3D, box_size: Vector3, tile_size: float, c
 	_assign_owner(body, editor_owner)
 	_assign_owner(shape, editor_owner)
 
+# Returns true when a wall tile touches at least one neighboring floor tile.
 func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int, y: int) -> bool:
 	for offset in CARDINAL_OFFSETS:
 		var nx: int = x + offset.x
@@ -377,13 +400,16 @@ func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int
 			return true
 	return false
 
+# Converts grid-space coordinates into world-space position.
 func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vector3:
 	return Vector3(x * tile_size, world_y, y * tile_size)
 
+# Assigns scene owner for editor persistence when available.
 func _assign_owner(node: Node, editor_owner: Node) -> void:
 	if editor_owner != null:
 		node.owner = editor_owner
 
+# Recursively assigns scene owner on a node subtree for editor persistence.
 func _assign_owner_recursive(node: Node, editor_owner: Node) -> void:
 	if editor_owner == null:
 		return
@@ -392,6 +418,7 @@ func _assign_owner_recursive(node: Node, editor_owner: Node) -> void:
 		if child is Node:
 			_assign_owner_recursive(child as Node, editor_owner)
 
+# Spawns one omni light at each room center to improve room readability.
 func _spawn_room_lights(parent: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
 	var rooms: Array = layout.get("rooms", [])
 	for room in rooms:

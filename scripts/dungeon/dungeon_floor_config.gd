@@ -2,6 +2,9 @@
 extends Resource
 class_name DungeonFloorConfig
 
+# Relation: Consumed by DungeonFloorController and forwarded to DungeonGenerator and DungeonBuilder3D.
+# Relation: Default instance is wired through resources/dungeon/default_floor_config.tres.
+
 # Seed value used by floor layout generation.
 @export var generation_seed: int = 1
 # Dungeon grid width in generation cells.
