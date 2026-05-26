@@ -10,6 +10,8 @@ const EnemyScene: PackedScene = preload("res://scenes/enemies/enemy_basic.tscn")
 const MerchantRoomScene: PackedScene = preload("res://scenes/merchant/merchant_room.tscn")
 # Chest scene spawned at generated chest candidate markers.
 const ChestScene: PackedScene = preload("res://scenes/items/chest_interactable.tscn")
+# Default floor-linked special-room pool list used by dungeon generation.
+const DefaultSpecialRoomFloorPoolList: DungeonSpecialRoomFloorPoolList = preload("res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres")
 
 # Relation: Consumed by DungeonFloorController and forwarded to DungeonGenerator and DungeonBuilder3D.
 # Relation: Default instance is wired through resources/dungeon/default_floor_config.tres.
@@ -22,6 +24,10 @@ const ChestScene: PackedScene = preload("res://scenes/items/chest_interactable.t
 @export var height: int = 160
 # Number of initial room-candidate cells to generate.
 @export var cell_count: int = 150
+# Fixed number of special-room spawn slots evaluated per floor.
+@export var special_room_target_count: int = 8
+# Floor-linked weighted special-room pool list used during special-room assignment.
+@export var special_room_floor_pool_list: DungeonSpecialRoomFloorPoolList = DefaultSpecialRoomFloorPoolList
 
 @export var room_min_size: int = 10
 @export var room_max_size: int = 40

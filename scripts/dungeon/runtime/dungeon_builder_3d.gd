@@ -3,26 +3,6 @@
 extends RefCounted
 class_name DungeonBuilder3D
 
-# Relation: Called by DungeonFloorController with layout output from DungeonGenerator.
-# Shared floor material resource for generated floor geometry.
-const floorMat: Material = preload("res://materials/floor_wall.tres")
-# Shared wall material resource for generated wall geometry.
-const wallMat: Material = preload("res://materials/brick_wall.tres")
-
-# Floor exit trigger scene instantiated at generated floor-exit markers.
-const FloorExitTriggerScene: PackedScene = preload("res://scenes/dungeon/floor_exit_trigger.tscn")
-# Tile id for wall cells.
-const TILE_WALL := 0
-# Tile id for floor cells.
-const TILE_FLOOR := 1
-# Cardinal neighbor offsets used for adjacency checks.
-const CARDINAL_OFFSETS: Array[Vector2i] = [
-	Vector2i(1, 0),
-	Vector2i(-1, 0),
-	Vector2i(0, 1),
-	Vector2i(0, -1),
-]
-
 # Builds dungeon meshes, colliders, and gameplay markers under a generated root node.
 func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderParams, editor_owner: Node) -> Node3D:
 	var root := Node3D.new()
@@ -60,12 +40,12 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 	wall_mesh.size = Vector3(tile_size, wall_height, tile_size)
 
 	#var floor_material := StandardMaterial3D.new()
-	var floor_material := floorMat
+	var floor_material := DungeonBuilderConstants.floorMat
 	floor_material.albedo_color = Color(0.28, 0.25, 0.2)
 	floor_mesh.material = floor_material
 
 	#var wall_material := StandardMaterial3D.new()
-	var wall_material := wallMat
+	var wall_material := DungeonBuilderConstants.wallMat
 	wall_material.albedo_color = Color(0.42, 0.42, 0.45)
 	wall_mesh.material = wall_material
 
@@ -79,7 +59,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 			var idx := y * width + x
 			if idx < 0 or idx >= grid.size():
 				continue
-			if grid[idx] == TILE_FLOOR:
+			if grid[idx] == DungeonBuilderConstants.TILE_FLOOR:
 				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, floor_thickness * 0.5)))
 				# No per-tile floor collider
 			else:
@@ -100,7 +80,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 		for y in height:
 			for x in width:
 				var idx := y * width + x
-				if grid[idx] == TILE_FLOOR:
+				if grid[idx] == DungeonBuilderConstants.TILE_FLOOR:
 					if not found:
 						min_x = x
 						max_x = x
@@ -347,7 +327,7 @@ func _spawn_floor_exit_visuals(root: Node3D, _tile_size: float, editor_owner: No
 		return
 	var marker: Marker3D = marker_node as Marker3D
 
-	var trigger_node: Node = FloorExitTriggerScene.instantiate()
+	var trigger_node: Node = DungeonBuilderConstants.FloorExitTriggerScene.instantiate()
 	if not trigger_node is FloorExitTrigger:
 		return
 	var trigger: FloorExitTrigger = trigger_node as FloorExitTrigger
@@ -372,13 +352,13 @@ func _spawn_collision_box(parent: Node3D, box_size: Vector3, tile_size: float, c
 
 # Returns true when a wall tile touches at least one neighboring floor tile.
 func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int, y: int) -> bool:
-	for offset in CARDINAL_OFFSETS:
+	for offset in DungeonBuilderConstants.CARDINAL_OFFSETS:
 		var nx: int = x + offset.x
 		var ny: int = y + offset.y
 		if nx < 0 or ny < 0 or nx >= width or ny >= height:
 			continue
 		var index: int = ny * width + nx
-		if index >= 0 and index < grid.size() and grid[index] == TILE_FLOOR:
+		if index >= 0 and index < grid.size() and grid[index] == DungeonBuilderConstants.TILE_FLOOR:
 			return true
 	return false
 

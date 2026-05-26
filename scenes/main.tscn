@@ -11,10 +11,11 @@
 [ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="6_a8y0u"]
 [ext_resource type="PackedScene" path="res://scenes/ui/merchant_panel.tscn" id="6_merchant_panel"]
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="7_jkv2x"]
+[ext_resource type="Resource" uid="uid://syx50ri3igss" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="8_eb6dy"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1bvp3"]
 panorama = ExtResource("3_h2yge")
-energy_multiplier = 0.0
+energy_multiplier = 0.84
 
 [sub_resource type="Sky" id="Sky_lquwl"]
 sky_material = SubResource("PanoramaSkyMaterial_1bvp3")
@@ -33,6 +34,11 @@ fog_depth_begin = 20.0
 
 [sub_resource type="Resource" id="Resource_ya4ey"]
 script = ExtResource("7_jkv2x")
+cell_count = 15
+room_min_size = 5
+room_max_size = 20
+spawn_radius = 12.0
+loop_percent = 0.45
 metadata/_custom_type_script = "uid://q1jk71bs8y11"
 
 [node name="Node3D" type="Node3D" unique_id=149825789]

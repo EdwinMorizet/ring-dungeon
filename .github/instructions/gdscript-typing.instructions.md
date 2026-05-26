@@ -44,6 +44,7 @@ func _process(delta: float) -> void:
 - Replace ad hoc key-based data with explicit `RefCounted` models and typed fields.
 - Prefer one payload type per concept (for example room data, edge data, debug report data).
 - Add clone/duplicate helpers on `RefCounted` payloads when snapshots must be immutable.
+- Use _init() on the `RefCounted` to build a constructor with parameters.
 
 `Dictionary` is only allowed for unavoidable engine/API interaction points where Godot returns dictionaries (for example physics query results). Extract those values immediately into typed locals or `RefCounted` wrappers.
 
@@ -58,6 +59,10 @@ emit_signal("done", report)
 var report: PatrolSmokeReport = PatrolSmokeReport.new()
 report.ok = true
 report.count = 4
+done.emit(report)
+
+# OR WITH CONSTRUCTOR
+var report: PatrolSmokeReport = PatrolSmokeReport.new(true, 4)
 done.emit(report)
 ```
 

@@ -3,10 +3,9 @@ extends RigidBody3D
 class_name EnemyBasic
 
 const FloatingDamageNumberScene: PackedScene = preload("res://scenes/vfx/floating_damage_number.tscn")
+const EnemyOverheadHudScene: PackedScene = preload("res://scenes/enemies/enemy_overhead_hud.tscn")
 const PlayerFpsControllerScript = preload("res://scripts/player/player_fps_controller.gd")
-const _OVERHEAD_BAR_WIDTH: float = 1.25
-const _OVERHEAD_BAR_HEIGHT: float = 0.08
-const _OVERHEAD_BAR_DEPTH: float = 0.05
+const _OVERHEAD_HEIGHT_EPSILON: float = 0.001
 
 signal damaged(amount: int, remaining_health: int)
 signal died(enemy: EnemyBasic)
@@ -25,7 +24,7 @@ signal died(enemy: EnemyBasic)
 @export var use_patrol_route: bool = true
 @export var patrol_reach_radius: float = 0.9
 @export var overhead_ui_enabled: bool = true
-@export var overhead_height_offset: float = 2.15
+@export var overhead_height_offset: float = 0.15
 @export var overhead_fade_start_distance: float = 14.0
 @export var overhead_fade_end_distance: float = 30.0
 
@@ -38,16 +37,8 @@ var _patrol_route: Array[Vector3] = []
 var _patrol_target_index: int = 0
 var _is_registered_with_enemy_manager: bool = false
 var _behavior_state_label: String = "Idle"
-var _overhead_root: Node3D = null
-var _overhead_type_label: Label3D = null
-var _overhead_state_label: Label3D = null
-var _overhead_health_background_node: MeshInstance3D = null
-var _overhead_health_fill_mesh: BoxMesh = null
-var _overhead_health_fill_node: MeshInstance3D = null
-var _overhead_type_material: StandardMaterial3D = null
-var _overhead_state_material: StandardMaterial3D = null
-var _overhead_health_background_material: StandardMaterial3D = null
-var _overhead_health_fill_material: StandardMaterial3D = null
+var _overhead_hud: EnemyOverheadHud = null
+var _overhead_base_height: float = 0.0
 
 func _ready() -> void:
 	contact_monitor = true
@@ -205,166 +196,71 @@ func _get_enemy_type_display_label() -> String:
 func _setup_overhead_ui() -> void:
 	if not overhead_ui_enabled:
 		return
-	if _overhead_root != null:
+	if _overhead_hud != null:
 		return
-
-	_overhead_root = Node3D.new()
-	_overhead_root.name = "EnemyOverheadUI"
-	_overhead_root.position = Vector3(0.0, overhead_height_offset, 0.0)
-	add_child(_overhead_root)
-
-	_overhead_type_label = Label3D.new()
-	_overhead_type_label.name = "TypeLabel"
-	_overhead_type_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_overhead_type_label.no_depth_test = true
-	_overhead_type_label.font_size = 44
-	_overhead_type_label.outline_size = 10
-	_overhead_type_label.modulate = Color(1.0, 0.95, 0.82, 1.0)
-	_overhead_type_material = _create_overhead_label_material(Color(1.0, 0.95, 0.82, 1.0))
-	_overhead_type_label.material_override = _overhead_type_material
-	_overhead_root.add_child(_overhead_type_label)
-
-	_overhead_state_label = Label3D.new()
-	_overhead_state_label.name = "StateLabel"
-	_overhead_state_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_overhead_state_label.no_depth_test = true
-	_overhead_state_label.position = Vector3(0.0, -0.28, 0.0)
-	_overhead_state_label.font_size = 32
-	_overhead_state_label.outline_size = 8
-	_overhead_state_label.modulate = Color(0.72, 0.88, 1.0, 1.0)
-	_overhead_state_material = _create_overhead_label_material(Color(0.72, 0.88, 1.0, 1.0))
-	_overhead_state_label.material_override = _overhead_state_material
-	_overhead_root.add_child(_overhead_state_label)
-
-	var bar_root: Node3D = Node3D.new()
-	bar_root.name = "HealthBarRoot"
-	bar_root.position = Vector3(0.0, -0.52, 0.0)
-	_overhead_root.add_child(bar_root)
-
-	_overhead_health_background_node = MeshInstance3D.new()
-	_overhead_health_background_node.name = "HealthBarBackground"
-	var background_mesh: BoxMesh = BoxMesh.new()
-	background_mesh.size = Vector3(_OVERHEAD_BAR_WIDTH, _OVERHEAD_BAR_HEIGHT, _OVERHEAD_BAR_DEPTH)
-	_overhead_health_background_node.mesh = background_mesh
-	_overhead_health_background_material = StandardMaterial3D.new()
-	_overhead_health_background_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_overhead_health_background_material.albedo_color = Color(0.12, 0.12, 0.14, 0.95)
-	_overhead_health_background_node.set_surface_override_material(0, _overhead_health_background_material)
-	bar_root.add_child(_overhead_health_background_node)
-
-	_overhead_health_fill_node = MeshInstance3D.new()
-	_overhead_health_fill_node.name = "HealthBarFill"
-	_overhead_health_fill_mesh = BoxMesh.new()
-	_overhead_health_fill_mesh.size = Vector3(_OVERHEAD_BAR_WIDTH, _OVERHEAD_BAR_HEIGHT * 0.78, _OVERHEAD_BAR_DEPTH * 0.7)
-	_overhead_health_fill_node.mesh = _overhead_health_fill_mesh
-	_overhead_health_fill_material = StandardMaterial3D.new()
-	_overhead_health_fill_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_overhead_health_fill_material.albedo_color = Color(0.27, 0.86, 0.36, 1.0)
-	_overhead_health_fill_node.set_surface_override_material(0, _overhead_health_fill_material)
-	bar_root.add_child(_overhead_health_fill_node)
+	var hud_node: Node = EnemyOverheadHudScene.instantiate()
+	if not (hud_node is EnemyOverheadHud):
+		hud_node.queue_free()
+		return
+	_overhead_hud = hud_node as EnemyOverheadHud
+	_overhead_hud.name = "EnemyOverheadHud"
+	add_child(_overhead_hud)
+	_overhead_base_height = _compute_collider_top_height_local()
+	_overhead_hud.position = Vector3(0.0, _overhead_base_height + maxf(overhead_height_offset, 0.0), 0.0)
 
 func _update_overhead_ui() -> void:
-	if _overhead_root == null:
+	if _overhead_hud == null:
 		return
-	_overhead_root.position = Vector3(0.0, overhead_height_offset, 0.0)
-	var camera: Camera3D = _get_overhead_camera()
-	_orient_overhead_ui_to_camera(camera)
-	var fade_alpha: float = _compute_overhead_fade_alpha(camera)
-	_apply_overhead_alpha(fade_alpha)
-	if _overhead_type_label != null:
-		_overhead_type_label.text = _get_enemy_type_display_label()
-	if _overhead_state_label != null:
-		var state_label: String = _get_behavior_state_label()
-		_overhead_state_label.text = state_label
-		var state_color: Color = _get_behavior_state_color(state_label)
-		_overhead_state_label.modulate = Color(state_color.r, state_color.g, state_color.b, fade_alpha)
-		if _overhead_state_material != null:
-			_overhead_state_material.albedo_color = Color(state_color.r, state_color.g, state_color.b, fade_alpha)
-	_update_overhead_health_bar()
+	_refresh_overhead_base_height_runtime()
+	_overhead_hud.position = Vector3(0.0, _overhead_base_height + maxf(overhead_height_offset, 0.0), 0.0)
+	_overhead_hud.refresh(
+		_get_enemy_type_display_label(),
+		_get_behavior_state_label(),
+		_health,
+		max_health,
+		overhead_fade_start_distance,
+		overhead_fade_end_distance
+	)
 
-func _update_overhead_health_bar() -> void:
-	if _overhead_health_fill_mesh == null or _overhead_health_fill_node == null:
+func _refresh_overhead_base_height_runtime() -> void:
+	var runtime_height: float = _compute_collider_top_height_local()
+	if absf(runtime_height - _overhead_base_height) <= _OVERHEAD_HEIGHT_EPSILON:
 		return
-	var max_hp: float = maxf(float(max_health), 1.0)
-	var ratio: float = clampf(float(_health) / max_hp, 0.0, 1.0)
-	if ratio <= 0.0:
-		_overhead_health_fill_node.visible = false
-		return
-	_overhead_health_fill_node.visible = true
-	var fill_width: float = _OVERHEAD_BAR_WIDTH * ratio
-	_overhead_health_fill_mesh.size = Vector3(fill_width, _OVERHEAD_BAR_HEIGHT * 0.78, _OVERHEAD_BAR_DEPTH * 0.7)
-	_overhead_health_fill_node.position = Vector3((-_OVERHEAD_BAR_WIDTH * 0.5) + (fill_width * 0.5), 0.0, 0.0)
+	_overhead_base_height = runtime_height
 
-func _get_overhead_camera() -> Camera3D:
-	var viewport: Viewport = get_viewport()
-	if viewport == null:
-		return null
-	return viewport.get_camera_3d()
+func _compute_collider_top_height_local() -> float:
+	var top_height: float = 1.0
+	for child_node in get_children():
+		if not (child_node is CollisionShape3D):
+			continue
+		var collision_shape: CollisionShape3D = child_node as CollisionShape3D
+		if collision_shape == null or collision_shape.disabled or collision_shape.shape == null:
+			continue
+		var half_height: float = _resolve_collision_shape_half_height(collision_shape)
+		var candidate_top: float = collision_shape.position.y + half_height
+		top_height = maxf(top_height, candidate_top)
+	return top_height
 
-func _orient_overhead_ui_to_camera(camera: Camera3D) -> void:
-	if camera == null:
-		return
-	var to_camera: Vector3 = camera.global_position - _overhead_root.global_position
-	if to_camera.length_squared() <= 0.0001:
-		return
-	_overhead_root.look_at(camera.global_position, Vector3.UP)
-
-func _compute_overhead_fade_alpha(camera: Camera3D) -> float:
-	if camera == null:
-		return 1.0
-	var start_distance: float = maxf(overhead_fade_start_distance, 0.0)
-	var end_distance: float = maxf(overhead_fade_end_distance, 0.0)
-	if end_distance <= start_distance:
-		return 1.0
-	var distance: float = _overhead_root.global_position.distance_to(camera.global_position)
-	if distance <= start_distance:
-		return 1.0
-	if distance >= end_distance:
-		return 0.0
-	var t: float = (distance - start_distance) / (end_distance - start_distance)
-	return clampf(1.0 - t, 0.0, 1.0)
-
-func _apply_overhead_alpha(alpha: float) -> void:
-	if _overhead_type_label != null:
-		var type_color: Color = Color(1.0, 0.95, 0.82, alpha)
-		_overhead_type_label.modulate = type_color
-		if _overhead_type_material != null:
-			_overhead_type_material.albedo_color = type_color
-	if _overhead_health_background_material != null:
-		_overhead_health_background_material.albedo_color = Color(0.12, 0.12, 0.14, 0.95 * alpha)
-	if _overhead_health_fill_material != null:
-		var health_color: Color = _resolve_health_fill_color()
-		_overhead_health_fill_material.albedo_color = Color(health_color.r, health_color.g, health_color.b, alpha)
-
-func _get_behavior_state_color(state_label: String) -> Color:
-	match state_label:
-		"Dead":
-			return Color(0.62, 0.62, 0.62, 1.0)
-		"Attacking", "Windup Shot":
-			return Color(1.0, 0.45, 0.38, 1.0)
-		"Chasing", "Advancing":
-			return Color(1.0, 0.8, 0.36, 1.0)
-		"Retreating", "Recovering":
-			return Color(0.9, 0.64, 1.0, 1.0)
-		"Patrolling":
-			return Color(0.52, 0.82, 1.0, 1.0)
-		_:
-			return Color(0.72, 0.88, 1.0, 1.0)
-
-func _resolve_health_fill_color() -> Color:
-	var max_hp: float = maxf(float(max_health), 1.0)
-	var ratio: float = clampf(float(_health) / max_hp, 0.0, 1.0)
-	if ratio >= 0.65:
-		return Color(0.27, 0.86, 0.36, 1.0)
-	if ratio >= 0.35:
-		return Color(0.95, 0.78, 0.26, 1.0)
-	return Color(0.95, 0.34, 0.34, 1.0)
-
-func _create_overhead_label_material(tint: Color) -> StandardMaterial3D:
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = tint
-	return material
+func _resolve_collision_shape_half_height(collision_shape: CollisionShape3D) -> float:
+	if collision_shape.shape == null:
+		return 0.5
+	var scale_y: float = absf(collision_shape.scale.y)
+	if scale_y <= 0.0001:
+		scale_y = 1.0
+	if collision_shape.shape is CapsuleShape3D:
+		var capsule_shape: CapsuleShape3D = collision_shape.shape as CapsuleShape3D
+		var capsule_total_height: float = capsule_shape.height + (capsule_shape.radius * 2.0)
+		return maxf(capsule_total_height * scale_y * 0.5, 0.5)
+	if collision_shape.shape is SphereShape3D:
+		var sphere_shape: SphereShape3D = collision_shape.shape as SphereShape3D
+		return maxf(sphere_shape.radius * scale_y, 0.5)
+	if collision_shape.shape is BoxShape3D:
+		var box_shape: BoxShape3D = collision_shape.shape as BoxShape3D
+		return maxf(box_shape.size.y * scale_y * 0.5, 0.5)
+	if collision_shape.shape is CylinderShape3D:
+		var cylinder_shape: CylinderShape3D = collision_shape.shape as CylinderShape3D
+		return maxf(cylinder_shape.height * scale_y * 0.5, 0.5)
+	return 0.5
 
 func _follow_patrol_route() -> bool:
 	if not use_patrol_route:

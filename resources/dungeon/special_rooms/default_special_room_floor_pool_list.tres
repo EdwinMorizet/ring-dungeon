@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="DungeonSpecialRoomFloorPoolList" format=3 uid="uid://syx50ri3igss"]
+
+[ext_resource type="Script" uid="uid://b0c01mpw5btvp" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_floor_pool_list.gd" id="1_list"]
+[ext_resource type="Script" uid="uid://c24800kbkmxdx" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_floor_pool_entry.gd" id="2_entry"]
+[ext_resource type="Resource" uid="uid://gbjchc1q1hc1" path="res://resources/dungeon/special_rooms/default_special_room_pool_early.tres" id="3_pool_early"]
+[ext_resource type="Resource" uid="uid://bn14vwgslkjy1" path="res://resources/dungeon/special_rooms/default_special_room_pool_basic.tres" id="4_pool_mid"]
+[ext_resource type="Resource" uid="uid://dc7xbl6erwy58" path="res://resources/dungeon/special_rooms/default_special_room_pool_late.tres" id="5_pool_late"]
+
+[sub_resource type="Resource" id="Resource_floor_0"]
+script = ExtResource("2_entry")
+pool = ExtResource("3_pool_early")
+
+[sub_resource type="Resource" id="Resource_floor_2"]
+script = ExtResource("2_entry")
+start_progression_index = 2
+special_spawn_chance = 0.75
+pool = ExtResource("4_pool_mid")
+
+[sub_resource type="Resource" id="Resource_floor_5"]
+script = ExtResource("2_entry")
+start_progression_index = 5
+special_spawn_chance = 0.55
+pool = ExtResource("5_pool_late")
+
+[resource]
+script = ExtResource("1_list")
+entries = Array[ExtResource("2_entry")]([SubResource("Resource_floor_0"), SubResource("Resource_floor_2"), SubResource("Resource_floor_5")])

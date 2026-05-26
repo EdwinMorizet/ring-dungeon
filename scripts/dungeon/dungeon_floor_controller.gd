@@ -148,7 +148,7 @@ func regenerate_now() -> void:
 	var debug_timeline: DungeonGeneratorDebugTimeline = null
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		debug_timeline = DungeonGeneratorDebugTimeline.new()
-	var layout: DungeonLayoutData = generator.generate(generation_seed, floor_config, debug_timeline)
+	var layout: DungeonLayoutData = generator.generate(generation_seed, floor_config, debug_timeline, _runtime_progression_index)
 	_runtime_layout = layout
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		_show_generation_debug_visualizer(debug_timeline, floor_config.tile_size)
