@@ -3,9 +3,14 @@
 [ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://brnj6h8di3jnh" path="res://scenes/ui/debug_floor_hud.tscn" id="2_dbgui"]
 [ext_resource type="Texture2D" uid="uid://b0anr3agalg3s" path="res://assets/sky_78_2k.png" id="3_h2yge"]
+[ext_resource type="PackedScene" uid="uid://dugyl3r82m3qw" path="res://scenes/items/chest_interactable.tscn" id="3_ya4ey"]
 [ext_resource type="PackedScene" uid="uid://eicmvh8yjf8w" path="res://scenes/ui/player_hud.tscn" id="4_1bvp3"]
+[ext_resource type="PackedScene" uid="uid://djyryd2kvvusk" path="res://scenes/enemies/enemy_basic.tscn" id="4_eb6dy"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="5_inventory_panel"]
+[ext_resource type="PackedScene" uid="uid://d2c638kyuv2vk" path="res://scenes/merchant/merchant_room.tscn" id="5_trceg"]
+[ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="6_a8y0u"]
 [ext_resource type="PackedScene" path="res://scenes/ui/merchant_panel.tscn" id="6_merchant_panel"]
+[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="7_jkv2x"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1bvp3"]
 panorama = ExtResource("3_h2yge")
@@ -26,6 +31,10 @@ fog_density = 0.495
 fog_sky_affect = 0.667
 fog_depth_begin = 20.0
 
+[sub_resource type="Resource" id="Resource_ya4ey"]
+script = ExtResource("7_jkv2x")
+metadata/_custom_type_script = "uid://q1jk71bs8y11"
+
 [node name="Node3D" type="Node3D" unique_id=149825789]
 
 [node name="env" type="Node" parent="." unique_id=1664492510]
@@ -35,6 +44,7 @@ environment = SubResource("Environment_7mycd")
 
 [node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
 script = ExtResource("1_ig7tw")
+config = SubResource("Resource_ya4ey")
 show_generation_debug_visualizer_in_editor = false
 metadata/_custom_type_script = "uid://bla0efmx0rcb4"
 

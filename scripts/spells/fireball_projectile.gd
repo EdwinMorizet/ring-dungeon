@@ -7,7 +7,7 @@ const DEFAULT_FIREBALL_CONFIG: FireballConfig = preload("res://resources/spells/
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
 const AOE_BURST_SCENE: PackedScene = preload("res://scenes/vfx/fireball_aoe_burst.tscn")
 
-@onready var _mesh_instance: MeshInstance3D = $MeshInstance3D
+@onready var _mesh_instance: MeshInstance3D = $Node3D/MeshInstance3D
 @onready var _collision_shape: CollisionShape3D = $CollisionShape3D
 
 var _config: FireballConfig = DEFAULT_FIREBALL_CONFIG

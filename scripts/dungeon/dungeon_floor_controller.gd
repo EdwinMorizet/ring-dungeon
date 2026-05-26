@@ -6,17 +6,13 @@ class_name DungeonFloorController
 # Relation: Owns end-to-end flow across DungeonFloorConfig, DungeonGenerator, DungeonBuilder3D, FloorExitTrigger,
 # EnemySpawnManager, InventoryManager, MerchantManager, and GameProgressionManager.
 
-# Default floor config resource used when no override is provided.
-const DefaultFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
-# Chest scene spawned at generated chest candidate markers.
-const ChestScene = preload("res://scenes/items/chest_interactable.tscn")
 # Editor-only node name used for the dungeon generation step visualizer.
 const GENERATION_DEBUG_VISUALIZER_NODE_NAME: String = "DungeonGeneratorStepVisualizer"
 # Node name used for runtime patrol debug line mesh.
 const PATROL_DEBUG_VISUAL_NODE_NAME: String = "PatrolDebugVisualizer"
 
 # Inspector-configured floor generation/build resource.
-@export var config: DungeonFloorConfig = DefaultFloorConfig
+@export var config: DungeonFloorConfig = DungeonFloorConfig.new()
 # Shows the editor-only dungeon generation step preview instead of building the floor scene.
 @export var show_generation_debug_visualizer_in_editor: bool = true
 # One-shot inspector action that steps generation preview backward in editor mode.
@@ -284,11 +280,12 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 
 # Spawns deterministic chest interactables at selected chest candidate markers.
 func _spawn_chests_for_floor(generation_seed: int) -> void:
+	var floor_config: DungeonFloorConfig = _get_config()
 	if Engine.is_editor_hint():
 		return
 	if _generated_root == null or not is_instance_valid(_generated_root):
 		return
-	if ChestScene == null:
+	if floor_config.chest_scene == null:
 		return
 	var marker_nodes: Array[Node] = _generated_root.find_children("ChestCandidate_*", "Marker3D", true, false)
 	if marker_nodes.is_empty():
@@ -313,7 +310,7 @@ func _spawn_chests_for_floor(generation_seed: int) -> void:
 		var marker: Marker3D = chest_markers[marker_choice_index]
 		chest_markers.remove_at(marker_choice_index)
 
-		var chest_node: Node = ChestScene.instantiate()
+		var chest_node: Node = floor_config.chest_scene.instantiate()
 		if not chest_node is Node3D:
 			chest_node.queue_free()
 			continue
@@ -352,12 +349,9 @@ func _ensure_enemy_spawn_manager() -> void:
 func _connect_floor_exit_trigger() -> void:
 	if _generated_root == null or not is_instance_valid(_generated_root):
 		return
-	var exit_trigger_node: Node = _generated_root.find_child("FloorExitTrigger", true, false)
-	if exit_trigger_node is FloorExitTrigger:
-		var exit_trigger: FloorExitTrigger = exit_trigger_node as FloorExitTrigger
-		var callback: Callable = Callable(self, "_on_floor_exit_reached")
-		if not exit_trigger.is_connected("exit_reached", callback):
-			exit_trigger.connect("exit_reached", callback)
+	var exit_trigger: Node = _generated_root.find_child("FloorExitTrigger", true, false)
+	if exit_trigger and not exit_trigger.is_connected("exit_reached", _on_floor_exit_reached):
+		exit_trigger.connect("exit_reached", _on_floor_exit_reached)
 
 # Handles floor exit activation and delegates to progression manager when present.
 func _on_floor_exit_reached() -> void:

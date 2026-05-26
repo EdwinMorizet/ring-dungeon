@@ -66,7 +66,7 @@ func set_mana(value: float, maximum: float = -1.0) -> void:
 	_mana_bar.value = current_mana
 
 func set_ap(value: float, maximum: float = -1.0) -> void:
-	if maximum > 0.0:
+	if maximum >= 0.0:
 		max_ap = maximum
 	max_ap = max(max_ap, 0.0)
 	current_ap = clamp(value, 0.0, max_ap)

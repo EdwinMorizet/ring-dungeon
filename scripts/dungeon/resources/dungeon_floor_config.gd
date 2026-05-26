@@ -8,6 +8,8 @@ const PlayerScene: PackedScene = preload("res://scenes/player/player.tscn")
 const EnemyScene: PackedScene = preload("res://scenes/enemies/enemy_basic.tscn")
 # Merchant room scene used during merchant transitions.
 const MerchantRoomScene: PackedScene = preload("res://scenes/merchant/merchant_room.tscn")
+# Chest scene spawned at generated chest candidate markers.
+const ChestScene: PackedScene = preload("res://scenes/items/chest_interactable.tscn")
 
 # Relation: Consumed by DungeonFloorController and forwarded to DungeonGenerator and DungeonBuilder3D.
 # Relation: Default instance is wired through resources/dungeon/default_floor_config.tres.
@@ -71,3 +73,5 @@ const MerchantRoomScene: PackedScene = preload("res://scenes/merchant/merchant_r
 @export var enemy_spawn_fallback: Vector3 = Vector3(8.0, 2.5, 8.0)
 # Scene used to instantiate the merchant room controller.
 @export var merchant_room_scene: PackedScene = MerchantRoomScene
+# Scene used to instantiate chest on dungeon floors.
+@export var chest_scene: PackedScene = ChestScene

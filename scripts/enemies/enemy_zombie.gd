@@ -1,5 +1,5 @@
 # Implements the first concrete enemy type using simple roaming before aggro.
-extends "res://scripts/enemies/enemy_basic.gd"
+extends EnemyBasic
 class_name EnemyZombie
 
 @export var roam_speed_multiplier: float = 0.55

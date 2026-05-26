@@ -1,5 +1,5 @@
 # Implements a simple ranged skeleton that patrols, keeps distance, and fires line-of-sight shots.
-extends "res://scripts/enemies/enemy_basic.gd"
+extends EnemyBasic
 class_name EnemySkeletonArcher
 
 const SkeletonArcherShotVfxScene: PackedScene = preload("res://scenes/vfx/skeleton_archer_shot_vfx.tscn")

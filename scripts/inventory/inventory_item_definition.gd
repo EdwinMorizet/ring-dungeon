@@ -128,14 +128,14 @@ func get_rarity_label() -> String:
 			return "Common"
 
 func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
-	var value: Variant = compiled_modifiers.get(key, default_value)
+	var value: Variant = _get_modifier_variant(key, default_value)
 	if key == &"max_ap_slots":
 		if value is int:
 			return float(value)
 		if value is float:
 			return float(int(roundf(value)))
-		if compiled_modifiers.has(&"max_ap_flat"):
-			var legacy_value: Variant = compiled_modifiers.get(&"max_ap_flat", 0.0)
+		if compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat"):
+			var legacy_value: Variant = _get_modifier_variant(&"max_ap_flat", 0.0)
 			if legacy_value is int:
 				return float(legacy_value)
 			if legacy_value is float:
@@ -148,9 +148,9 @@ func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
 	return default_value
 
 func get_modifier_int(key: StringName, default_value: int = 0) -> int:
-	var value: Variant = compiled_modifiers.get(key, default_value)
-	if key == &"max_ap_slots" and not compiled_modifiers.has(&"max_ap_slots") and compiled_modifiers.has(&"max_ap_flat"):
-		var legacy_value: Variant = compiled_modifiers.get(&"max_ap_flat", default_value)
+	var value: Variant = _get_modifier_variant(key, default_value)
+	if key == &"max_ap_slots" and not (compiled_modifiers.has(&"max_ap_slots") or compiled_modifiers.has("max_ap_slots")) and (compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat")):
+		var legacy_value: Variant = _get_modifier_variant(&"max_ap_flat", default_value)
 		if legacy_value is float:
 			return int(roundf(legacy_value))
 		if legacy_value is int:
@@ -228,7 +228,7 @@ func _build_stat_lines(benefit: bool) -> Array[String]:
 	]
 	for key: StringName in modifier_order:
 		var default_value: Variant = _DEFAULT_MODIFIERS.get(key, 0)
-		var current_value: Variant = compiled_modifiers.get(key, default_value)
+		var current_value: Variant = _get_modifier_variant(key, default_value)
 		if current_value == default_value:
 			continue
 		var is_benefit_value: bool = _is_benefit_modifier_value(key, current_value)
@@ -292,3 +292,11 @@ func _format_modifier_line(key: StringName, value: Variant) -> String:
 	if key == &"active_speed_mult_flat":
 		return "%s %s +%.0f%% (RMB Single)" % [emoji, label, float(value) * 100.0]
 	return "%s: %s" % [String(key), String(value)]
+
+func _get_modifier_variant(key: StringName, default_value: Variant) -> Variant:
+	if compiled_modifiers.has(key):
+		return compiled_modifiers.get(key, default_value)
+	var key_as_string: String = String(key)
+	if compiled_modifiers.has(key_as_string):
+		return compiled_modifiers.get(key_as_string, default_value)
+	return default_value

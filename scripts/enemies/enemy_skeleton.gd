@@ -1,5 +1,5 @@
 # Implements a simple melee skeleton that patrols before aggro.
-extends "res://scripts/enemies/enemy_basic.gd"
+extends EnemyBasic
 class_name EnemySkeleton
 
 func _ready() -> void:

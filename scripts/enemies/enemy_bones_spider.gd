@@ -1,5 +1,5 @@
 # Implements a fast bones spider with skittering idle roam and hit-and-run chase pressure.
-extends "res://scripts/enemies/enemy_basic.gd"
+extends EnemyBasic
 class_name EnemyBonesSpider
 
 @export var roam_speed_multiplier: float = 0.72
