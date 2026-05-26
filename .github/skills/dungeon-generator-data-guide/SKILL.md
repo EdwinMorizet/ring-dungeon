@@ -1,6 +1,6 @@
 ---
 name: dungeon-generator-data-guide
-description: 'Explain how to use and read data from the Godot dungeon generator. Use for architecture walkthroughs, runtime integration, consuming layout dictionaries, and spawn-marker usage in scripts.'
+description: 'Explain how to use and read data from the Godot dungeon generator. Use for architecture walkthroughs, runtime integration, consuming typed layout models, and spawn-marker usage in scripts.'
 argument-hint: 'What do you need to read or use from dungeon generation output?'
 user-invocable: true
 disable-model-invocation: false
@@ -24,24 +24,30 @@ Expected outputs:
 
 Use this skill when the user asks to:
 - Explain how dungeon generation works in this project.
-- Read data from the generator layout dictionary.
+- Read data from the generator typed layout model.
 - Integrate player/enemy/chest spawning with generated metadata.
 - Understand regenerate behavior in editor vs runtime.
+
+## Structured Data Policy
+
+- Use typed RefCounted data models for generator output and debug/runtime contracts.
+- Do not present gameplay/runtime contracts as ad hoc Dictionary key maps.
+- Dictionary is only acceptable when a Godot engine API forces it; convert immediately to typed values/models.
 
 ## Procedure
 
 1. Identify the data producer and consumer flow.
 - Config source: `DungeonFloorConfig` resource stores selected tuning fields.
-- Producer: `DungeonGenerator.generate(config.seed, params)` returns layout dictionary.
+- Producer: `DungeonGenerator.generate(seed_value, config, debug_timeline)` returns `DungeonLayoutData`.
 - Consumer: `DungeonFloorController.regenerate_now()` passes layout to `DungeonBuilder3D.build(...)`.
 
-2. Enumerate layout dictionary fields and intended use.
+2. Enumerate `DungeonLayoutData` fields and intended use.
 - `grid`, `width`, `height`: floor/wall tile topology.
-- `rooms`: room list, each with `rect`, `center`, and `metadata`.
-- `edges`, `mst_edges`, `corridor_edges`: generation graph artifacts.
+- `rooms`: `Array[DungeonRoomData]`, each with `rect`, `center`, and typed `metadata`.
+- `edges`, `mst_edges`, `corridor_edges`: `Array[DungeonEdgeData]` graph artifacts.
 - `start_room_index`, `exit_room_index`: primary progression anchors.
-- `spawn_markers`: grouped spawn points (`player_start`, `enemy`, `chest_candidate`, `floor_exit`).
-- `stats`: generation diagnostics and sanity values.
+- `spawn_markers`: `DungeonSpawnMarkersData` with `player_start`, `enemy`, `chest_candidate`, `floor_exit`.
+- `stats`: `DungeonGeneratorStatsData` diagnostics.
 
 3. Explain room metadata contract.
 - Each room can include boolean flags:
@@ -93,14 +99,14 @@ Use this skill when the user asks to:
 ## Decision Rules
 
 - If user asks for high-level understanding: summarize pipeline first, then data contracts.
-- If user asks for implementation help: prioritize concrete dictionary keys, node paths, and code snippets.
+- If user asks for implementation help: prioritize typed model fields, node paths, and code snippets.
 - If user asks for bugs: start from `stats`, marker counts, and scene hierarchy validation.
 - Treat `1 player start` and `1 floor exit` marker as hard invariants unless the user explicitly asks to change generator rules.
 
 ## Completion Criteria
 
 A response is complete when it includes:
-- Data dictionary field meanings.
+- Typed layout/model field meanings.
 - Room metadata interpretation.
 - Marker hierarchy and usage guidance.
 - Runtime vs editor behavior implications.

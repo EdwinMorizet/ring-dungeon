@@ -140,10 +140,14 @@ When a generated ring rolls one of these primary benefits, enforce the linked do
   1. Roll hand type (ring vs band).
   2. Roll rarity (depth-weighted).
   3. Select affixes from hand-specific pools according to rarity budget.
-  4. Compile rolled modifiers into a final modifier dictionary/resource payload.
+  4. Compile rolled modifiers into a final typed `RefCounted`/resource payload (never an ad hoc dictionary payload).
   5. Construct final display name from affix tokens and base item type.
   6. Compute gold value from rarity and affix strength.
 - Keep this pipeline deterministic when a run seed is present.
+
+- Represent generated item contracts with typed `RefCounted` data models.
+  - Do not pass runtime gameplay payloads as key-based `Dictionary` structures.
+  - If a Godot API returns a `Dictionary`, map it immediately into typed values or a typed model.
 
 ## Runtime Stacking Math
 

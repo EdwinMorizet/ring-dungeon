@@ -24,30 +24,25 @@ const CARDINAL_OFFSETS: Array[Vector2i] = [
 ]
 
 # Builds dungeon meshes, colliders, and gameplay markers under a generated root node.
-func build(parent: Node3D, layout: Dictionary, params: Dictionary, editor_owner: Node) -> Node3D:
+func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderParams, editor_owner: Node) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GeneratedDungeon"
 	parent.add_child(root)
 	if editor_owner != null:
 		root.owner = editor_owner
 
-	var width: int = int(layout.get("width", 0))
-	var height: int = int(layout.get("height", 0))
-	var grid: PackedInt32Array = layout.get("grid", PackedInt32Array())
+	var width: int = layout.width
+	var height: int = layout.height
+	var grid: PackedInt32Array = layout.grid
 	if width <= 0 or height <= 0 or grid.is_empty():
 		return root
-	var grid_offset: Vector2 = Vector2.ZERO
-	var grid_offset_data: Variant = layout.get("grid_offset", Vector2i.ZERO)
-	if grid_offset_data is Vector2i:
-		grid_offset = Vector2(grid_offset_data as Vector2i)
-	elif grid_offset_data is Vector2:
-		grid_offset = grid_offset_data as Vector2
+	var grid_offset: Vector2 = Vector2(layout.grid_offset)
 
-	var tile_size: float = float(params.get("tile_size", 2.0))
-	var wall_height: float = float(params.get("wall_height", 3.0))
-	var floor_thickness: float = float(params.get("floor_thickness", 0.2))
-	var create_floor_collision: bool = bool(params.get("create_floor_collision", false))
-	var use_multimesh: bool = bool(params.get("use_multimesh", true))
+	var tile_size: float = params.tile_size
+	var wall_height: float = params.wall_height
+	var floor_thickness: float = params.floor_thickness
+	var create_floor_collision: bool = params.create_floor_collision
+	var use_multimesh: bool = params.use_multimesh
 
 	var floor_parent := Node3D.new()
 	floor_parent.name = "FloorTiles"
@@ -244,40 +239,23 @@ func _spawn_mesh_tiles(parent: Node3D, mesh: Mesh, transforms: Array[Transform3D
 		_assign_owner(mi, editor_owner)
 
 # Spawns gameplay marker groups for player start, enemies, chests, and floor exit.
-func _spawn_room_markers(root: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
+func _spawn_room_markers(root: Node3D, layout: DungeonLayoutData, tile_size: float, editor_owner: Node) -> void:
 	var markers_root := Node3D.new()
 	markers_root.name = "SpawnMarkers"
 	root.add_child(markers_root)
 	_assign_owner(markers_root, editor_owner)
 
-	var spawn_markers: Dictionary = layout.get("spawn_markers", {})
-	if not spawn_markers.is_empty():
-		_spawn_marker_group(markers_root, "PlayerStartMarkers", "PlayerStart", spawn_markers.get("player_start", PackedVector2Array()), tile_size, editor_owner)
-		_spawn_marker_group(markers_root, "EnemySpawnMarkers", "EnemySpawn", spawn_markers.get("enemy", PackedVector2Array()), tile_size, editor_owner)
-		_spawn_marker_group(markers_root, "ChestCandidateMarkers", "ChestCandidate", spawn_markers.get("chest_candidate", PackedVector2Array()), tile_size, editor_owner)
-		_spawn_marker_group(markers_root, "FloorExitMarkers", "FloorExit", spawn_markers.get("floor_exit", PackedVector2Array()), tile_size, editor_owner)
-	else:
-		var rooms: Array = layout.get("rooms", [])
-		for i in rooms.size():
-			var room: Dictionary = rooms[i]
-			if not room.has("metadata"):
-				continue
-			var metadata: Dictionary = room["metadata"]
-			var center: Vector2 = room.get("center", Vector2.ZERO)
-			if metadata.get("is_player_start", false):
-				_spawn_marker(markers_root, "PlayerStart_%d" % i, center, tile_size, editor_owner)
-			if metadata.get("is_enemy_room", false):
-				_spawn_marker(markers_root, "EnemySpawn_%d" % i, center, tile_size, editor_owner)
-			if metadata.get("is_chest_candidate", false):
-				_spawn_marker(markers_root, "ChestCandidate_%d" % i, center, tile_size, editor_owner)
-			if metadata.get("is_floor_exit", false):
-				_spawn_marker(markers_root, "FloorExit_%d" % i, center, tile_size, editor_owner)
+	var spawn_markers: DungeonSpawnMarkersData = layout.spawn_markers
+	_spawn_marker_group(markers_root, "PlayerStartMarkers", "PlayerStart", spawn_markers.player_start, tile_size, editor_owner)
+	_spawn_marker_group(markers_root, "EnemySpawnMarkers", "EnemySpawn", spawn_markers.enemy, tile_size, editor_owner)
+	_spawn_marker_group(markers_root, "ChestCandidateMarkers", "ChestCandidate", spawn_markers.chest_candidate, tile_size, editor_owner)
+	_spawn_marker_group(markers_root, "FloorExitMarkers", "FloorExit", spawn_markers.floor_exit, tile_size, editor_owner)
 	# Call _spawn_room_lights after spawning room markers
 	_spawn_room_lights(root, layout, tile_size, editor_owner)
 
 # Spawns per-room patrol marker groups from room metadata.
-func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
-	var rooms: Array = layout.get("rooms", [])
+func _spawn_patrol_nodes(root: Node3D, layout: DungeonLayoutData, tile_size: float, editor_owner: Node) -> void:
+	var rooms: Array[DungeonRoomData] = layout.rooms
 	if rooms.is_empty():
 		return
 
@@ -287,11 +265,8 @@ func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, edi
 	_assign_owner(patrol_root, editor_owner)
 
 	for i in rooms.size():
-		var room_data: Dictionary = rooms[i]
-		if not room_data.has("metadata"):
-			continue
-		var metadata: Dictionary = room_data["metadata"]
-		var patrol_points: PackedVector2Array = metadata.get("patrol_points", PackedVector2Array())
+		var room_data: DungeonRoomData = rooms[i]
+		var patrol_points: PackedVector2Array = room_data.metadata.patrol_points
 		if patrol_points.is_empty():
 			continue
 
@@ -307,9 +282,8 @@ func _spawn_patrol_nodes(root: Node3D, layout: Dictionary, tile_size: float, edi
 	_spawn_patrol_link_markers(patrol_root, layout, rooms, tile_size, editor_owner)
 
 # Spawns marker nodes representing MST-derived cross-room patrol links.
-func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: Array, tile_size: float, editor_owner: Node) -> void:
-	var patrol_graph: Dictionary = layout.get("patrol_graph", {})
-	var room_links: Array = patrol_graph.get("room_links", [])
+func _spawn_patrol_link_markers(patrol_root: Node3D, layout: DungeonLayoutData, rooms: Array[DungeonRoomData], tile_size: float, editor_owner: Node) -> void:
+	var room_links: Array[DungeonEdgeData] = layout.patrol_graph.room_links
 	if room_links.is_empty():
 		return
 
@@ -318,10 +292,9 @@ func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: 
 	patrol_root.add_child(links_root)
 	_assign_owner(links_root, editor_owner)
 
-	for link_data in room_links:
-		var room_link: Dictionary = link_data
-		var from_room: int = int(room_link.get("a", -1))
-		var to_room: int = int(room_link.get("b", -1))
+	for room_link in room_links:
+		var from_room: int = room_link.a
+		var to_room: int = room_link.b
 		if from_room < 0 or to_room < 0 or from_room == to_room:
 			continue
 		if from_room >= rooms.size() or to_room >= rooms.size():
@@ -340,11 +313,11 @@ func _spawn_patrol_link_markers(patrol_root: Node3D, layout: Dictionary, rooms: 
 		_assign_owner(marker, editor_owner)
 
 # Resolves a room center from room array data with bounds safety.
-func _resolve_room_center(rooms: Array, room_index: int) -> Vector2:
+func _resolve_room_center(rooms: Array[DungeonRoomData], room_index: int) -> Vector2:
 	if room_index < 0 or room_index >= rooms.size():
 		return Vector2.ZERO
-	var room_data: Dictionary = rooms[room_index]
-	return room_data.get("center", Vector2.ZERO)
+	var room_data: DungeonRoomData = rooms[room_index]
+	return room_data.center
 
 # Spawns a named marker group and all marker children for provided points.
 func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String, points: PackedVector2Array, tile_size: float, editor_owner: Node) -> void:
@@ -428,10 +401,10 @@ func _assign_owner_recursive(node: Node, editor_owner: Node) -> void:
 			_assign_owner_recursive(child as Node, editor_owner)
 
 # Spawns one omni light at each room center to improve room readability.
-func _spawn_room_lights(parent: Node3D, layout: Dictionary, tile_size: float, editor_owner: Node) -> void:
-	var rooms: Array = layout.get("rooms", [])
+func _spawn_room_lights(parent: Node3D, layout: DungeonLayoutData, tile_size: float, editor_owner: Node) -> void:
+	var rooms: Array[DungeonRoomData] = layout.rooms
 	for room in rooms:
-		var center: Vector2 = room.get("center", Vector2.ZERO)
+		var center: Vector2 = room.center
 		var light := OmniLight3D.new()
 		light.name = "RoomLight"
 		light.position = _tile_to_world(center.x, center.y, tile_size, 2.0) # Adjust Y for light height

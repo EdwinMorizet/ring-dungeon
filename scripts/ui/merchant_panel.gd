@@ -3,11 +3,13 @@ extends CanvasLayer
 class_name MerchantPanel
 
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+const MerchantOfferDataScript = preload("res://scripts/merchant/merchant_offer_data.gd")
+const MerchantBuyResultScript = preload("res://scripts/merchant/merchant_buy_result.gd")
+const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/merchant_special_unlocks_data.gd")
 const MERCHANT_LOCK_ID: StringName = &"merchant_shop_open"
 const _MUTED_TEXT_COLOR: Color = Color(0.82, 0.82, 0.82, 1.0)
 const _WARNING_TEXT_COLOR: Color = Color(1.0, 0.74, 0.52, 1.0)
 
-@onready var _panel_container: PanelContainer = $Root/Panel
 @onready var _gold_label: Label = $Root/Panel/Margin/VBox/CurrencyRow/GoldValue
 @onready var _gems_label: Label = $Root/Panel/Margin/VBox/CurrencyRow/GemsValue
 @onready var _offer_list: VBoxContainer = $Root/Panel/Margin/VBox/OffersSection/OffersScroll/OffersList
@@ -111,15 +113,15 @@ func _refresh_currency() -> void:
 
 func _refresh_offers() -> void:
 	_clear_container(_offer_list)
-	var offers: Array[Dictionary] = MerchantManager.get_offers()
+	var offers: Array = MerchantManager.get_offers()
 	if offers.is_empty():
 		_add_info_label(_offer_list, "No offers available")
 		return
 	for offer_index: int in offers.size():
-		var offer: Dictionary = offers[offer_index]
+		var offer: Variant = offers[offer_index]
 		_offer_list.add_child(_build_offer_entry(offer_index, offer))
 
-func _build_offer_entry(offer_index: int, offer: Dictionary) -> Control:
+func _build_offer_entry(offer_index: int, offer: Variant) -> Control:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -146,12 +148,12 @@ func _build_offer_entry(offer_index: int, offer: Dictionary) -> Control:
 	reason_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reason_label.modulate = _WARNING_TEXT_COLOR
 
-	var offer_kind: int = int(offer.get("offer_kind", 0))
-	var display_name: String = String(offer.get("display_name", "Unknown Offer"))
-	var description: String = String(offer.get("description", ""))
-	var price_gold: int = int(offer.get("price_gold", 0))
-	var purchased: bool = bool(offer.get("purchased", false))
-	var item_definition: InventoryItemDefinition = offer.get("item_definition", null) as InventoryItemDefinition
+	var offer_kind: int = offer.offer_kind
+	var display_name: String = offer.display_name
+	var description: String = offer.description
+	var price_gold: int = offer.price_gold
+	var purchased: bool = offer.purchased
+	var item_definition: InventoryItemDefinition = offer.item_definition
 
 	if offer_kind == int(MerchantManager.OfferKind.ITEM) and item_definition != null:
 		title_label.text = "%s (%s)" % [display_name, item_definition.get_rarity_label()]
@@ -270,13 +272,15 @@ func _refresh_unlocks() -> void:
 	_unlocks_label.text = "Special Unlocks: Bag [%s] | Dungeon Map [%s]" % ["ON" if bag_unlocked else "OFF", "ON" if map_unlocked else "OFF"]
 
 func _on_buy_offer_pressed(offer_index: int) -> void:
-	var result: Dictionary = MerchantManager.buy_offer(offer_index)
-	if bool(result.get("ok", false)):
-		var gold_spent: int = int(result.get("gold_spent", 0))
+	var result: Variant = MerchantManager.buy_offer(offer_index)
+	if result != null and result.ok:
+		var gold_spent: int = result.gold_spent
 		_status_label.text = "Bought offer for %dg" % gold_spent
 		_status_label.modulate = Color(0.62, 1.0, 0.68, 1.0)
 	else:
-		var reason: String = String(result.get("reason", "Purchase failed"))
+		var reason: String = "Purchase failed"
+		if result != null:
+			reason = result.reason
 		_status_label.text = reason
 		_status_label.modulate = Color(1.0, 0.62, 0.62, 1.0)
 	_refresh_all()

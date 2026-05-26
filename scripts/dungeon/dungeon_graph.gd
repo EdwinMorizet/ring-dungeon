@@ -4,7 +4,7 @@ class_name DungeonGraph
 
 # Relation: Called by DungeonGenerator to produce Delaunay, MST, and optional loop edges.
 # Builds undirected weighted edges from room centers using Delaunay triangulation.
-func build_delaunay_edges(points: PackedVector2Array) -> Array:
+func build_delaunay_edges(points: PackedVector2Array) -> Array[DungeonEdgeData]:
 	if points.size() < 2:
 		return []
 	if points.size() == 2:
@@ -14,35 +14,36 @@ func build_delaunay_edges(points: PackedVector2Array) -> Array:
 	if triangles.is_empty():
 		return []
 
-	var edge_map := {}
+	var edge_hashes: Array[int] = []
+	var edges: Array[DungeonEdgeData] = []
 	for i in range(0, triangles.size(), 3):
 		var a: int = triangles[i]
 		var b: int = triangles[i + 1]
 		var c: int = triangles[i + 2]
-		_add_edge_if_missing(edge_map, a, b, points)
-		_add_edge_if_missing(edge_map, b, c, points)
-		_add_edge_if_missing(edge_map, c, a, points)
+		_add_edge_if_missing(edges, edge_hashes, a, b, points)
+		_add_edge_if_missing(edges, edge_hashes, b, c, points)
+		_add_edge_if_missing(edges, edge_hashes, c, a, points)
 
-	return edge_map.values()
+	return edges
 
 # Builds a minimum spanning tree from weighted edges using union-find.
-func build_mst(points: PackedVector2Array, edges: Array) -> Array:
+func build_mst(points: PackedVector2Array, edges: Array[DungeonEdgeData]) -> Array[DungeonEdgeData]:
 	if points.is_empty() or edges.is_empty():
 		return []
 
-	var sorted_edges := edges.duplicate()
-	sorted_edges.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return a["weight"] < b["weight"]
+	var sorted_edges: Array[DungeonEdgeData] = edges.duplicate()
+	sorted_edges.sort_custom(func(a: DungeonEdgeData, b: DungeonEdgeData) -> bool:
+		return a.weight < b.weight
 	)
 
 	var parent: Array[int] = []
 	for i in points.size():
 		parent.append(i)
 
-	var mst: Array = []
+	var mst: Array[DungeonEdgeData] = []
 	for edge in sorted_edges:
-		var u: int = edge["a"]
-		var v: int = edge["b"]
+		var u: int = edge.a
+		var v: int = edge.b
 		if _find(parent, u) != _find(parent, v):
 			_union(parent, u, v)
 			mst.append(edge)
@@ -52,18 +53,18 @@ func build_mst(points: PackedVector2Array, edges: Array) -> Array:
 	return mst
 
 # Adds a randomized subset of non-MST edges to create dungeon loops.
-func add_loop_edges(edges: Array, mst_edges: Array, loop_percent: float, rng: RandomNumberGenerator) -> Array:
+func add_loop_edges(edges: Array[DungeonEdgeData], mst_edges: Array[DungeonEdgeData], loop_percent: float, rng: RandomNumberGenerator) -> Array[DungeonEdgeData]:
 	if edges.is_empty():
 		return []
 
-	var result := mst_edges.duplicate()
-	var mst_lookup := {}
+	var result: Array[DungeonEdgeData] = mst_edges.duplicate()
+	var mst_hashes: Array[int] = []
 	for edge in mst_edges:
-		mst_lookup[_edge_key(edge["a"], edge["b"])] = true
+		mst_hashes.append(_edge_hash(edge.a, edge.b))
 
-	var candidates: Array = []
+	var candidates: Array[DungeonEdgeData] = []
 	for edge in edges:
-		if not mst_lookup.has(_edge_key(edge["a"], edge["b"])):
+		if not _contains_edge_hash(mst_hashes, _edge_hash(edge.a, edge.b)):
 			candidates.append(edge)
 
 	if candidates.is_empty():
@@ -83,30 +84,34 @@ func add_loop_edges(edges: Array, mst_edges: Array, loop_percent: float, rng: Ra
 
 	return result
 
-# Inserts one undirected edge in the edge map if that edge has not been registered yet.
-func _add_edge_if_missing(edge_map: Dictionary, a: int, b: int, points: PackedVector2Array) -> void:
+# Inserts one undirected edge if that edge has not been registered yet.
+func _add_edge_if_missing(edges: Array[DungeonEdgeData], edge_hashes: Array[int], a: int, b: int, points: PackedVector2Array) -> void:
 	if a == b:
 		return
-	var key := _edge_key(a, b)
-	if edge_map.has(key):
+	var hash_key: int = _edge_hash(a, b)
+	if _contains_edge_hash(edge_hashes, hash_key):
 		return
-	edge_map[key] = _make_edge(a, b, points)
+	edge_hashes.append(hash_key)
+	edges.append(_make_edge(a, b, points))
 
 # Normalizes endpoint order and computes Euclidean edge weight.
-func _make_edge(a: int, b: int, points: PackedVector2Array) -> Dictionary:
+func _make_edge(a: int, b: int, points: PackedVector2Array) -> DungeonEdgeData:
 	var ai := mini(a, b)
 	var bi := maxi(a, b)
-	return {
-		"a": ai,
-		"b": bi,
-		"weight": points[ai].distance_to(points[bi])
-	}
+	return DungeonEdgeData.new(ai, bi, points[ai].distance_to(points[bi]))
 
-# Produces a stable key used to deduplicate undirected edges.
-func _edge_key(a: int, b: int) -> String:
+# Produces a stable hash key used to deduplicate undirected edges.
+func _edge_hash(a: int, b: int) -> int:
 	var ai := mini(a, b)
 	var bi := maxi(a, b)
-	return "%s:%s" % [ai, bi]
+	return (ai << 32) ^ bi
+
+# Returns true when an edge hash is already present in the lookup array.
+func _contains_edge_hash(edge_hashes: Array[int], hash_key: int) -> bool:
+	for existing_hash in edge_hashes:
+		if existing_hash == hash_key:
+			return true
+	return false
 
 # Finds the representative of a union-find set with path compression.
 func _find(parent: Array[int], i: int) -> int:

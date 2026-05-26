@@ -53,3 +53,8 @@ Use the same resolver workflow as godot-cli-paths:
 - Preset was validated before running export command.
 - Exit code and key output were reported.
 - Failure class is specific and actionable.
+
+## Data Contract Note
+
+- Keep gameplay/system data contract recommendations aligned with typed RefCounted models used in project scripts.
+- Do not propose ad hoc Dictionary payloads for structured runtime contracts.

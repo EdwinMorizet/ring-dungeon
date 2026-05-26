@@ -45,6 +45,12 @@ Use this skill when the user asks to:
 - Move manager parameters into the manager config resource and access them through `_config`.
 - Any parameter intentionally kept in manager must be documented with an explicit reason.
 
+## Structured Data Policy
+
+- Use typed RefCounted/Resource classes for manager configuration and runtime manager contracts.
+- Do not introduce ad hoc Dictionary payloads for manager state exchange.
+- Dictionary is allowed only for unavoidable Godot engine API responses and must be converted immediately.
+
 ## Procedure
 
 1. Discover autoload managers

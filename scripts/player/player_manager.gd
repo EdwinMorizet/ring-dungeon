@@ -5,6 +5,48 @@ const PlayerFpsControllerScript = preload("res://scripts/player/player_fps_contr
 # Default parameter resource for lock ids and startup tuning.
 const DefaultPlayerManagerConfig: PlayerManagerConfig = preload("res://resources/player/default_player_manager_config.tres")
 
+class InputLockEntry extends RefCounted:
+	var lock_id: StringName = StringName()
+	var count: int = 0
+
+	func _init(value_lock_id: StringName = StringName(), value_count: int = 0) -> void:
+		lock_id = value_lock_id
+		count = maxi(value_count, 0)
+
+class InputLockTracker extends RefCounted:
+	var _entries: Array[InputLockEntry] = []
+
+	func push(lock_id: StringName) -> void:
+		if lock_id == StringName():
+			return
+		var existing: InputLockEntry = _find_entry(lock_id)
+		if existing != null:
+			existing.count += 1
+			return
+		_entries.append(InputLockEntry.new(lock_id, 1))
+
+	func pop(lock_id: StringName) -> void:
+		for index in range(_entries.size() - 1, -1, -1):
+			var entry: InputLockEntry = _entries[index]
+			if entry.lock_id != lock_id:
+				continue
+			entry.count -= 1
+			if entry.count <= 0:
+				_entries.remove_at(index)
+			return
+
+	func clear() -> void:
+		_entries.clear()
+
+	func is_empty() -> bool:
+		return _entries.is_empty()
+
+	func _find_entry(lock_id: StringName) -> InputLockEntry:
+		for entry in _entries:
+			if entry.lock_id == lock_id:
+				return entry
+		return null
+
 signal player_bound(player: Node3D)
 signal player_unbound()
 signal controls_changed(enabled: bool)
@@ -14,7 +56,7 @@ signal currency_changed(gold: int, gems: int)
 var _config: PlayerManagerConfig = DefaultPlayerManagerConfig
 var _player: Node3D = null
 var _controls_forced_enabled: bool = true
-var _input_locks: Dictionary = {}
+var _input_locks: InputLockTracker = InputLockTracker.new()
 var _gold: int = 0
 var _gems: int = 0
 var _inventory_lock_active: bool = false
@@ -269,20 +311,11 @@ func set_controls_enabled(enabled: bool) -> void:
 	_apply_controls_state()
 
 func push_input_lock(lock_id: StringName) -> void:
-	if lock_id == StringName():
-		return
-	var lock_count: int = int(_input_locks.get(lock_id, 0))
-	_input_locks[lock_id] = lock_count + 1
+	_input_locks.push(lock_id)
 	_apply_controls_state()
 
 func pop_input_lock(lock_id: StringName) -> void:
-	if not _input_locks.has(lock_id):
-		return
-	var next_count: int = int(_input_locks.get(lock_id, 0)) - 1
-	if next_count <= 0:
-		_input_locks.erase(lock_id)
-	else:
-		_input_locks[lock_id] = next_count
+	_input_locks.pop(lock_id)
 	_apply_controls_state()
 
 func clear_input_locks() -> void:

@@ -4,6 +4,35 @@ extends Node
 # Default parameter resource for registry behavior and fallback type metadata.
 const DefaultEnemyManagerConfig: EnemyManagerConfig = preload("res://resources/enemies/default_enemy_manager_config.tres")
 
+class EnemySceneCacheEntry extends RefCounted:
+	var enemy_type_id: String = ""
+	var scene: PackedScene = null
+
+	func _init(value_enemy_type_id: String = "", value_scene: PackedScene = null) -> void:
+		enemy_type_id = value_enemy_type_id
+		scene = value_scene
+
+class EnemySceneCache extends RefCounted:
+	var _entries: Array[EnemySceneCacheEntry] = []
+
+	func clear() -> void:
+		_entries.clear()
+
+	func get_scene(enemy_type_id: String) -> PackedScene:
+		for entry in _entries:
+			if entry.enemy_type_id == enemy_type_id:
+				return entry.scene
+		return null
+
+	func set_scene(enemy_type_id: String, scene: PackedScene) -> void:
+		if enemy_type_id.is_empty() or scene == null:
+			return
+		for entry in _entries:
+			if entry.enemy_type_id == enemy_type_id:
+				entry.scene = scene
+				return
+		_entries.append(EnemySceneCacheEntry.new(enemy_type_id, scene))
+
 signal enemy_registered(enemy: EnemyBasic)
 signal enemy_unregistered(enemy: EnemyBasic)
 signal enemy_died(enemy: EnemyBasic)
@@ -11,7 +40,7 @@ signal enemy_died(enemy: EnemyBasic)
 # Active parameter resource for this autoload manager.
 var _config: EnemyManagerConfig = DefaultEnemyManagerConfig
 var _live_enemies: Array[EnemyBasic] = []
-var _enemy_scene_cache: Dictionary = {}
+var _enemy_scene_cache: EnemySceneCache = EnemySceneCache.new()
 
 func set_config(config: EnemyManagerConfig) -> void:
 	if config != null:
@@ -98,16 +127,16 @@ func resolve_spawn_enemy_scene(fallback_scene: PackedScene, requested_type_id: S
 	var resolved_type_id: String = resolve_spawn_enemy_type_id(requested_type_id, floor_seed, progression_index, spawn_index)
 	if resolved_type_id.is_empty():
 		return fallback_scene
-	var cached_scene: Variant = _enemy_scene_cache.get(resolved_type_id, null)
-	if cached_scene is PackedScene:
-		return cached_scene as PackedScene
+	var cached_scene: PackedScene = _enemy_scene_cache.get_scene(resolved_type_id)
+	if cached_scene != null:
+		return cached_scene
 	var scene_path: String = _get_enemy_scene_path(resolved_type_id)
 	if scene_path.is_empty():
 		return fallback_scene
 	var loaded_resource: Resource = load(scene_path)
 	if loaded_resource is PackedScene:
 		var resolved_scene: PackedScene = loaded_resource as PackedScene
-		_enemy_scene_cache[resolved_type_id] = resolved_scene
+		_enemy_scene_cache.set_scene(resolved_type_id, resolved_scene)
 		return resolved_scene
 	return fallback_scene
 

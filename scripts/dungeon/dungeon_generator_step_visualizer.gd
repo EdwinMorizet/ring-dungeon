@@ -127,8 +127,8 @@ func _rebuild_preview() -> void:
 	_clear_preview_root()
 	if _timeline == null or _timeline.is_empty():
 		return
-	var step: Dictionary = _timeline.get_step(_step_index)
-	if step.is_empty():
+	var step: DungeonGeneratorDebugStepData = _timeline.get_step(_step_index)
+	if step == null:
 		return
 	var preview_mesh: ImmediateMesh = _build_step_mesh(step)
 	if preview_mesh == null:
@@ -142,7 +142,7 @@ func _rebuild_preview() -> void:
 	mesh_instance.material_override = _build_preview_material()
 	_preview_root.add_child(mesh_instance)
 
-	var step_name: StringName = StringName(step.get("step_name", &""))
+	var step_name: StringName = step.step_name
 	var label: Label3D = Label3D.new()
 	label.name = "GenerationPreviewLabel"
 	label.text = _build_stage_label_text(step_name)
@@ -151,77 +151,62 @@ func _rebuild_preview() -> void:
 	_preview_root.add_child(label)
 
 # Builds the mesh used to render one recorded generation step.
-func _build_step_mesh(step: Dictionary) -> ImmediateMesh:
-	var step_name: StringName = StringName(step.get("step_name", &""))
+func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
+	var step_name: StringName = step.step_name
 	if step_name != &"generate_cells" and step_name != &"separate_cells" and step_name != &"designate_rooms" and step_name != &"delaunay" and step_name != &"mst" and step_name != &"loop_edges":
 		return null
 	var mesh: ImmediateMesh = ImmediateMesh.new()
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	match step_name:
 		&"generate_cells":
-			_append_cell_outlines(mesh, step.get("cells", []), CELL_GENERATE_COLOR, 0.04)
+			_append_cell_outlines(mesh, step.cells, CELL_GENERATE_COLOR, 0.04)
 		&"separate_cells":
-			_append_cell_outlines(mesh, step.get("cells", []), CELL_SEPARATE_COLOR, 0.04)
+			_append_cell_outlines(mesh, step.cells, CELL_SEPARATE_COLOR, 0.04)
 		&"designate_rooms":
-			_append_cell_outlines(mesh, step.get("cells", []), CELL_FADED_COLOR, 0.03)
-			_append_room_outlines(mesh, step.get("rooms", []), ROOM_COLOR, 0.07)
+			_append_cell_outlines(mesh, step.cells, CELL_FADED_COLOR, 0.03)
+			_append_room_outlines(mesh, step.rooms, ROOM_COLOR, 0.07)
 		&"delaunay":
-			_append_room_outlines(mesh, step.get("rooms", []), ROOM_COLOR, 0.07)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("delaunay_edges", []), DELAUNAY_COLOR, 0.18)
+			_append_room_outlines(mesh, step.rooms, ROOM_COLOR, 0.07)
+			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.18)
 		&"mst":
-			_append_room_outlines(mesh, step.get("rooms", []), ROOM_COLOR, 0.07)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("delaunay_edges", []), DELAUNAY_COLOR, 0.14)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("mst_edges", []), MST_COLOR, 0.19)
+			_append_room_outlines(mesh, step.rooms, ROOM_COLOR, 0.07)
+			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.14)
+			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.19)
 		&"loop_edges":
-			_append_room_outlines(mesh, step.get("rooms", []), ROOM_COLOR, 0.07)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("delaunay_edges", []), DELAUNAY_COLOR, 0.14)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("mst_edges", []), MST_COLOR, 0.19)
-			_append_room_edges(mesh, step.get("rooms", []), step.get("loop_edges", []), LOOP_COLOR, 0.24)
+			_append_room_outlines(mesh, step.rooms, ROOM_COLOR, 0.07)
+			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.14)
+			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.19)
+			_append_room_edges(mesh, step.rooms, step.loop_edges, LOOP_COLOR, 0.24)
 	mesh.surface_end()
 	return mesh
 
 # Appends outlines for candidate or separated cells.
-func _append_cell_outlines(mesh: ImmediateMesh, cell_data: Variant, color: Color, y: float) -> void:
-	if not cell_data is Array:
-		return
-	for cell_variant in cell_data:
-		if cell_variant is Dictionary:
-			var cell: Dictionary = cell_variant
-			_append_rect_outline(mesh, cell.get("rect", Rect2i()), color, y)
+func _append_cell_outlines(mesh: ImmediateMesh, cell_data: Array[DungeonCellData], color: Color, y: float) -> void:
+	for cell in cell_data:
+		_append_rect_outline(mesh, cell.rect, color, y)
 
 # Appends outlines for selected rooms.
-func _append_room_outlines(mesh: ImmediateMesh, room_data: Variant, color: Color, y: float) -> void:
-	if not room_data is Array:
-		return
-	for room_variant in room_data:
-		if room_variant is Dictionary:
-			var room: Dictionary = room_variant
-			_append_rect_outline(mesh, room.get("rect", Rect2i()), color, y)
+func _append_room_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], color: Color, y: float) -> void:
+	for room in room_data:
+		_append_rect_outline(mesh, room.rect, color, y)
 
 # Appends edge lines between room centers.
-func _append_room_edges(mesh: ImmediateMesh, rooms: Variant, edge_data: Variant, color: Color, y: float) -> void:
-	if not rooms is Array or not edge_data is Array:
-		return
-	var room_array: Array = rooms
-	for edge_variant in edge_data:
-		if not edge_variant is Dictionary:
+func _append_room_edges(mesh: ImmediateMesh, rooms: Array[DungeonRoomData], edge_data: Array[DungeonEdgeData], color: Color, y: float) -> void:
+	for edge in edge_data:
+		var from_index: int = edge.a
+		var to_index: int = edge.b
+		if from_index < 0 or to_index < 0 or from_index >= rooms.size() or to_index >= rooms.size():
 			continue
-		var edge: Dictionary = edge_variant
-		var from_index: int = int(edge.get("a", -1))
-		var to_index: int = int(edge.get("b", -1))
-		if from_index < 0 or to_index < 0 or from_index >= room_array.size() or to_index >= room_array.size():
-			continue
-		var from_room: Dictionary = room_array[from_index]
-		var to_room: Dictionary = room_array[to_index]
-		_append_line(mesh, _grid_to_world(from_room.get("center", Vector2.ZERO), y), _grid_to_world(to_room.get("center", Vector2.ZERO), y), color)
+		var from_room: DungeonRoomData = rooms[from_index]
+		var to_room: DungeonRoomData = rooms[to_index]
+		_append_line(mesh, _grid_to_world(from_room.center, y), _grid_to_world(to_room.center, y), color)
 
 # Converts grid-space coordinates into preview-local world coordinates.
 func _grid_to_world(point: Vector2, y: float) -> Vector3:
 	return Vector3(point.x * _tile_size, y, point.y * _tile_size)
 
 # Appends a rectangle outline as four line segments.
-func _append_rect_outline(mesh: ImmediateMesh, rect_data: Variant, color: Color, y: float) -> void:
-	var rect: Rect2i = _to_rect2i(rect_data)
+func _append_rect_outline(mesh: ImmediateMesh, rect: Rect2i, color: Color, y: float) -> void:
 	var min_x: float = float(rect.position.x) * _tile_size
 	var min_z: float = float(rect.position.y) * _tile_size
 	var max_x: float = float(rect.end.x) * _tile_size
@@ -234,18 +219,6 @@ func _append_rect_outline(mesh: ImmediateMesh, rect_data: Variant, color: Color,
 	_append_line(mesh, top_right, bottom_right, color)
 	_append_line(mesh, bottom_right, bottom_left, color)
 	_append_line(mesh, bottom_left, top_left, color)
-
-# Converts rectangle payload variants into Rect2i for integer-grid preview drawing.
-func _to_rect2i(rect_data: Variant) -> Rect2i:
-	if rect_data is Rect2i:
-		return rect_data as Rect2i
-	if rect_data is Rect2:
-		var rect: Rect2 = rect_data as Rect2
-		return Rect2i(
-			Vector2i(int(round(rect.position.x)), int(round(rect.position.y))),
-			Vector2i(int(round(rect.size.x)), int(round(rect.size.y)))
-		)
-	return Rect2i()
 
 # Writes one colored line segment into the immediate mesh.
 func _append_line(mesh: ImmediateMesh, from_point: Vector3, to_point: Vector3, color: Color) -> void:

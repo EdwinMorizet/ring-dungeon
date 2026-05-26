@@ -146,22 +146,22 @@ func _run_ring_balance_sample() -> void:
 	print("[RingsBands] UI ring balance sample")
 	print("samples=200 seed=1337")
 	for rarity: int in rarities:
-		var summary: Dictionary = ItemAffixGenerator.debug_sample_ring_balance(rarity, 200, 1337)
+		var summary: ItemAffixGenerator.RingBalanceSummary = ItemAffixGenerator.debug_sample_ring_balance(rarity, 200, 1337)
 		_print_ring_balance_summary(summary)
 
-func _print_ring_balance_summary(summary: Dictionary) -> void:
-	var rarity_value: int = int(summary.get("rarity", InventoryItemDefinition.Rarity.COMMON))
+func _print_ring_balance_summary(summary: ItemAffixGenerator.RingBalanceSummary) -> void:
+	var rarity_value: int = summary.rarity
 	var rarity_label: String = _rarity_label(rarity_value)
 	print("--- %s ---" % rarity_label)
-	print("avg_damage_mult=%.3f" % float(summary.get("avg_damage_mult", 1.0)))
-	print("avg_mana_cost_mult=%.3f" % float(summary.get("avg_mana_cost_mult", 1.0)))
-	print("avg_proj_speed_mult=%.3f" % float(summary.get("avg_proj_speed_mult", 1.0)))
-	print("gravity_trait_roll_rate=%.3f" % float(summary.get("gravity_trait_roll_rate", 0.0)))
-	print("avg_cast_delay_mult=%.3f" % float(summary.get("avg_cast_delay_mult", 1.0)))
-	print("avg_accuracy_deviation_flat=%+.3f" % float(summary.get("avg_accuracy_deviation_flat", 0.0)))
-	print("avg_split_flat=%.3f" % float(summary.get("avg_split_flat", 0.0)))
-	print("avg_pierce_chance=%.3f" % float(summary.get("avg_pierce_chance", 0.0)))
-	print("avg_required_tradeoff_entries=%.3f" % float(summary.get("avg_required_tradeoff_entries", 0.0)))
+	print("avg_damage_mult=%.3f" % summary.avg_damage_mult)
+	print("avg_mana_cost_mult=%.3f" % summary.avg_mana_cost_mult)
+	print("avg_proj_speed_mult=%.3f" % summary.avg_proj_speed_mult)
+	print("gravity_trait_roll_rate=%.3f" % summary.gravity_trait_roll_rate)
+	print("avg_cast_delay_mult=%.3f" % summary.avg_cast_delay_mult)
+	print("avg_accuracy_deviation_flat=%+.3f" % summary.avg_accuracy_deviation_flat)
+	print("avg_split_flat=%.3f" % summary.avg_split_flat)
+	print("avg_pierce_chance=%.3f" % summary.avg_pierce_chance)
+	print("avg_required_tradeoff_entries=%.3f" % summary.avg_required_tradeoff_entries)
 
 func _rarity_label(rarity: int) -> String:
 	match rarity:
@@ -220,14 +220,14 @@ func _build_patrol_debug_line() -> String:
 	var controller: DungeonFloorController = _get_floor_controller()
 	if controller == null:
 		return "Patrol: unavailable"
-	var snapshot: Dictionary = controller.get_patrol_debug_snapshot()
-	if snapshot.is_empty():
+	var snapshot: DungeonPatrolDebugSnapshot = controller.get_patrol_debug_snapshot()
+	if snapshot == null or snapshot.is_empty():
 		return "Patrol: no runtime layout"
 	return "Patrol: Rooms=%d Nodes=%d Links=%d | %s" % [
-		int(snapshot.get("room_count", 0)),
-		int(snapshot.get("patrol_node_count", 0)),
-		int(snapshot.get("patrol_link_count", 0)),
-		String(snapshot.get("topology", "")),
+		snapshot.room_count,
+		snapshot.patrol_node_count,
+		snapshot.patrol_link_count,
+		snapshot.topology,
 	]
 
 func _run_patrol_smoke_check() -> void:
@@ -235,17 +235,20 @@ func _run_patrol_smoke_check() -> void:
 	if controller == null:
 		print("[PatrolSmoke] missing DungeonFloorController or helper method")
 		return
-	var report: Dictionary = controller.run_patrol_smoke_check()
-	var ok: bool = bool(report.get("ok", false))
+	var report: DungeonPatrolSmokeReport = controller.run_patrol_smoke_check()
+	if report == null:
+		print("[PatrolSmoke] FAIL rooms=0 markers=0 links=0 expected_links=0 error=Missing report")
+		return
+	var ok: bool = report.ok
 	var status: String = "PASS" if ok else "FAIL"
 	print(
 		"[PatrolSmoke] %s rooms=%d markers=%d links=%d expected_links=%d error=%s" % [
 			status,
-			int(report.get("room_groups", 0)),
-			int(report.get("patrol_markers", 0)),
-			int(report.get("link_markers", 0)),
-			int(report.get("expected_links", 0)),
-			String(report.get("error", "")),
+			report.room_groups,
+			report.patrol_markers,
+			report.link_markers,
+			report.expected_links,
+			report.error,
 		]
 	)
 	if _show_patrol_debug:

@@ -36,6 +36,31 @@ func _process(delta: float) -> void:
     pass
 ```
 
+## Structured Data Policy
+
+**Use typed `RefCounted` classes for all structured runtime data.**
+
+- Do not model gameplay payloads, state snapshots, configs, or inter-system contracts as `Dictionary`.
+- Replace ad hoc key-based data with explicit `RefCounted` models and typed fields.
+- Prefer one payload type per concept (for example room data, edge data, debug report data).
+- Add clone/duplicate helpers on `RefCounted` payloads when snapshots must be immutable.
+
+`Dictionary` is only allowed for unavoidable engine/API interaction points where Godot returns dictionaries (for example physics query results). Extract those values immediately into typed locals or `RefCounted` wrappers.
+
+❌ **Bad:**
+```gdscript
+var report: Dictionary = {"ok": true, "count": 4}
+emit_signal("done", report)
+```
+
+✅ **Good:**
+```gdscript
+var report: PatrolSmokeReport = PatrolSmokeReport.new()
+report.ok = true
+report.count = 4
+done.emit(report)
+```
+
 ## Class Structure
 
 Organize class members in this order:
@@ -131,3 +156,5 @@ When editing .gd files:
 - [ ] `_onready` nodes are cached, not queried repeatedly
 - [ ] Signal connections are cleaned up in `_exit_tree()`
 - [ ] Corrected tabulation use for indent
+- [ ] Structured data uses typed `RefCounted` models (no ad hoc `Dictionary` payloads)
+- [ ] Any unavoidable engine `Dictionary` result is converted immediately to typed values/models

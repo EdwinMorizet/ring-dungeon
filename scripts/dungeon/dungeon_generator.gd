@@ -19,47 +19,34 @@ const DEBUG_STEP_MST: StringName = &"mst"
 const DEBUG_STEP_LOOP_EDGES: StringName = &"loop_edges"
 
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
-func generate(seed_value: int, config: DungeonFloorConfig, debug_timeline: DungeonGeneratorDebugTimeline = null) -> Dictionary:
-	var cell_count: int = config.cell_count
-	var loop_percent: float = config.loop_percent
-	var chest_candidate_ratio: float = config.chest_candidate_ratio
-	var patrol_nodes_per_room_min: int = config.patrol_nodes_per_room_min
-	var patrol_nodes_per_room_max: int = config.patrol_nodes_per_room_max
-	var patrol_point_padding: float = config.patrol_point_padding
-	var patrol_point_jitter: float = config.patrol_point_jitter
-
+func generate(seed_value: int, config: DungeonFloorConfig, debug_timeline: DungeonGeneratorDebugTimeline = null) -> DungeonLayoutData:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 
-	var cells := generate_cells(cell_count, rng, config)
-	_record_debug_step(debug_timeline, DEBUG_STEP_GENERATE_CELLS, {"cells": cells})
+	var cells: Array[DungeonCellData] = generate_cells(config.cell_count, rng, config)
+	_record_debug_step(debug_timeline, DEBUG_STEP_GENERATE_CELLS, cells)
 
 	separate_cells(cells, config, rng)
-	_record_debug_step(debug_timeline, DEBUG_STEP_SEPARATE_CELLS, {"cells": cells})
+	_record_debug_step(debug_timeline, DEBUG_STEP_SEPARATE_CELLS, cells)
 
-	var rooms := designate_rooms(cells, config)
-	_record_debug_step(debug_timeline, DEBUG_STEP_DESIGNATE_ROOMS, {"cells": cells, "rooms": rooms})
+	var rooms: Array[DungeonRoomData] = designate_rooms(cells, config)
+	_record_debug_step(debug_timeline, DEBUG_STEP_DESIGNATE_ROOMS, cells, rooms)
 
 	var centers := PackedVector2Array()
 	for room in rooms:
-		centers.push_back(room["center"])
-	var graph := DungeonGraph.new()
-	var delaunay_edges := graph.build_delaunay_edges(centers)
-	_record_debug_step(debug_timeline, DEBUG_STEP_DELAUNAY, {"rooms": rooms, "delaunay_edges": delaunay_edges})
+		centers.push_back(room.center)
+	var graph: DungeonGraph = DungeonGraph.new()
+	var delaunay_edges: Array[DungeonEdgeData] = graph.build_delaunay_edges(centers)
+	_record_debug_step(debug_timeline, DEBUG_STEP_DELAUNAY, [], rooms, delaunay_edges)
 
-	var mst_edges := graph.build_mst(centers, delaunay_edges)
-	_record_debug_step(debug_timeline, DEBUG_STEP_MST, {"rooms": rooms, "delaunay_edges": delaunay_edges, "mst_edges": mst_edges})
+	var mst_edges: Array[DungeonEdgeData] = graph.build_mst(centers, delaunay_edges)
+	_record_debug_step(debug_timeline, DEBUG_STEP_MST, [], rooms, delaunay_edges, mst_edges)
 
-	var corridor_edges := graph.add_loop_edges(delaunay_edges, mst_edges, loop_percent, rng)
-	var loop_edges: Array = []
+	var corridor_edges: Array[DungeonEdgeData] = graph.add_loop_edges(delaunay_edges, mst_edges, config.loop_percent, rng)
+	var loop_edges: Array[DungeonEdgeData] = []
 	for edge_index in range(mst_edges.size(), corridor_edges.size()):
 		loop_edges.append(corridor_edges[edge_index])
-	_record_debug_step(debug_timeline, DEBUG_STEP_LOOP_EDGES, {
-		"rooms": rooms,
-		"delaunay_edges": delaunay_edges,
-		"mst_edges": mst_edges,
-		"loop_edges": loop_edges,
-	})
+	_record_debug_step(debug_timeline, DEBUG_STEP_LOOP_EDGES, [], rooms, delaunay_edges, mst_edges, loop_edges)
 
 	var world_rect: Rect2i = _compute_rect_bounds_from_entries(rooms)
 	var world_width := int(world_rect.size.x)
@@ -67,11 +54,11 @@ func generate(seed_value: int, config: DungeonFloorConfig, debug_timeline: Dunge
 	var grid := _create_grid(world_width, world_height, TILE_WALL)
 	
 	for room in rooms:
-		_carve_room(grid, world_rect, room["rect"])
+		_carve_room(grid, world_rect, room.rect)
 
 	for edge in corridor_edges:
-		var a: Vector2 = centers[edge["a"]]
-		var b: Vector2 = centers[edge["b"]]
+		var a: Vector2 = centers[edge.a]
+		var b: Vector2 = centers[edge.b]
 		_carve_l_corridor(grid, world_width, world_height, a, b, rng)
 		
 	_enforce_border_walls(grid, world_width, world_height)
@@ -82,64 +69,81 @@ func generate(seed_value: int, config: DungeonFloorConfig, debug_timeline: Dunge
 		exit_index = _find_farthest_room_index(rooms)
 		start_index = _find_farthest_from_room_index(rooms, exit_index)
 
-	var annotation_data := _annotate_rooms_with_metadata(
+	var annotation_data: DungeonAnnotationData = _annotate_rooms_with_metadata(
 		rooms,
 		start_index,
 		exit_index,
-		chest_candidate_ratio,
+		config.chest_candidate_ratio,
 		mst_edges,
 		rng,
-		patrol_nodes_per_room_min,
-		patrol_nodes_per_room_max,
-		patrol_point_padding,
-		patrol_point_jitter
+		config.patrol_nodes_per_room_min,
+		config.patrol_nodes_per_room_max,
+		config.patrol_point_padding,
+		config.patrol_point_jitter
 	)
-	var marker_data: Dictionary = annotation_data.get("spawn_markers", {})
-	var patrol_graph: Dictionary = annotation_data.get("patrol_graph", {})
+	var marker_data: DungeonSpawnMarkersData = annotation_data.spawn_markers
+	var patrol_graph: DungeonPatrolGraphData = annotation_data.patrol_graph
 	var patrol_node_total: int = 0
-	var patrol_room_nodes: Dictionary = patrol_graph.get("room_nodes", {})
-	for room_key in patrol_room_nodes.keys():
-		var room_points: Variant = patrol_room_nodes[room_key]
-		if room_points is PackedVector2Array:
-			patrol_node_total += (room_points as PackedVector2Array).size()
-	var patrol_links: Array = patrol_graph.get("room_links", [])
+	for room_points in patrol_graph.room_nodes:
+		patrol_node_total += room_points.size()
 
-	return {
-		"grid": grid,
-		"width": world_width,
-		"height": world_height,
-		"grid_offset": world_rect.position,
-		"rooms": rooms,
-		"edges": delaunay_edges,
-		"mst_edges": mst_edges,
-		"corridor_edges": corridor_edges,
-		"start_room_index": start_index,
-		"exit_room_index": exit_index,
-		"spawn_markers": marker_data,
-		"patrol_graph": patrol_graph,
-		"stats": {
-			"cells": cells.size(),
-			"rooms": rooms.size(),
-			"delaunay_edges": delaunay_edges.size(),
-			"mst_edges": mst_edges.size(),
-			"loop_edges": maxi(0, corridor_edges.size() - mst_edges.size()),
-			"enemy_rooms": marker_data["enemy"].size(),
-			"chest_candidate_rooms": marker_data["chest_candidate"].size(),
-			"patrol_rooms": patrol_room_nodes.size(),
-			"patrol_nodes": patrol_node_total,
-			"patrol_room_links": patrol_links.size()
-		}
-	}
+	var stats: DungeonGeneratorStatsData = DungeonGeneratorStatsData.new()
+	stats.cells = cells.size()
+	stats.rooms = rooms.size()
+	stats.delaunay_edges = delaunay_edges.size()
+	stats.mst_edges = mst_edges.size()
+	stats.loop_edges = maxi(0, corridor_edges.size() - mst_edges.size())
+	stats.enemy_rooms = marker_data.enemy.size()
+	stats.chest_candidate_rooms = marker_data.chest_candidate.size()
+	stats.patrol_rooms = patrol_graph.room_nodes.size()
+	stats.patrol_nodes = patrol_node_total
+	stats.patrol_room_links = patrol_graph.room_links.size()
+
+	var layout: DungeonLayoutData = DungeonLayoutData.new()
+	layout.grid = grid
+	layout.width = world_width
+	layout.height = world_height
+	layout.grid_offset = world_rect.position
+	layout.rooms = rooms
+	layout.edges = delaunay_edges
+	layout.mst_edges = mst_edges
+	layout.corridor_edges = corridor_edges
+	layout.start_room_index = start_index
+	layout.exit_room_index = exit_index
+	layout.spawn_markers = marker_data
+	layout.patrol_graph = patrol_graph
+	layout.stats = stats
+	return layout
 
 # Records one generation step into the optional editor-only debug timeline.
-func _record_debug_step(debug_timeline: DungeonGeneratorDebugTimeline, step_name: StringName, payload: Dictionary) -> void:
+func _record_debug_step(
+	debug_timeline: DungeonGeneratorDebugTimeline,
+	step_name: StringName,
+	cells: Array[DungeonCellData] = [],
+	rooms: Array[DungeonRoomData] = [],
+	delaunay_edges: Array[DungeonEdgeData] = [],
+	mst_edges: Array[DungeonEdgeData] = [],
+	loop_edges: Array[DungeonEdgeData] = []
+) -> void:
 	if debug_timeline == null:
 		return
-	debug_timeline.record_step(step_name, payload)
+	var step_data: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
+	step_data.step_name = step_name
+	for cell in cells:
+		step_data.cells.append(cell.duplicate_data())
+	for room in rooms:
+		step_data.rooms.append(room.duplicate_data())
+	for edge in delaunay_edges:
+		step_data.delaunay_edges.append(edge.duplicate_data())
+	for edge in mst_edges:
+		step_data.mst_edges.append(edge.duplicate_data())
+	for edge in loop_edges:
+		step_data.loop_edges.append(edge.duplicate_data())
+	debug_timeline.record_step(step_data)
 
 # Samples room candidate cells from a radial distribution around map center.
-func generate_cells(cell_count: int, rng: RandomNumberGenerator, config: DungeonFloorConfig) -> Array:
-	var cells: Array = []
+func generate_cells(cell_count: int, rng: RandomNumberGenerator, config: DungeonFloorConfig) -> Array[DungeonCellData]:
+	var cells: Array[DungeonCellData] = []
 	var center := Vector2(config.width * 0.5, config.height * 0.5)
 	for _i in cell_count:
 		var angle := rng.randf() * TAU
@@ -163,14 +167,11 @@ func generate_cells(cell_count: int, rng: RandomNumberGenerator, config: Dungeon
 		)
 		var rect_size := Vector2i(int(room_w), int(room_h))
 		var rect := Rect2i(rect_position, rect_size)
-		cells.append({
-			"rect": _snap_rect_to_grid(rect),
-			"is_room": false,
-		})
+		cells.append(DungeonCellData.new(_snap_rect_to_grid(rect), false))
 	return cells
 
 # Resolves overlapping room candidates using iterative pairwise push separation.
-func separate_cells(cells: Array, config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
+func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
 	var overlaps: int = 0
 	for i in config.separation_iterations:
 		overlaps = 0
@@ -180,8 +181,8 @@ func separate_cells(cells: Array, config: DungeonFloorConfig, rng: RandomNumberG
 			for b in cells.size():
 				if a == b:
 					continue
-				var rect_a: Rect2i = _grow_rect_i(cells[a]["rect"], int(SEPARATION_MARGIN))
-				var rect_b: Rect2i = _grow_rect_i(cells[b]["rect"], int(SEPARATION_MARGIN))
+				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, int(SEPARATION_MARGIN))
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, int(SEPARATION_MARGIN))
 				if rect_a.intersects(rect_b):
 					var _dir := Vector2(rect_a.position - rect_b.position)
 					var _dist: float = _dir.length_squared()
@@ -199,23 +200,17 @@ func separate_cells(cells: Array, config: DungeonFloorConfig, rng: RandomNumberG
 			var _push_dir := Vector2i(int(round(_overlaps_dir.x)), int(round(_overlaps_dir.y)))
 			if _push_dir == Vector2i.ZERO:
 				_push_dir = Vector2i(1, 0)
-			var rect: Rect2i = cells[a]["rect"]
+			var rect: Rect2i = cells[a].rect
 			rect.position += _push_dir
-			cells[a]["rect"] = _snap_rect_to_grid(rect)
+			cells[a].rect = _snap_rect_to_grid(rect)
 		if overlaps == 0:
 			break
-# Computes a merged Rect2i bounds box from dictionary entries containing a Rect2i in "rect".
-func _compute_rect_bounds_from_entries(entries: Array) -> Rect2i:
+# Computes a merged Rect2i bounds box from typed room entries.
+func _compute_rect_bounds_from_entries(entries: Array[DungeonRoomData]) -> Rect2i:
 	var has_bounds: bool = false
 	var bounds: Rect2i = Rect2i()
-	for entry_data in entries:
-		if not entry_data is Dictionary:
-			continue
-		var entry: Dictionary = entry_data
-		var rect_data: Variant = entry.get("rect", Rect2i())
-		if not rect_data is Rect2i:
-			continue
-		var rect: Rect2i = rect_data as Rect2i
+	for entry in entries:
+		var rect: Rect2i = entry.rect
 		if not has_bounds:
 			bounds = rect
 			has_bounds = true
@@ -227,10 +222,10 @@ func _compute_rect_bounds_from_entries(entries: Array) -> Rect2i:
 	return bounds
 
 # Selects final rooms from candidates based on size, area, and keep ratio.
-func designate_rooms(cells: Array, config:DungeonFloorConfig) -> Array:
-	var candidates: Array = []
+func designate_rooms(cells: Array[DungeonCellData], config:DungeonFloorConfig) -> Array[DungeonRoomData]:
+	var candidates: Array[DungeonCellData] = []
 	for cell in cells:
-		var rect: Rect2i = _snap_rect_to_grid(cell["rect"])
+		var rect: Rect2i = _snap_rect_to_grid(cell.rect)
 		var ratio: float = min(rect.size.x, rect.size.y) / max(rect.size.x, rect.size.y)
 		if ratio >= config.room_keep_ratio:
 			candidates.append(cell)
@@ -238,14 +233,11 @@ func designate_rooms(cells: Array, config:DungeonFloorConfig) -> Array:
 	if candidates.is_empty() and not cells.is_empty():
 		candidates = cells.duplicate()
 
-	var rooms: Array = []
+	var rooms: Array[DungeonRoomData] = []
 	for i in candidates.size():
-		var room_rect: Rect2i = _snap_rect_to_grid(candidates[i]["rect"])
+		var room_rect: Rect2i = _snap_rect_to_grid(candidates[i].rect)
 		var room_center: Vector2 = Vector2(room_rect.get_center())
-		rooms.append({
-			"rect": room_rect,
-			"center": room_center,
-		})
+		rooms.append(DungeonRoomData.new(room_rect, room_center))
 
 	return rooms
 
@@ -366,36 +358,36 @@ func _grow_rect_i(rect: Rect2i, margin: int) -> Rect2i:
 	)
 
 # Finds the room farthest from the average center of all rooms.
-func _find_farthest_room_index(rooms: Array) -> int:
+func _find_farthest_room_index(rooms: Array[DungeonRoomData]) -> int:
 	if rooms.is_empty():
 		return -1
 	var center := Vector2.ZERO
 	for room in rooms:
-		center += room["center"]
+		center += room.center
 	center /= float(rooms.size())
 	var max_dist := -1.0
 	var max_index := 0
 	for i in rooms.size():
-		var dist := center.distance_squared_to(rooms[i]["center"])
+		var dist := center.distance_squared_to(rooms[i].center)
 		if dist > max_dist:
 			max_dist = dist
 			max_index = i
 	return max_index
 
 # Finds the room farthest from a reference room index.
-func _find_farthest_from_room_index(rooms: Array, room_index: int) -> int:
+func _find_farthest_from_room_index(rooms: Array[DungeonRoomData], room_index: int) -> int:
 	if rooms.is_empty():
 		return -1
 	if room_index < 0 or room_index >= rooms.size():
 		return 0
 
-	var ref_center: Vector2 = rooms[room_index]["center"]
+	var ref_center: Vector2 = rooms[room_index].center
 	var max_dist := -1.0
 	var max_index := room_index
 	for i in rooms.size():
 		if i == room_index:
 			continue
-		var dist := ref_center.distance_squared_to(rooms[i]["center"])
+		var dist := ref_center.distance_squared_to(rooms[i].center)
 		if dist > max_dist:
 			max_dist = dist
 			max_index = i
@@ -403,46 +395,35 @@ func _find_farthest_from_room_index(rooms: Array, room_index: int) -> int:
 
 # Adds gameplay metadata to rooms and builds spawn marker and patrol graph payloads.
 func _annotate_rooms_with_metadata(
-	rooms: Array,
+	rooms: Array[DungeonRoomData],
 	start_index: int,
 	exit_index: int,
 	chest_candidate_ratio: float,
-	mst_edges: Array,
+	mst_edges: Array[DungeonEdgeData],
 	rng: RandomNumberGenerator,
 	patrol_nodes_per_room_min: int,
 	patrol_nodes_per_room_max: int,
 	patrol_point_padding: float,
 	patrol_point_jitter: float
-) -> Dictionary:
-	var marker_data := {
-		"player_start": PackedVector2Array(),
-		"enemy": PackedVector2Array(),
-		"chest_candidate": PackedVector2Array(),
-		"floor_exit": PackedVector2Array(),
-	}
-	var room_adjacency: Dictionary = _build_mst_room_adjacency(rooms.size(), mst_edges)
+	) -> DungeonAnnotationData:
+	var marker_data: DungeonSpawnMarkersData = DungeonSpawnMarkersData.new()
+	var room_adjacency: Array[PackedInt32Array] = _build_mst_room_adjacency(rooms.size(), mst_edges)
 
 	var candidate_indices: Array[int] = []
 	for i in rooms.size():
-		var room: Dictionary = rooms[i]
-		var metadata := {
-			"index": i,
-			"is_player_start": i == start_index,
-			"is_floor_exit": i == exit_index,
-			"is_enemy_room": i != start_index and i != exit_index,
-			"is_chest_candidate": false,
-			"patrol_points": PackedVector2Array(),
-			"patrol_linked_rooms": PackedInt32Array(),
-		}
-		room["metadata"] = metadata
-		rooms[i] = room
+		var room: DungeonRoomData = rooms[i]
+		var metadata: DungeonRoomMetadataData = DungeonRoomMetadataData.new(i)
+		metadata.is_player_start = i == start_index
+		metadata.is_floor_exit = i == exit_index
+		metadata.is_enemy_room = i != start_index and i != exit_index
+		room.metadata = metadata
 
-		if metadata["is_player_start"]:
-			marker_data["player_start"].push_back(room["center"])
-		if metadata["is_floor_exit"]:
-			marker_data["floor_exit"].push_back(room["center"])
-		if metadata["is_enemy_room"]:
-			marker_data["enemy"].push_back(room["center"])
+		if metadata.is_player_start:
+			marker_data.player_start.push_back(room.center)
+		if metadata.is_floor_exit:
+			marker_data.floor_exit.push_back(room.center)
+		if metadata.is_enemy_room:
+			marker_data.enemy.push_back(room.center)
 			candidate_indices.append(i)
 
 	if not candidate_indices.is_empty():
@@ -459,44 +440,40 @@ func _annotate_rooms_with_metadata(
 
 	for i in range(chest_count):
 		var room_index := candidate_indices[i]
-		var room: Dictionary = rooms[room_index]
-		var metadata: Dictionary = room["metadata"]
-		metadata["is_chest_candidate"] = true
-		room["metadata"] = metadata
-		rooms[room_index] = room
-		marker_data["chest_candidate"].push_back(room["center"])
+		var room: DungeonRoomData = rooms[room_index]
+		room.metadata.is_chest_candidate = true
+		marker_data.chest_candidate.push_back(room.center)
 
 	for i in rooms.size():
-		var room: Dictionary = rooms[i]
-		var metadata: Dictionary = room["metadata"]
-		var linked_rooms: PackedInt32Array = room_adjacency.get(i, PackedInt32Array())
+		var room: DungeonRoomData = rooms[i]
+		var metadata: DungeonRoomMetadataData = room.metadata
+		var linked_rooms: PackedInt32Array = PackedInt32Array()
+		if i >= 0 and i < room_adjacency.size():
+			linked_rooms = room_adjacency[i]
 		var patrol_point_count: int = _resolve_patrol_point_count(patrol_nodes_per_room_min, patrol_nodes_per_room_max, rng)
-		metadata["patrol_points"] = _build_patrol_points_for_room(
-			room["rect"],
+		metadata.patrol_points = _build_patrol_points_for_room(
+			room.rect,
 			patrol_point_count,
 			patrol_point_padding,
 			patrol_point_jitter,
 			rng
 		)
-		metadata["patrol_linked_rooms"] = linked_rooms
-		room["metadata"] = metadata
-		rooms[i] = room
+		metadata.patrol_linked_rooms = linked_rooms
 
-	return {
-		"spawn_markers": marker_data,
-		"patrol_graph": _build_patrol_graph_payload(rooms, room_adjacency, mst_edges),
-	}
+	var annotation_data: DungeonAnnotationData = DungeonAnnotationData.new()
+	annotation_data.spawn_markers = marker_data
+	annotation_data.patrol_graph = _build_patrol_graph_payload(rooms, room_adjacency, mst_edges)
+	return annotation_data
 
 # Builds symmetric room adjacency from MST edges.
-func _build_mst_room_adjacency(room_count: int, mst_edges: Array) -> Dictionary:
-	var room_adjacency: Dictionary = {}
-	for room_index in room_count:
-		room_adjacency[room_index] = PackedInt32Array()
+func _build_mst_room_adjacency(room_count: int, mst_edges: Array[DungeonEdgeData]) -> Array[PackedInt32Array]:
+	var room_adjacency: Array[PackedInt32Array] = []
+	for room_index in range(room_count):
+		room_adjacency.append(PackedInt32Array())
 
-	for edge_data in mst_edges:
-		var edge: Dictionary = edge_data
-		var a: int = int(edge.get("a", -1))
-		var b: int = int(edge.get("b", -1))
+	for edge in mst_edges:
+		var a: int = edge.a
+		var b: int = edge.b
 		if a < 0 or b < 0 or a >= room_count or b >= room_count or a == b:
 			continue
 
@@ -563,26 +540,17 @@ func _build_patrol_points_for_room(rect: Rect2i, point_count: int, padding: floa
 	return points
 
 # Builds serialized patrol graph payload used by builders and debug consumers.
-func _build_patrol_graph_payload(rooms: Array, room_adjacency: Dictionary, mst_edges: Array) -> Dictionary:
-	var room_nodes: Dictionary = {}
-	for i in rooms.size():
-		var room: Dictionary = rooms[i]
-		if not room.has("metadata"):
-			continue
-		var metadata: Dictionary = room["metadata"]
-		room_nodes[i] = metadata.get("patrol_points", PackedVector2Array())
+func _build_patrol_graph_payload(rooms: Array[DungeonRoomData], room_adjacency: Array[PackedInt32Array], mst_edges: Array[DungeonEdgeData]) -> DungeonPatrolGraphData:
+	var patrol_graph: DungeonPatrolGraphData = DungeonPatrolGraphData.new()
+	for room in rooms:
+		patrol_graph.room_nodes.append(room.metadata.patrol_points)
 
-	var room_links: Array = []
-	for edge_data in mst_edges:
-		var edge: Dictionary = edge_data
-		var a: int = int(edge.get("a", -1))
-		var b: int = int(edge.get("b", -1))
-		if a < 0 or b < 0 or a == b:
+	for edge in mst_edges:
+		if edge.a < 0 or edge.b < 0 or edge.a == edge.b:
 			continue
-		room_links.append({"a": a, "b": b})
+		patrol_graph.room_links.append(DungeonEdgeData.new(edge.a, edge.b, edge.weight))
 
-	return {
-		"room_nodes": room_nodes,
-		"room_links": room_links,
-		"room_adjacency": room_adjacency,
-	}
+	for room_links in room_adjacency:
+		patrol_graph.room_adjacency.append(room_links)
+
+	return patrol_graph

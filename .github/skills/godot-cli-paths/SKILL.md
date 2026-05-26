@@ -55,6 +55,11 @@ A run is complete when all checks are true:
 - Exit code and meaningful output were reported.
 - If failed, the failure reason and next action were reported clearly.
 
+## Data Contract Note
+
+- When discussing gameplay/runtime data contracts in reports, refer to typed RefCounted models used by project scripts.
+- Do not recommend ad hoc Dictionary payload contracts for new gameplay/system code.
+
 ## Failure Handling
 
 If no executable is found:

@@ -95,7 +95,7 @@ var _enemy_spawn_manager: Node
 # Seed used for current runtime-generated floor.
 var _runtime_generation_seed: int = 0
 # Last generated layout payload from DungeonGenerator.
-var _runtime_layout: Dictionary = {}
+var _runtime_layout: DungeonLayoutData = null
 # Controls whether runtime patrol link debug mesh is displayed.
 var _patrol_link_debug_visual_enabled: bool = false
 # Cached editor-only generation step visualizer node.
@@ -152,7 +152,7 @@ func regenerate_now() -> void:
 	var debug_timeline: DungeonGeneratorDebugTimeline = null
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		debug_timeline = DungeonGeneratorDebugTimeline.new()
-	var layout: Dictionary = generator.generate(generation_seed, floor_config, debug_timeline)
+	var layout: DungeonLayoutData = generator.generate(generation_seed, floor_config, debug_timeline)
 	_runtime_layout = layout
 	if Engine.is_editor_hint() and show_generation_debug_visualizer_in_editor:
 		_show_generation_debug_visualizer(debug_timeline, floor_config.tile_size)
@@ -177,16 +177,17 @@ func get_runtime_progression_index() -> int:
 func get_current_floor_seed() -> int:
 	return _runtime_generation_seed
 
-# Builds parameter dictionary consumed by DungeonBuilder3D.build.
-func _build_builder_params() -> Dictionary:
+
+# Builds typed parameters consumed by DungeonBuilder3D.build.
+func _build_builder_params() -> DungeonBuilderParams:
 	var floor_config := _get_config()
-	return {
-		"tile_size": floor_config.tile_size,
-		"wall_height": floor_config.wall_height,
-		"floor_thickness": floor_config.floor_thickness,
-		"use_multimesh": floor_config.use_multimesh,
-		"create_floor_collision": floor_config.create_floor_collision,
-	}
+	var params: DungeonBuilderParams = DungeonBuilderParams.new()
+	params.tile_size = floor_config.tile_size
+	params.wall_height = floor_config.wall_height
+	params.floor_thickness = floor_config.floor_thickness
+	params.use_multimesh = floor_config.use_multimesh
+	params.create_floor_collision = floor_config.create_floor_collision
+	return params
 
 # Resolves active floor config, preferring runtime progression override when applicable.
 func _get_config() -> DungeonFloorConfig:
@@ -203,7 +204,7 @@ func _clear_generated() -> void:
 		_generated_root = null
 	_clear_generation_debug_visualizer()
 	_clear_patrol_link_debug_visual()
-	_runtime_layout.clear()
+	_runtime_layout = null
 	if not Engine.is_editor_hint() and is_inside_tree():
 		InventoryManager.clear_world_items()
 	_ensure_enemy_spawn_manager()
@@ -426,59 +427,47 @@ func _has_progression_manager() -> bool:
 	return has_node("/root/GameProgressionManager")
 
 # Builds a summarized patrol topology snapshot from runtime layout metadata.
-func get_patrol_debug_snapshot() -> Dictionary:
-	if _runtime_layout.is_empty():
-		return {}
+func get_patrol_debug_snapshot() -> DungeonPatrolDebugSnapshot:
+	var snapshot: DungeonPatrolDebugSnapshot = DungeonPatrolDebugSnapshot.new()
+	if _runtime_layout == null or _runtime_layout.is_empty():
+		return snapshot
 
-	var rooms: Array = _runtime_layout.get("rooms", [])
-	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
-	var room_links: Array = patrol_graph.get("room_links", [])
+	var rooms: Array[DungeonRoomData] = _runtime_layout.rooms
+	var room_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.room_links
 
 	var room_count: int = 0
 	var patrol_node_count: int = 0
 	var topology_parts: PackedStringArray = PackedStringArray()
 
-	for room_data in rooms:
-		var room: Dictionary = room_data
-		if not room.has("metadata"):
-			continue
-		var metadata: Dictionary = room["metadata"]
-		var room_index: int = int(metadata.get("index", -1))
-		var patrol_points: PackedVector2Array = metadata.get("patrol_points", PackedVector2Array())
-		var linked_rooms: PackedInt32Array = metadata.get("patrol_linked_rooms", PackedInt32Array())
+	for room in rooms:
+		var metadata: DungeonRoomMetadataData = room.metadata
+		var room_index: int = metadata.index
+		var patrol_points: PackedVector2Array = metadata.patrol_points
+		var linked_rooms: PackedInt32Array = metadata.patrol_linked_rooms
 		room_count += 1
 		patrol_node_count += patrol_points.size()
 		topology_parts.push_back("R%d(%d)->[%s]" % [room_index, patrol_points.size(), _packed_int_array_to_csv(linked_rooms)])
 
-	return {
-		"room_count": room_count,
-		"patrol_node_count": patrol_node_count,
-		"patrol_link_count": room_links.size(),
-		"topology": " | ".join(topology_parts),
-	}
+	snapshot.room_count = room_count
+	snapshot.patrol_node_count = patrol_node_count
+	snapshot.patrol_link_count = room_links.size()
+	snapshot.topology = " | ".join(topology_parts)
+	return snapshot
 
 # Validates generated patrol nodes and patrol links against runtime layout metadata.
-func run_patrol_smoke_check() -> Dictionary:
-	var report := {
-		"ok": false,
-		"error": "",
-		"room_groups": 0,
-		"patrol_markers": 0,
-		"link_markers": 0,
-		"expected_links": 0,
-		"topology": "",
-	}
+func run_patrol_smoke_check() -> DungeonPatrolSmokeReport:
+	var report: DungeonPatrolSmokeReport = DungeonPatrolSmokeReport.new()
 
 	if _generated_root == null or not is_instance_valid(_generated_root):
-		report["error"] = "Generated root missing"
+		report.error = "Generated root missing"
 		return report
-	if _runtime_layout.is_empty():
-		report["error"] = "Runtime layout missing"
+	if _runtime_layout == null or _runtime_layout.is_empty():
+		report.error = "Runtime layout missing"
 		return report
 
 	var patrol_root: Node = _generated_root.find_child("PatrolNodes", true, false)
 	if patrol_root == null:
-		report["error"] = "PatrolNodes root missing"
+		report.error = "PatrolNodes root missing"
 		return report
 
 	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
@@ -488,29 +477,28 @@ func run_patrol_smoke_check() -> Dictionary:
 	if links_root != null:
 		link_markers = links_root.find_children("PatrolLink_*", "Marker3D", false, false)
 
-	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
-	var expected_links: Array = patrol_graph.get("room_links", [])
-	var snapshot: Dictionary = get_patrol_debug_snapshot()
+	var expected_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.room_links
+	var snapshot: DungeonPatrolDebugSnapshot = get_patrol_debug_snapshot()
 
-	report["room_groups"] = room_groups.size()
-	report["patrol_markers"] = patrol_markers.size()
-	report["link_markers"] = link_markers.size()
-	report["expected_links"] = expected_links.size()
-	report["topology"] = snapshot.get("topology", "")
+	report.room_groups = room_groups.size()
+	report.patrol_markers = patrol_markers.size()
+	report.link_markers = link_markers.size()
+	report.expected_links = expected_links.size()
+	report.topology = snapshot.topology
 
 	if patrol_markers.is_empty():
-		report["error"] = "No patrol markers found"
+		report.error = "No patrol markers found"
 		return report
 	if link_markers.size() != expected_links.size():
-		report["error"] = "Patrol link marker count mismatch"
+		report.error = "Patrol link marker count mismatch"
 		return report
 
 	for link_node in link_markers:
 		if not link_node.has_meta("from_room") or not link_node.has_meta("to_room"):
-			report["error"] = "Patrol link missing room metadata"
+			report.error = "Patrol link missing room metadata"
 			return report
 
-	report["ok"] = true
+	report.ok = true
 	return report
 
 # Enables or disables runtime patrol link debug mesh rendering.
@@ -530,7 +518,7 @@ func _rebuild_patrol_link_debug_visual() -> void:
 	_clear_patrol_link_debug_visual()
 	if _generated_root == null or not is_instance_valid(_generated_root):
 		return
-	if _runtime_layout.is_empty():
+	if _runtime_layout == null or _runtime_layout.is_empty():
 		return
 
 	var patrol_root: Node = _generated_root.find_child("PatrolNodes", true, false)
@@ -580,12 +568,10 @@ func _append_room_patrol_loop_lines(mesh: ImmediateMesh, patrol_root: Node) -> i
 # Appends patrol lines connecting anchors between MST-linked rooms.
 func _append_cross_room_patrol_lines(mesh: ImmediateMesh, patrol_root: Node) -> int:
 	var lines_added: int = 0
-	var patrol_graph: Dictionary = _runtime_layout.get("patrol_graph", {})
-	var room_links: Array = patrol_graph.get("room_links", [])
-	for link_data in room_links:
-		var link: Dictionary = link_data
-		var from_room: int = int(link.get("a", -1))
-		var to_room: int = int(link.get("b", -1))
+	var room_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.room_links
+	for link in room_links:
+		var from_room: int = link.a
+		var to_room: int = link.b
 		if from_room < 0 or to_room < 0 or from_room == to_room:
 			continue
 		var from_position: Vector3 = _resolve_room_patrol_anchor(patrol_root, from_room)

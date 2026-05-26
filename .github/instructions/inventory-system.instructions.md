@@ -61,8 +61,13 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
   - Merchant Ring Slot Expansion adds exactly +1 ring slot once.
   - Merchant Band Slot Expansion adds exactly +1 band slot once.
 - Keep drag-and-drop payload handling defensive:
-  - Validate dictionary payload keys and types.
+  - Use typed `RefCounted` payload models for drag-and-drop contracts.
+  - Validate payload object type and field values before equip/swap.
   - Validate source item existence with is_instance_valid checks before equip.
+
+- Do not use ad hoc `Dictionary` payloads for inventory/equipment runtime contracts.
+  - Model slot transfer, equip preview, and result reports as typed `RefCounted` classes.
+  - Only use `Dictionary` where a Godot engine API forces it, and convert immediately.
 - Follow full Rings/Bands domains from the dedicated mechanics instruction:
   - Rings: offensive fireball modifiers (multipliers and flats such as damage, mana cost, speed, cast delay, spread, bounces, split, AoE radius, pierce).
   - Bands: passive defensive/core player modifiers (max HP, max MP, mana regen, max AP slots, speed multiplier) plus active trait values (heal, shield-fill, speed-burst).
