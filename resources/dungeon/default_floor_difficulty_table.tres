@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="FloorDifficultyTable" format=3 uid="uid://c0g11khm3kmio"]
 
-[ext_resource type="Script" uid="uid://dmg6yju54wbjt" path="res://scripts/progression/floor_difficulty_table.gd" id="1_8vk0h"]
-[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/dungeon_floor_config.gd" id="2_i020c"]
-[ext_resource type="Script" uid="uid://d08pq1l2tats" path="res://scripts/progression/floor_config_pool_entry.gd" id="2_u4v67"]
+[ext_resource type="Script" uid="uid://dmg6yju54wbjt" path="res://scripts/progression/resources/floor_difficulty_table.gd" id="1_8vk0h"]
+[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="2_i020c"]
+[ext_resource type="Script" uid="uid://d08pq1l2tats" path="res://scripts/progression/resources/floor_config_pool_entry.gd" id="2_u4v67"]
 [ext_resource type="Resource" uid="uid://7cjyy6eh8qi" path="res://resources/dungeon/default_floor_config.tres" id="4_4qf3q"]
 
 [sub_resource type="Resource" id="Resource_0k680"]

@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://7cjyy6eh8qi"]
 
-[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/dungeon_floor_config.gd" id="1_2x5xk"]
+[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_2x5xk"]
 [ext_resource type="PackedScene" uid="uid://djyryd2kvvusk" path="res://scenes/enemies/enemy_basic.tscn" id="1_xx3vb"]
 [ext_resource type="PackedScene" uid="uid://d2c638kyuv2vk" path="res://scenes/merchant/merchant_room.tscn" id="2_6cpke"]
 [ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="3_bjrfy"]
 
 [resource]
 script = ExtResource("1_2x5xk")
-generation_seed = 1513894056
+generation_seed = 863904633
 width = 200
 height = 200
 cell_count = 10

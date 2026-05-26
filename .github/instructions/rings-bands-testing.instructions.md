@@ -1,6 +1,6 @@
 ---
 description: "Use when validating Rings and Bands generation, stacking math, deterministic seeding, or regression safety for inventory-to-combat and merchant integration. Defines tests and debug hooks for the equipment system."
-applyTo: "scripts/inventory/*.gd, scripts/spells/*.gd, scripts/player/player_fps_controller.gd, scripts/ui/player_hud.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/merchant/*.gd, scripts/ui/merchant_panel.gd"
+applyTo: "scripts/inventory/**/*.gd, scripts/spells/**/*.gd, scripts/player/**/*.gd, scripts/ui/player_hud.gd, scripts/dungeon/**/*.gd, scripts/merchant/**/*.gd, scripts/ui/merchant_panel.gd"
 ---
 
 # Rings And Bands Testing

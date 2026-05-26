@@ -1,7 +1,7 @@
 extends RefCounted
 class_name MerchantSpecialUnlocksData
 
-const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/merchant_special_modifier_id.gd")
+const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contracts/merchant_special_modifier_id.gd")
 
 var bag_slot_unlocked: bool = false
 var dungeon_map_unlocked: bool = false

@@ -1,6 +1,6 @@
 ---
 description: "Use when implementing or refactoring ring/band mechanics, procedural affix generation, fireball stat stacking, rarity budgets, equipment-driven combat, or economy scaling in this Godot project. Enforces the Rings and Bands GDD behavior and data flow."
-applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/player_fps_controller.gd, scripts/spells/*.gd, scripts/enemies/enemy_basic.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/merchant/*.gd, scripts/progression/*.gd"
+applyTo: "scripts/inventory/**/*.gd, scripts/ui/inventory*.gd, scripts/player/**/*.gd, scripts/spells/**/*.gd, scripts/enemies/**/*.gd, scripts/dungeon/**/*.gd, scripts/merchant/**/*.gd, scripts/progression/**/*.gd"
 ---
 
 # Rings And Bands Mechanics

@@ -1,6 +1,6 @@
 ---
 description: "Use when editing any enemy script or scene. Route roster-specific work to the matching enemy instruction file."
-applyTo: "scripts/enemies/*.gd, scenes/enemies/*.tscn"
+applyTo: "scripts/enemies/**/*.gd, scenes/enemies/*.tscn"
 ---
 
 # Enemy Roster Hub

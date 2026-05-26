@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://xogsi6tqw8de"]
 
-[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/dungeon_floor_config.gd" id="1_cycqr"]
+[ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_cycqr"]
 
 [resource]
 script = ExtResource("1_cycqr")

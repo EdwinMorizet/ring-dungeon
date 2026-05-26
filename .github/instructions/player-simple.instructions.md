@@ -1,6 +1,6 @@
 ---
 description: "Use when editing player controller scripts in scripts/player. Keep movement and input code simple, typed, and stable."
-applyTo: "scripts/player/*.gd, scenes/player/*.tscn"
+applyTo: "scripts/player/**/*.gd, scenes/player/*.tscn"
 ---
 
 # Player Folder Guidelines

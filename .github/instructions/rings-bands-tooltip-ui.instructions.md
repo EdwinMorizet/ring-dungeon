@@ -1,6 +1,6 @@
 ---
 description: "Use when building inventory tooltip UI, item cards, rarity color styling, or stat-preview formatting for ring/band items. Defines how to present benefits, trade-offs, and computed values clearly."
-applyTo: "scripts/ui/*.gd, scripts/inventory/*.gd, scenes/ui/*.tscn"
+applyTo: "scripts/ui/**/*.gd, scripts/inventory/**/*.gd, scenes/ui/*.tscn"
 ---
 
 # Rings And Bands Tooltip UI

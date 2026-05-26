@@ -3,9 +3,9 @@ extends CanvasLayer
 class_name MerchantPanel
 
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
-const MerchantOfferDataScript = preload("res://scripts/merchant/merchant_offer_data.gd")
-const MerchantBuyResultScript = preload("res://scripts/merchant/merchant_buy_result.gd")
-const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/merchant_special_unlocks_data.gd")
+const MerchantOfferDataScript = preload("res://scripts/merchant/contracts/merchant_offer_data.gd")
+const MerchantBuyResultScript = preload("res://scripts/merchant/contracts/merchant_buy_result.gd")
+const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/contracts/merchant_special_unlocks_data.gd")
 const MERCHANT_LOCK_ID: StringName = &"merchant_shop_open"
 const _MUTED_TEXT_COLOR: Color = Color(0.82, 0.82, 0.82, 1.0)
 const _WARNING_TEXT_COLOR: Color = Color(1.0, 0.74, 0.52, 1.0)

@@ -1,6 +1,6 @@
 ---
 description: "Use when implementing rarity rolls, affix budgets, ring/band generation tables, floor-depth scaling, or item gold value tuning for the Rings and Bands system. Defines canonical rarity constants and placeholder balance ranges to fill from the GDD."
-applyTo: "scripts/inventory/*.gd, scripts/progression/*.gd, scripts/merchant/*.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/ui/inventory*.gd"
+applyTo: "scripts/inventory/**/*.gd, scripts/progression/**/*.gd, scripts/merchant/**/*.gd, scripts/dungeon/**/*.gd, scripts/ui/inventory*.gd"
 ---
 
 # Rarity And Affix Constants

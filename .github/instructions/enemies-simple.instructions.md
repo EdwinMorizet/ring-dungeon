@@ -1,6 +1,6 @@
 ---
 description: "Use when editing enemy scripts in scripts/enemies. Start with the matching roster-specific enemy instruction file when one exists."
-applyTo: "scripts/enemies/*.gd, scenes/enemies/*.tscn"
+applyTo: "scripts/enemies/**/*.gd, scenes/enemies/*.tscn"
 ---
 
 # Enemies Folder Guidelines

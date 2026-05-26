@@ -1,12 +1,12 @@
 # Central merchant service for offer generation, shop state, and purchases.
 extends Node
 
-const ItemAffixGeneratorScript = preload("res://scripts/inventory/item_affix_generator.gd")
-const MerchantOfferDataScript = preload("res://scripts/merchant/merchant_offer_data.gd")
-const MerchantBuyResultScript = preload("res://scripts/merchant/merchant_buy_result.gd")
-const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/merchant_special_unlocks_data.gd")
-const MerchantSpecialOfferTemplateScript = preload("res://scripts/merchant/merchant_special_offer_template.gd")
-const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/merchant_special_modifier_id.gd")
+const ItemAffixGeneratorScript = preload("res://scripts/inventory/runtime/item_affix_generator.gd")
+const MerchantOfferDataScript = preload("res://scripts/merchant/contracts/merchant_offer_data.gd")
+const MerchantBuyResultScript = preload("res://scripts/merchant/contracts/merchant_buy_result.gd")
+const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/contracts/merchant_special_unlocks_data.gd")
+const MerchantSpecialOfferTemplateScript = preload("res://scripts/merchant/contracts/merchant_special_offer_template.gd")
+const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contracts/merchant_special_modifier_id.gd")
 
 const SPECIAL_BAG_ID: int = MerchantSpecialModifierIdScript.Id.BAG_SLOT_1
 const SPECIAL_MAP_ID: int = MerchantSpecialModifierIdScript.Id.DUNGEON_MAP

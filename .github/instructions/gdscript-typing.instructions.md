@@ -61,6 +61,19 @@ report.count = 4
 done.emit(report)
 ```
 
+## Folder Structure Policy
+
+Use a domain-first layout under `scripts/` and split by role inside each domain.
+
+- `managers/`: autoload-facing orchestration scripts.
+- `contracts/`: typed `RefCounted` runtime payloads shared across systems.
+- `resources/`: `Resource` scripts and config/resource helpers.
+- `runtime/`: gameplay logic and calculators that are not autoload managers.
+- `debug/`: optional debug runners and diagnostics.
+
+Keep autoload singleton entrypoints stable unless the task explicitly requires path migration in `project.godot`.
+When moving scripts into role folders, update all preload paths in `.gd/.tscn/.tres` references in the same change.
+
 ## Class Structure
 
 Organize class members in this order:

@@ -2,7 +2,7 @@
 extends Node3D
 class_name ChestInteractable
 
-const ItemAffixGeneratorScript = preload("res://scripts/inventory/item_affix_generator.gd")
+const ItemAffixGeneratorScript = preload("res://scripts/inventory/runtime/item_affix_generator.gd")
 
 @export var floor_depth: int = 0
 @export var floor_seed: int = 1

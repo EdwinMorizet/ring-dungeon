@@ -1,6 +1,6 @@
 ---
 description: "Use when editing fireball or spell scripts in scripts/spells. Keep gameplay logic simple, typed, and easy to tune."
-applyTo: "scripts/spells/*.gd, resources/spells/*.tres, scenes/spells/*.tscn"
+applyTo: "scripts/spells/**/*.gd, resources/spells/*.tres, scenes/spells/*.tscn"
 ---
 
 # Spells Folder Guidelines
@@ -9,6 +9,12 @@ applyTo: "scripts/spells/*.gd, resources/spells/*.tres, scenes/spells/*.tscn"
   - `fireball_config.gd`: data only.
   - `fireball_manager.gd`: spawn and orchestration only.
   - `fireball_projectile.gd`: projectile runtime behavior only.
+- Prefer this folder layout for new spell code:
+  - `scripts/spells/managers/` for manager/autoload orchestrators.
+  - `scripts/spells/contracts/` for typed `RefCounted` runtime payloads.
+  - `scripts/spells/resources/` for `Resource` scripts and config helpers.
+  - `scripts/spells/runtime/` for projectile/runtime calculators.
+  - `scripts/spells/debug/` for deterministic debug/sample runners.
 - Prefer strongly typed GDScript for variables, arguments, and return values.
 - Keep exported tuning values in config resources or exported properties, not hard-coded in logic paths.
 - Use straightforward control flow over clever abstractions.

@@ -8,7 +8,7 @@ const CURRENCY_KIND_GOLD: int = 0
 const CURRENCY_KIND_GEMS: int = 1
 # Default parameter resource for slot counts and drop/nearby behavior.
 const DefaultInventoryManagerConfig: InventoryManagerConfig = preload("res://resources/inventory/default_inventory_manager_config.tres")
-const ItemAffixGeneratorScript = preload("res://scripts/inventory/item_affix_generator.gd")
+const ItemAffixGeneratorScript = preload("res://scripts/inventory/runtime/item_affix_generator.gd")
 
 signal inventory_open_changed(is_open: bool)
 signal inventory_changed()

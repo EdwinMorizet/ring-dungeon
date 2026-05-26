@@ -1,6 +1,6 @@
 ---
 description: "Use when implementing merchant room interaction, merchant offers, merchant UI behavior, or buy/sell transaction flow."
-applyTo: "scripts/merchant/*.gd, scenes/merchant/*.tscn, scripts/ui/merchant_panel.gd, scenes/ui/merchant_panel.tscn, scripts/dungeon/dungeon_floor_controller.gd, scripts/inventory/inventory_manager.gd, project.godot"
+applyTo: "scripts/merchant/**/*.gd, scenes/merchant/*.tscn, scripts/ui/merchant_panel.gd, scenes/ui/merchant_panel.tscn, scripts/dungeon/**/*.gd, scripts/inventory/**/*.gd, project.godot"
 ---
 
 # Merchant System Guidelines

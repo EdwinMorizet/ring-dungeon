@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="PlayerManagerConfig" format=3]
 
-[ext_resource type="Script" path="res://scripts/player/player_manager_config.gd" id="1_player_cfg"]
+[ext_resource type="Script" path="res://scripts/player/resources/player_manager_config.gd" id="1_player_cfg"]
 
 [resource]
 script = ExtResource("1_player_cfg")

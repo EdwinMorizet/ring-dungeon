@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FireballConfig" format=3 uid="uid://ckd54enf5bfco"]
 
-[ext_resource type="Script" uid="uid://5biflvp08toa" path="res://scripts/spells/fireball_config.gd" id="1_ex2vi"]
+[ext_resource type="Script" uid="uid://5biflvp08toa" path="res://scripts/spells/resources/fireball_config.gd" id="1_ex2vi"]
 
 [resource]
 script = ExtResource("1_ex2vi")

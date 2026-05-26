@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="InventoryManagerConfig" format=3]
 
-[ext_resource type="Script" path="res://scripts/inventory/inventory_manager_config.gd" id="1_inventory_cfg"]
+[ext_resource type="Script" path="res://scripts/inventory/resources/inventory_manager_config.gd" id="1_inventory_cfg"]
 
 [resource]
 script = ExtResource("1_inventory_cfg")

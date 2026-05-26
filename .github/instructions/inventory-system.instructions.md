@@ -1,6 +1,6 @@
 ---
 description: "Use when editing inventory, equipment slots, world item drops, inventory UI behavior, or inventory-driven combat/player integration. Keep inventory architecture and slot flow consistent with the Rings/Bands mechanics instruction."
-applyTo: "scripts/inventory/*.gd, scripts/ui/inventory*.gd, scripts/player/player_fps_controller.gd, scripts/spells/fireball_manager.gd, scripts/enemies/enemy_basic.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/ui/player_hud.gd, scripts/progression/*.gd"
+applyTo: "scripts/inventory/**/*.gd, scripts/ui/inventory*.gd, scripts/player/player_fps_controller.gd, scripts/spells/**/*.gd, scripts/enemies/enemy_basic.gd, scripts/dungeon/dungeon_floor_controller.gd, scripts/ui/player_hud.gd, scripts/progression/**/*.gd"
 ---
 
 # Inventory System Guidelines
@@ -32,6 +32,12 @@ Use these stat emojis consistently in inventory UI strings, equip previews, and 
   - Left hand slots (base 4 bands, expandable to 5 via merchant slot offer).
   - Right hand slots (base 4 rings, expandable to 5 via merchant slot offer).
   - Nearby world item tracking and equip validation.
+- Prefer this folder layout for new inventory code:
+  - `scripts/inventory/managers/` for autoload-facing manager scripts.
+  - `scripts/inventory/contracts/` for typed `RefCounted` payload contracts.
+  - `scripts/inventory/resources/` for `Resource` scripts/configs.
+  - `scripts/inventory/runtime/` for generation and runtime calculators.
+  - `scripts/inventory/debug/` for deterministic test/debug runners.
 - Keep currency ownership and flow explicit:
   - Player stores authoritative Gold and Diamonds values.
   - InventoryManager provides helper APIs to add/read player currency from other systems.

@@ -1,7 +1,7 @@
 ---
 description: "Use when creating or refactoring Godot autoload managers to enforce dedicated resource-backed manager configs, default .tres wiring, typed config lifecycle helpers, and full parameter comments."
 name: "Autoload Manager Config Conventions"
-applyTo: "scripts/enemies/enemy_spawn_manager.gd, scripts/spells/fireball_manager.gd, scripts/progression/game_progression_manager.gd, scripts/inventory/inventory_manager.gd, scripts/player/player_manager.gd, scripts/**/*manager_config.gd, resources/**/default_*manager_config.tres, project.godot"
+applyTo: "scripts/enemies/enemy_spawn_manager.gd, scripts/spells/fireball_manager.gd, scripts/progression/game_progression_manager.gd, scripts/inventory/inventory_manager.gd, scripts/player/player_manager.gd, scripts/**/managers/*manager.gd, scripts/**/*manager_config.gd, scripts/**/resources/*manager_config.gd, resources/**/default_*manager_config.tres, project.godot"
 ---
 
 # Autoload Manager Config Conventions
@@ -17,12 +17,13 @@ applyTo: "scripts/enemies/enemy_spawn_manager.gd, scripts/spells/fireball_manage
 ## Required Pattern
 
 1. Manager config files
-- Create `scripts/<domain>/<manager>_config.gd`.
+- Create `scripts/<domain>/resources/<manager>_config.gd` for new code. Legacy `scripts/<domain>/<manager>_config.gd` paths are allowed during migration.
 - Create `resources/<domain>/default_<manager>_config.tres`.
 - Use typed `@export var` for manager parameters.
 - Add one-line comments above every exported field.
 
 2. Manager script wiring
+- Prefer `scripts/<domain>/managers/<manager>.gd` for new manager/autoload scripts. Legacy top-level domain paths are allowed during migration.
 - Preload default config constant in manager script.
 - Add `var _config: ConfigType = DefaultConfig`.
 - Add `set_config(config: ConfigType) -> void` with null guard.
