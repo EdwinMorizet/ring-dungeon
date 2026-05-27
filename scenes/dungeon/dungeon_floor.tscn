@@ -1,6 +1,10 @@
 [gd_scene format=3 uid="uid://b4iah6p7r2i7m"]
 
 [ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_r3r5s"]
+[ext_resource type="Script" path="res://scripts/dungeon/debug/dungeon_floor_debug_controller.gd" id="2_floor_debug"]
 
 [node name="DungeonFloor" type="Node3D" unique_id=426038178]
 script = ExtResource("1_r3r5s")
+
+[node name="DungeonFloorDebugController" type="Node3D" parent="." unique_id=878188722]
+script = ExtResource("2_floor_debug")

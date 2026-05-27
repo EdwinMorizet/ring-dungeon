@@ -490,7 +490,8 @@ func _assign_special_room_cells(cells: Array[DungeonCellData], rng: RandomNumber
 
 	var floor_pool_entry: DungeonSpecialRoomFloorPoolEntry = null
 	if config.special_room_floor_pool_list != null:
-		floor_pool_entry = config.special_room_floor_pool_list.resolve_for_progression_index(progression_index)
+		if config.special_room_floor_pool_list.has_method("resolve_for_progression_index"):
+			floor_pool_entry = config.special_room_floor_pool_list.resolve_for_progression_index(progression_index)
 	if floor_pool_entry == null or floor_pool_entry.pool == null:
 		return
 
@@ -649,6 +650,10 @@ func _find_nearest_floor_tile(grid: PackedInt32Array, width: int, height: int, o
 # Instantiates a special-room script and validates the expected base type.
 func _instantiate_special_room_script(room_script: Script) -> DungeonSpecRoomBase:
 	if room_script == null:
+		return null
+	if not room_script.can_instantiate():
+		return null
+	if not room_script.has_method("new"):
 		return null
 	var instance: Variant = room_script.new()
 	if instance is DungeonSpecRoomBase:

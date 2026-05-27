@@ -14,10 +14,6 @@ const ROOM_COLOR: Color = Color(0.28, 1.0, 0.45, 1.0)
 const DELAUNAY_COLOR: Color = Color(1.0, 0.62, 0.18, 1.0)
 const MST_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
 const LOOP_COLOR: Color = Color(1.0, 0.34, 0.8, 1.0)
-const HOTKEY_PREVIOUS_STEP: Key = KEY_BRACKETLEFT
-const HOTKEY_NEXT_STEP: Key = KEY_BRACKETRIGHT
-const HOTKEY_FIRST_STEP: Key = KEY_M
-const HOTKEY_LAST_STEP: Key = KEY_END
 
 # Current step shown by the editor preview.
 var _step_index: int = 0
@@ -57,9 +53,6 @@ var _preview_root: Node3D
 	set(value):
 		_set_step_index(value)
 
-# Enables editor hotkeys ([, ], Home, End) for timeline stepping.
-@export var enable_editor_hotkeys: bool = true
-
 # Configures the visualizer with a fresh generation timeline and tile size.
 func configure(timeline: Variant, tile_size: float) -> void:
 	_timeline = timeline
@@ -82,26 +75,7 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		queue_free()
 		return
-	set_process_unhandled_input(true)
 	_rebuild_preview()
-
-# Handles editor hotkeys for quick generation timeline stepping.
-func _unhandled_input(event: InputEvent) -> void:
-	if not Engine.is_editor_hint() or not enable_editor_hotkeys:
-		return
-	if not event is InputEventKey:
-		return
-	var key_event: InputEventKey = event as InputEventKey
-	if not key_event.pressed or key_event.echo:
-		return
-	if key_event.keycode == HOTKEY_PREVIOUS_STEP:
-		_step_step(-1)
-	elif key_event.keycode == HOTKEY_NEXT_STEP:
-		_step_step(1)
-	elif key_event.keycode == HOTKEY_FIRST_STEP:
-		_set_step_index(0)
-	elif key_event.keycode == HOTKEY_LAST_STEP:
-		_set_step_index(_get_latest_step_index())
 
 # Applies a delta to the current step index and refreshes the preview.
 func _step_step(delta: int) -> void:
@@ -141,14 +115,6 @@ func _rebuild_preview() -> void:
 	mesh_instance.mesh = preview_mesh
 	mesh_instance.material_override = _build_preview_material()
 	_preview_root.add_child(mesh_instance)
-
-	var step_name: StringName = step.step_name
-	var label: Label3D = Label3D.new()
-	label.name = "GenerationPreviewLabel"
-	label.text = _build_stage_label_text(step_name)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.position = Vector3(0.0, 2.8, 0.0)
-	_preview_root.add_child(label)
 
 # Builds the mesh used to render one recorded generation step.
 func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
@@ -234,18 +200,6 @@ func _build_preview_material() -> StandardMaterial3D:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material
-
-# Builds compact label text showing current stage and available stepping keys.
-func _build_stage_label_text(step_name: StringName) -> String:
-	return "Step %d/%d: %s\n[%s] Prev  [%s] Next  [%s] First  [%s] Last" % [
-		_step_index + 1,
-		maxi(get_step_count(), 1),
-		String(step_name),
-		OS.get_keycode_string(HOTKEY_PREVIOUS_STEP),
-		OS.get_keycode_string(HOTKEY_NEXT_STEP),
-		OS.get_keycode_string(HOTKEY_FIRST_STEP),
-		OS.get_keycode_string(HOTKEY_LAST_STEP),
-	]
 
 # Removes the existing preview subtree from the visualizer.
 func _clear_preview_root() -> void:

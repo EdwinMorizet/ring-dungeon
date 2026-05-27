@@ -1,4 +1,5 @@
 # Stores ordered floor mappings used to resolve special-room pools by progression index.
+@tool
 extends Resource
 class_name DungeonSpecialRoomFloorPoolList
 

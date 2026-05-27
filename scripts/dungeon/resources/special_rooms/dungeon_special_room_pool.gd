@@ -1,4 +1,5 @@
 # Groups weighted special-room entries used by one floor mapping.
+@tool
 extends Resource
 class_name DungeonSpecialRoomPool
 

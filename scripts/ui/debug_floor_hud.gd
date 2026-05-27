@@ -206,9 +206,9 @@ func _has_progression_manager() -> bool:
 
 func _toggle_patrol_overlay() -> void:
 	_show_patrol_debug = not _show_patrol_debug
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller != null:
-		controller.set_patrol_link_debug_visual_enabled(_show_patrol_debug)
+	var debug_controller: DungeonFloorDebugController = _get_floor_debug_controller()
+	if debug_controller != null:
+		debug_controller.set_patrol_link_debug_visual_enabled(_show_patrol_debug)
 	if _patrol_overlay_button != null:
 		_patrol_overlay_button.text = "Patrol Overlay: %s" % ("On" if _show_patrol_debug else "Off")
 	if _has_progression_manager():
@@ -217,10 +217,10 @@ func _toggle_patrol_overlay() -> void:
 		_refresh_status_without_manager()
 
 func _build_patrol_debug_line() -> String:
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller == null:
+	var debug_controller: DungeonFloorDebugController = _get_floor_debug_controller()
+	if debug_controller == null:
 		return "Patrol: unavailable"
-	var snapshot: DungeonPatrolDebugSnapshot = controller.get_patrol_debug_snapshot()
+	var snapshot: DungeonPatrolDebugSnapshot = debug_controller.get_patrol_debug_snapshot()
 	if snapshot == null or snapshot.is_empty():
 		return "Patrol: no runtime layout"
 	return "Patrol: Rooms=%d Nodes=%d Links=%d | %s" % [
@@ -231,11 +231,11 @@ func _build_patrol_debug_line() -> String:
 	]
 
 func _run_patrol_smoke_check() -> void:
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller == null:
-		print("[PatrolSmoke] missing DungeonFloorController or helper method")
+	var debug_controller: DungeonFloorDebugController = _get_floor_debug_controller()
+	if debug_controller == null:
+		print("[PatrolSmoke] missing DungeonFloorDebugController")
 		return
-	var report: DungeonPatrolSmokeReport = controller.run_patrol_smoke_check()
+	var report: DungeonPatrolSmokeReport = debug_controller.run_patrol_smoke_check()
 	if report == null:
 		print("[PatrolSmoke] FAIL rooms=0 markers=0 links=0 expected_links=0 error=Missing report")
 		return
@@ -255,14 +255,14 @@ func _run_patrol_smoke_check() -> void:
 		if _has_progression_manager():
 			_refresh()
 
-func _get_floor_controller() -> DungeonFloorController:
+func _get_floor_debug_controller() -> DungeonFloorDebugController:
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return null
 	var current_scene: Node = tree.current_scene
 	if current_scene == null:
 		return null
-	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if not (controller_node is DungeonFloorController):
+	var controller_node: Node = current_scene.find_child("DungeonFloorDebugController", true, false)
+	if not (controller_node is DungeonFloorDebugController):
 		return null
-	return controller_node as DungeonFloorController
+	return controller_node as DungeonFloorDebugController

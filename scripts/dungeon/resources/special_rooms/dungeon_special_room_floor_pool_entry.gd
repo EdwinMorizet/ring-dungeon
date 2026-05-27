@@ -1,4 +1,5 @@
 # Maps progression floors to a weighted special-room pool and spawn chance.
+@tool
 extends Resource
 class_name DungeonSpecialRoomFloorPoolEntry
 

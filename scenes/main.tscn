@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bla0efmx0rcb4" path="res://scripts/dungeon/dungeon_floor_controller.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://brnj6h8di3jnh" path="res://scenes/ui/debug_floor_hud.tscn" id="2_dbgui"]
+[ext_resource type="Script" uid="uid://dk1ncw73kn4pb" path="res://scripts/dungeon/debug/dungeon_floor_debug_controller.gd" id="2_floor_debug"]
 [ext_resource type="Texture2D" uid="uid://b0anr3agalg3s" path="res://assets/sky_78_2k.png" id="3_h2yge"]
 [ext_resource type="PackedScene" uid="uid://dugyl3r82m3qw" path="res://scenes/items/chest_interactable.tscn" id="3_ya4ey"]
 [ext_resource type="PackedScene" uid="uid://eicmvh8yjf8w" path="res://scenes/ui/player_hud.tscn" id="4_1bvp3"]
@@ -51,8 +52,10 @@ environment = SubResource("Environment_7mycd")
 [node name="DungeonFloorController" type="Node3D" parent="." unique_id=1797963649]
 script = ExtResource("1_ig7tw")
 config = SubResource("Resource_ya4ey")
-show_generation_debug_visualizer_in_editor = false
 metadata/_custom_type_script = "uid://bla0efmx0rcb4"
+
+[node name="DungeonFloorDebugController" type="Node3D" parent="." unique_id=1549971001]
+script = ExtResource("2_floor_debug")
 
 [node name="DebugFloorHud" parent="." unique_id=1054138337 instance=ExtResource("2_dbgui")]
 
