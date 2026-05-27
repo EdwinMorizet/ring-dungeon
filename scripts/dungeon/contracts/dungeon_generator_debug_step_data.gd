@@ -8,6 +8,7 @@ var delaunay_edges: Array[DungeonEdgeData] = []
 var mst_edges: Array[DungeonEdgeData] = []
 var loop_edges: Array[DungeonEdgeData] = []
 var corridor_edges: Array[DungeonEdgeData] = []
+var corridor_paths: Array[PackedVector2Array] = []
 
 func duplicate_data() -> DungeonGeneratorDebugStepData:
 	var snapshot: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
@@ -24,4 +25,9 @@ func duplicate_data() -> DungeonGeneratorDebugStepData:
 		snapshot.loop_edges.append(edge.duplicate_data())
 	for edge in corridor_edges:
 		snapshot.corridor_edges.append(edge.duplicate_data())
+	for corridor_path in corridor_paths:
+		var path_snapshot: PackedVector2Array = PackedVector2Array()
+		for cell in corridor_path:
+			path_snapshot.push_back(cell)
+		snapshot.corridor_paths.append(path_snapshot)
 	return snapshot

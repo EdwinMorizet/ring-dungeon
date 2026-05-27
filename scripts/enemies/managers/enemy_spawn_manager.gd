@@ -251,11 +251,10 @@ func _resolve_enemy_scene_for_spawn(default_scene: PackedScene, floor_seed: int,
 	return default_scene
 
 func _get_enemy_manager_node() -> Node:
-	if not is_inside_tree():
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
 		return null
-	if not has_node("/root/EnemyManager"):
-		return null
-	return get_node("/root/EnemyManager")
+	return tree.root.get_node_or_null("EnemyManager")
 
 func _resolve_patrol_route_for_spawn_marker(generated_root: Node3D, marker: Marker3D) -> Array[Vector3]:
 	var route: Array[Vector3] = []

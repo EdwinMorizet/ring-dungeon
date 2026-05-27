@@ -284,10 +284,14 @@ func _build_chest_seed(generation_seed: int, marker_position: Vector3, spawn_ind
 func _ensure_enemy_spawn_manager() -> void:
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
 		return
-	if not is_inside_tree() or not has_node("/root/EnemySpawnManager"):
+	if not is_inside_tree():
 		_enemy_spawn_manager = null
 		return
-	_enemy_spawn_manager = get_node("/root/EnemySpawnManager")
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		_enemy_spawn_manager = null
+		return
+	_enemy_spawn_manager = tree.root.get_node_or_null("EnemySpawnManager")
 
 # Connects generated floor-exit trigger signal to floor completion callback.
 func _connect_floor_exit_trigger() -> void:
@@ -315,7 +319,10 @@ func _on_merchant_exit_reached() -> void:
 
 # Returns true when the progression manager autoload exists in the scene tree.
 func _has_progression_manager() -> bool:
-	return has_node("/root/GameProgressionManager")
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		return false
+	return tree.root.has_node("GameProgressionManager")
 
 # Performs cleanup when this controller is about to be deleted.
 func _notification(what: int) -> void:

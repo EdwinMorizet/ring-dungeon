@@ -390,12 +390,14 @@ func _unregister_from_enemy_manager() -> void:
 	_is_registered_with_enemy_manager = false
 
 func _get_enemy_manager_node() -> Node:
-	if not has_node("/root/EnemyManager"):
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
 		return null
-	return get_node("/root/EnemyManager")
+	return tree.root.get_node_or_null("EnemyManager")
 
 func _resolve_floor_depth() -> int:
-	if has_node("/root/GameProgressionManager"):
+	var tree: SceneTree = get_tree()
+	if tree != null and tree.root != null and tree.root.has_node("GameProgressionManager"):
 		return int(GameProgressionManager.get_progression_index())
 	return 0
 

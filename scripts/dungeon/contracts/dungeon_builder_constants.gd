@@ -13,6 +13,8 @@ const FloorExitTriggerScene: PackedScene = preload("res://scenes/dungeon/floor_e
 const TILE_WALL := 0
 # Tile id for floor cells.
 const TILE_FLOOR := 1
+# Tile id for corridor cells.
+const TILE_CORRIDOR: int = 2
 # Cardinal neighbor offsets used for adjacency checks.
 const CARDINAL_OFFSETS: Array[Vector2i] = [
 	Vector2i(1, 0),

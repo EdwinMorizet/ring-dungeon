@@ -202,7 +202,10 @@ func _spawn_debug_gems() -> void:
 	InventoryManager.debug_spawn_seeded_gems(8, floor_depth, 3037, 2.2)
 
 func _has_progression_manager() -> bool:
-	return has_node("/root/GameProgressionManager")
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		return false
+	return tree.root.has_node("GameProgressionManager")
 
 func _toggle_patrol_overlay() -> void:
 	_show_patrol_debug = not _show_patrol_debug

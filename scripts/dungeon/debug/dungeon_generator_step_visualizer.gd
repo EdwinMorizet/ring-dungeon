@@ -61,8 +61,18 @@ var _preview_root: Node3D
 func configure(timeline: Variant, tile_size: float) -> void:
 	_timeline = timeline
 	_tile_size = maxf(tile_size, 0.001)
-	# _set_step_index(_get_latest_step_index())
-	_set_step_index(1)
+	_set_step_index(_resolve_default_step_index())
+
+# Resolves the preferred initial step index, favoring the latest renderable stage.
+func _resolve_default_step_index() -> int:
+	var latest_index: int = _get_latest_step_index()
+	if _timeline == null or _timeline.is_empty():
+		return 0
+	for step_index in range(latest_index, -1, -1):
+		var step: DungeonGeneratorDebugStepData = _timeline.get_step(step_index)
+		if _build_step_mesh(step) != null:
+			return step_index
+	return latest_index
 
 # Returns the number of available recorded steps.
 func get_step_count() -> int:
@@ -109,6 +119,13 @@ func _rebuild_preview() -> void:
 	if step == null:
 		return
 	var preview_mesh: ImmediateMesh = _build_step_mesh(step)
+	if preview_mesh == null:
+		for fallback_index in range(_get_latest_step_index(), -1, -1):
+			var fallback_step: DungeonGeneratorDebugStepData = _timeline.get_step(fallback_index)
+			preview_mesh = _build_step_mesh(fallback_step)
+			if preview_mesh != null:
+				_step_index = fallback_index
+				break
 	if preview_mesh == null:
 		return
 	_preview_root = Node3D.new()
@@ -164,6 +181,7 @@ func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
 			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			_append_room_edges(mesh, step.rooms, step.corridor_edges, CORRIDOR_COLOR, 0.44)
+			_append_corridor_path_cells(mesh, step.corridor_paths, CORRIDOR_COLOR, 0.16)
 	mesh.surface_end()
 	return mesh
 
@@ -209,6 +227,13 @@ func _append_room_edges(mesh: ImmediateMesh, rooms: Array[DungeonRoomData], edge
 		var from_room: DungeonRoomData = rooms[from_index]
 		var to_room: DungeonRoomData = rooms[to_index]
 		_append_line(mesh, _grid_to_world(from_room.center, y), _grid_to_world(to_room.center, y), color)
+
+# Appends one tile outline per carved corridor cell, using recorded world-grid path data.
+func _append_corridor_path_cells(mesh: ImmediateMesh, corridor_paths: Array[PackedVector2Array], color: Color, y: float) -> void:
+	for corridor_path in corridor_paths:
+		for cell in corridor_path:
+			var cell_rect: Rect2i = Rect2i(Vector2i(int(round(cell.x)), int(round(cell.y))), Vector2i.ONE)
+			_append_rect_outline(mesh, cell_rect, color, y)
 
 # Appends short cross markers at room centers to improve edge stage readability.
 func _append_room_center_markers(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], color: Color, y: float, marker_size: float) -> void:

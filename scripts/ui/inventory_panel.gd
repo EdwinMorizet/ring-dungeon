@@ -216,7 +216,8 @@ func _build_player_actual_stats_text() -> String:
 	return "\n".join(lines)
 
 func _build_fireball_actual_stats_text() -> String:
-	if not has_node("/root/FireballManager"):
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null or not tree.root.has_node("FireballManager"):
 		return "Fireball manager not found"
 	if FireballManager == null:
 		return "Fireball stats unavailable"

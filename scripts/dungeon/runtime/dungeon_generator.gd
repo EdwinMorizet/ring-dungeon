@@ -50,7 +50,6 @@ func generate(
 	for edge_index in range(mst_edges.size(), corridor_edges.size()):
 		loop_edges.append(corridor_edges[edge_index])
 	_record_debug_step(debug_timeline, DEBUG_STEP_LOOP_EDGES, cells, rooms, delaunay_edges, mst_edges, loop_edges)
-	_record_debug_step(debug_timeline, DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges)
 
 	var world_rect: Rect2i = _compute_rect_bounds_from_entries(rooms)
 	var world_width := int(world_rect.size.x)
@@ -63,6 +62,7 @@ func generate(
 	var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
 	var door_side_used: PackedInt32Array = PackedInt32Array()
 	door_side_used.resize(door_side_totals.size())
+	var debug_corridor_paths: Array[PackedVector2Array] = []
 
 	for edge in corridor_edges:
 		if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
@@ -89,9 +89,14 @@ func generate(
 
 		_set_tile(grid, world_width, world_height, door_a.x, door_a.y, DungeonBuilderConstants.TILE_FLOOR)
 		_set_tile(grid, world_width, world_height, door_b.x, door_b.y, DungeonBuilderConstants.TILE_FLOOR)
-		_carve_l_corridor_between_doors(grid, world_width, world_height, door_a, door_b, rng)
+		var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
+		var world_corridor_path: PackedVector2Array = PackedVector2Array()
+		for local_cell in local_corridor_path:
+			world_corridor_path.push_back(Vector2(local_cell + world_rect.position))
+		debug_corridor_paths.append(world_corridor_path)
 		
 	_enforce_border_walls(grid, world_width, world_height)
+	_record_debug_step(debug_timeline, DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths)
 
 	var exit_index := -1
 	var start_index := -1
@@ -179,7 +184,8 @@ func _record_debug_step(
 	delaunay_edges: Array[DungeonEdgeData] = [],
 	mst_edges: Array[DungeonEdgeData] = [],
 	loop_edges: Array[DungeonEdgeData] = [],
-	corridor_edges: Array[DungeonEdgeData] = []
+	corridor_edges: Array[DungeonEdgeData] = [],
+	corridor_paths: Array[PackedVector2Array] = []
 ) -> void:
 	if debug_timeline == null:
 		return
@@ -197,6 +203,11 @@ func _record_debug_step(
 		step_data.loop_edges.append(edge.duplicate_data())
 	for edge in corridor_edges:
 		step_data.corridor_edges.append(edge.duplicate_data())
+	for corridor_path in corridor_paths:
+		var path_snapshot: PackedVector2Array = PackedVector2Array()
+		for cell in corridor_path:
+			path_snapshot.push_back(cell)
+		step_data.corridor_paths.append(path_snapshot)
 	debug_timeline.record_step(step_data)
 
 # Samples room candidate cells from a radial distribution around map center.
@@ -331,21 +342,142 @@ func _carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> vo
 		for x in range(start_x, end_x):
 			_set_tile(grid, int(world_rect.size.x), int(world_rect.size.y), x, y, DungeonBuilderConstants.TILE_FLOOR)
 
-# Carves an L-shaped corridor between two door cells and smooths dense corners.
-func _carve_l_corridor_between_doors(grid: PackedInt32Array, width: int, height: int, a: Vector2i, b: Vector2i, rng: RandomNumberGenerator) -> void:
-	var a_cell: Vector2i = a
-	var b_cell: Vector2i = b
-	if rng.randf() < 0.5:
-		_carve_hall_segment(grid, width, height, a_cell.x, b_cell.x, a_cell.y)
-		_carve_hall_segment_vertical(grid, width, height, a_cell.y, b_cell.y, b_cell.x)
-	else:
-		_carve_hall_segment_vertical(grid, width, height, a_cell.y, b_cell.y, a_cell.x)
-		_carve_hall_segment(grid, width, height, a_cell.x, b_cell.x, b_cell.y)
+# Carves an orthogonal A* corridor that prefers merging into existing corridor tiles.
+func _carve_orthogonal_a_star_corridor_between_doors(grid: PackedInt32Array, width: int, height: int, a: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var path: Array[Vector2i] = _build_orthogonal_corridor_path(grid, width, height, a, b)
+	if path.size() < 2:
+		return path
+	for i in range(1, path.size() - 1):
+		var cell: Vector2i = path[i]
+		_set_tile(grid, width, height, cell.x, cell.y, DungeonBuilderConstants.TILE_CORRIDOR)
+	return path
 
-	for y in range(mini(a_cell.y, b_cell.y) - 1, maxi(a_cell.y, b_cell.y) + 2):
-		for x in range(mini(a_cell.x, b_cell.x) - 1, maxi(a_cell.x, b_cell.x) + 2):
-			if _count_floor_neighbors(grid, width, height, x, y) >= 3:
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+# Builds an orthogonal A* path that prefers existing corridor tiles over fresh wall carving.
+func _build_orthogonal_corridor_path(grid: PackedInt32Array, width: int, height: int, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+	var path: Array[Vector2i] = []
+	if width <= 0 or height <= 0:
+		return path
+	if start == goal:
+		path.append(start)
+		return path
+
+	var total_cells: int = width * height
+	var start_index: int = start.y * width + start.x
+	var goal_index: int = goal.y * width + goal.x
+	if start_index < 0 or start_index >= total_cells or goal_index < 0 or goal_index >= total_cells:
+		return path
+
+	var came_from: PackedInt32Array = PackedInt32Array()
+	came_from.resize(total_cells)
+	for i in range(total_cells):
+		came_from[i] = -1
+
+	var g_score: PackedFloat32Array = PackedFloat32Array()
+	g_score.resize(total_cells)
+	for i in range(total_cells):
+		g_score[i] = INF
+
+	var f_score: PackedFloat32Array = PackedFloat32Array()
+	f_score.resize(total_cells)
+	for i in range(total_cells):
+		f_score[i] = INF
+
+	var open_set: Array[int] = [start_index]
+	var open_flags: PackedByteArray = PackedByteArray()
+	open_flags.resize(total_cells)
+	open_flags[start_index] = 1
+	var closed_flags: PackedByteArray = PackedByteArray()
+	closed_flags.resize(total_cells)
+
+	g_score[start_index] = 0.0
+	f_score[start_index] = _resolve_corridor_path_heuristic(start, goal)
+
+	while not open_set.is_empty():
+		var best_open_index: int = 0
+		var current_index: int = open_set[0]
+		var current_f: float = f_score[current_index]
+		var current_g: float = g_score[current_index]
+		for open_index in range(1, open_set.size()):
+			var candidate_index: int = open_set[open_index]
+			var candidate_f: float = f_score[candidate_index]
+			var candidate_g: float = g_score[candidate_index]
+			if candidate_f < current_f or (is_equal_approx(candidate_f, current_f) and candidate_g < current_g):
+				best_open_index = open_index
+				current_index = candidate_index
+				current_f = candidate_f
+				current_g = candidate_g
+
+		open_set.remove_at(best_open_index)
+		open_flags[current_index] = 0
+		if current_index == goal_index:
+			return _reconstruct_corridor_path(came_from, start_index, goal_index, width)
+		closed_flags[current_index] = 1
+
+		var current_pos: Vector2i = Vector2i(current_index % width, int(current_index / width))
+		for offset in DungeonBuilderConstants.CARDINAL_OFFSETS:
+			var neighbor_pos: Vector2i = current_pos + offset
+			if not _is_corridor_path_walkable(grid, width, height, neighbor_pos, start, goal):
+				continue
+			var neighbor_index: int = neighbor_pos.y * width + neighbor_pos.x
+			if closed_flags[neighbor_index] == 1:
+				continue
+
+			var tile_cost: float = _resolve_corridor_path_tile_cost(grid, width, height, neighbor_pos, start, goal)
+			if tile_cost >= INF:
+				continue
+
+			var tentative_g: float = g_score[current_index] + tile_cost
+			if tentative_g >= g_score[neighbor_index]:
+				continue
+
+			came_from[neighbor_index] = current_index
+			g_score[neighbor_index] = tentative_g
+			f_score[neighbor_index] = tentative_g + _resolve_corridor_path_heuristic(neighbor_pos, goal)
+			if open_flags[neighbor_index] == 0:
+				open_set.append(neighbor_index)
+				open_flags[neighbor_index] = 1
+
+	return path
+
+# Reconstructs a path array from the A* parent links.
+func _reconstruct_corridor_path(came_from: PackedInt32Array, start_index: int, goal_index: int, width: int) -> Array[Vector2i]:
+	var path: Array[Vector2i] = []
+	var current_index: int = goal_index
+	while current_index != -1:
+		# nocheck
+		path.append(Vector2i(current_index % width, int(current_index / width)))
+		if current_index == start_index:
+			path.reverse()
+			return path
+		current_index = came_from[current_index]
+	path.clear()
+	return path
+
+# Returns the path heuristic using Manhattan distance so movement stays orthogonal.
+func _resolve_corridor_path_heuristic(from_cell: Vector2i, to_cell: Vector2i) -> float:
+	return float(abs(from_cell.x - to_cell.x) + abs(from_cell.y - to_cell.y))
+
+# Returns true when a cell can participate in corridor routing.
+func _is_corridor_path_walkable(grid: PackedInt32Array, width: int, height: int, cell: Vector2i, start: Vector2i, goal: Vector2i) -> bool:
+	if cell == start or cell == goal:
+		return true
+	if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= height:
+		return false
+	if cell.x == 0 or cell.y == 0 or cell.x == width - 1 or cell.y == height - 1:
+		return false
+	var tile: int = _get_tile(grid, width, cell.x, cell.y)
+	return tile == DungeonBuilderConstants.TILE_WALL or tile == DungeonBuilderConstants.TILE_CORRIDOR
+
+# Returns the weighted traversal cost for a walkable corridor-routing cell.
+func _resolve_corridor_path_tile_cost(grid: PackedInt32Array, width: int, _height: int, cell: Vector2i, start: Vector2i, goal: Vector2i) -> float:
+	if cell == start or cell == goal:
+		return 0.0
+	var tile: int = _get_tile(grid, width, cell.x, cell.y)
+	if tile == DungeonBuilderConstants.TILE_CORRIDOR:
+		return 0.15
+	if tile == DungeonBuilderConstants.TILE_WALL:
+		return 1.0
+	return INF
 
 # Resolves the cardinal side on source room that faces the target room.
 func _resolve_room_side_for_target(source_center: Vector2, target_center: Vector2) -> int:
@@ -442,7 +574,7 @@ func _carve_hall_segment(grid: PackedInt32Array, width: int, _height: int, from_
 	var x := from_x
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, _height, x, y + t, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, _height, x, y + t, DungeonBuilderConstants.TILE_CORRIDOR)
 		if x == to_x:
 			break
 		x += step
@@ -453,7 +585,7 @@ func _carve_hall_segment_vertical(grid: PackedInt32Array, width: int, _height: i
 	var y := from_y
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, _height, x + t, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, _height, x + t, y, DungeonBuilderConstants.TILE_CORRIDOR)
 		if y == to_y:
 			break
 		y += step
@@ -467,9 +599,13 @@ func _count_floor_neighbors(grid: PackedInt32Array, width: int, height: int, x: 
 		for ox in range(-1, 2):
 			if ox == 0 and oy == 0:
 				continue
-			if _get_tile(grid, width, x + ox, y + oy) == DungeonBuilderConstants.TILE_FLOOR:
+			if _is_floor_like_tile(_get_tile(grid, width, x + ox, y + oy)):
 				count += 1
 	return count
+
+# Returns true when a tile should behave like walkable floor for room and corridor logic.
+func _is_floor_like_tile(tile: int) -> bool:
+	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR
 
 # Writes a tile value with bounds checks and a permanent one-tile outer wall border.
 func _set_tile(grid: PackedInt32Array, width: int, height: int, x: int, y: int, tile: int) -> void:
@@ -640,7 +776,7 @@ func _resolve_accessible_marker_for_room(
 	var best_cell: Vector2i = center_local
 	for y in range(local_min_y, local_max_y + 1):
 		for x in range(local_min_x, local_max_x + 1):
-			if _get_tile(grid, width, x, y) != DungeonBuilderConstants.TILE_FLOOR:
+			if not _is_floor_like_tile(_get_tile(grid, width, x, y)):
 				continue
 			var dx: float = float(x - center_local.x)
 			var dy: float = float(y - center_local.y)
@@ -662,7 +798,7 @@ func _find_nearest_floor_tile(grid: PackedInt32Array, width: int, height: int, o
 	var best_cell: Vector2i = origin
 	for y in range(height):
 		for x in range(width):
-			if _get_tile(grid, width, x, y) != DungeonBuilderConstants.TILE_FLOOR:
+			if not _is_floor_like_tile(_get_tile(grid, width, x, y)):
 				continue
 			var dx: float = float(x - origin.x)
 			var dy: float = float(y - origin.y)

@@ -59,7 +59,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 			var idx := y * width + x
 			if idx < 0 or idx >= grid.size():
 				continue
-			if grid[idx] == DungeonBuilderConstants.TILE_FLOOR:
+			if _is_walkable_tile(grid[idx]):
 				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, floor_thickness * 0.5)))
 				# No per-tile floor collider
 			else:
@@ -80,7 +80,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 		for y in height:
 			for x in width:
 				var idx := y * width + x
-				if grid[idx] == DungeonBuilderConstants.TILE_FLOOR:
+				if _is_walkable_tile(grid[idx]):
 					if not found:
 						min_x = x
 						max_x = x
@@ -412,9 +412,13 @@ func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int
 		if nx < 0 or ny < 0 or nx >= width or ny >= height:
 			continue
 		var index: int = ny * width + nx
-		if index >= 0 and index < grid.size() and grid[index] == DungeonBuilderConstants.TILE_FLOOR:
+		if index >= 0 and index < grid.size() and _is_walkable_tile(grid[index]):
 			return true
 	return false
+
+# Returns true when a tile should render and collide like floor.
+func _is_walkable_tile(tile: int) -> bool:
+	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR
 
 # Converts grid-space coordinates into world-space position.
 func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vector3:

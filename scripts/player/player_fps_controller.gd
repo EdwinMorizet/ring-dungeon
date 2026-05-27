@@ -111,7 +111,8 @@ func _shoot_fireball() -> void:
 		return
 	if PlayerManager.current_health <= 0.0:
 		return
-	if not has_node("/root/FireballManager"):
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null or not tree.root.has_node("FireballManager"):
 		return
 	if PlayerManager.cast_cooldown_remaining > 0.0:
 		return
