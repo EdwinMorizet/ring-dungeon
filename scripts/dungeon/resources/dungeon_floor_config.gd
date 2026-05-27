@@ -37,14 +37,14 @@ const DefaultSpecialRoomFloorPoolList: DungeonSpecialRoomFloorPoolList = preload
 @export var spawn_radius: float = 52.0
 # Iteration count for room separation relaxation.
 @export var separation_iterations: int = 200
-# Minimum room dimension used by room candidate generation.
-@export var min_room_size: float = 12.0
 # Minimum room area threshold kept after culling.
 @export var room_area_threshold: float = 120.0
 # Fraction of top candidate rooms kept for graph building.
 @export var room_keep_ratio: float = 0.45
 # Chance to add loop edges after minimum spanning tree build.
 @export var loop_percent: float = 0.15
+# Chance for a discarded standard cell to be restored as a room when a carved corridor crosses it.
+@export var room_keep_corridor_overlap_chance: float = 0.35
 # Fraction of room candidates used for chest spawn picks.
 @export var chest_candidate_ratio: float = 0.3
 # Minimum patrol points generated in each room patrol net.

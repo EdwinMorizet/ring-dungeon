@@ -15,6 +15,8 @@ const TILE_WALL := 0
 const TILE_FLOOR := 1
 # Tile id for corridor cells.
 const TILE_CORRIDOR: int = 2
+# Tile id for doorway cells connecting rooms and corridors.
+const TILE_DOOR: int = 3
 # Cardinal neighbor offsets used for adjacency checks.
 const CARDINAL_OFFSETS: Array[Vector2i] = [
 	Vector2i(1, 0),

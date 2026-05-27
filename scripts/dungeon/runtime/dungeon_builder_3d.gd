@@ -418,7 +418,7 @@ func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int
 
 # Returns true when a tile should render and collide like floor.
 func _is_walkable_tile(tile: int) -> bool:
-	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR
+	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
 
 # Converts grid-space coordinates into world-space position.
 func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vector3:
