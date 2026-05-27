@@ -103,6 +103,11 @@ func generate(
 		exit_index,
 		config.chest_candidate_ratio,
 		mst_edges,
+		corridor_edges,
+		grid,
+		world_width,
+		world_height,
+		world_rect.position,
 		rng,
 		config.patrol_nodes_per_room_min,
 		config.patrol_nodes_per_room_max,
@@ -132,6 +137,8 @@ func generate(
 	var patrol_node_total: int = 0
 	for room_points in patrol_graph.room_nodes:
 		patrol_node_total += room_points.size()
+	for corridor_points in patrol_graph.corridor_nodes:
+		patrol_node_total += corridor_points.size()
 
 	var stats: DungeonGeneratorStatsData = DungeonGeneratorStatsData.new()
 	stats.cells = cells.size()
@@ -702,6 +709,11 @@ func _annotate_rooms_with_metadata(
 	exit_index: int,
 	chest_candidate_ratio: float,
 	mst_edges: Array[DungeonEdgeData],
+	corridor_edges: Array[DungeonEdgeData],
+	grid: PackedInt32Array,
+	grid_width: int,
+	grid_height: int,
+	world_offset: Vector2i,
 	rng: RandomNumberGenerator,
 	patrol_nodes_per_room_min: int,
 	patrol_nodes_per_room_max: int,
@@ -725,7 +737,6 @@ func _annotate_rooms_with_metadata(
 		if metadata.is_floor_exit:
 			marker_data.floor_exit.push_back(room.center)
 		if metadata.is_enemy_room:
-			marker_data.enemy.push_back(room.center)
 			candidate_indices.append(i)
 
 	if not candidate_indices.is_empty():
@@ -749,22 +760,85 @@ func _annotate_rooms_with_metadata(
 	for i in rooms.size():
 		var room: DungeonRoomData = rooms[i]
 		var metadata: DungeonRoomMetadataData = room.metadata
+		var room_carver: DungeonSpecRoomBase = null
+		if room.is_special_room and room.special_room_script != null:
+			room_carver = _instantiate_special_room_script(room.special_room_script)
 		var linked_rooms: PackedInt32Array = PackedInt32Array()
 		if i >= 0 and i < room_adjacency.size():
 			linked_rooms = room_adjacency[i]
-		var patrol_point_count: int = _resolve_patrol_point_count(patrol_nodes_per_room_min, patrol_nodes_per_room_max, rng)
-		metadata.patrol_points = _build_patrol_points_for_room(
-			room.rect,
-			patrol_point_count,
-			patrol_point_padding,
+		var custom_patrol_points: PackedVector2Array = PackedVector2Array()
+		if room_carver != null:
+			custom_patrol_points = room_carver.build_custom_patrol_points(room.rect, patrol_point_padding, rng)
+		if custom_patrol_points.is_empty():
+			var patrol_point_count: int = _resolve_patrol_point_count(patrol_nodes_per_room_min, patrol_nodes_per_room_max, rng)
+			metadata.patrol_points = _build_patrol_points_for_room(
+				room.rect,
+				patrol_point_count,
+				patrol_point_padding,
+				patrol_point_jitter,
+				rng
+			)
+		else:
+			metadata.patrol_points = custom_patrol_points
+		metadata.patrol_linked_rooms = linked_rooms
+
+		if metadata.is_enemy_room:
+			var custom_spawn_points: PackedVector2Array = PackedVector2Array()
+			if room_carver != null:
+				custom_spawn_points = room_carver.build_custom_enemy_spawn_points(room.rect, patrol_point_padding, rng)
+			if custom_spawn_points.is_empty():
+				marker_data.enemy.push_back(_resolve_accessible_marker_for_room(grid, grid_width, grid_height, world_offset, room))
+			else:
+				for spawn_point in custom_spawn_points:
+					var resolved_point: Vector2 = _resolve_accessible_marker_near_world_point(
+						grid,
+						grid_width,
+						grid_height,
+						world_offset,
+						spawn_point
+					)
+					marker_data.enemy.push_back(resolved_point)
+
+	var corridor_nodes: Array[PackedVector2Array] = []
+	for corridor_edge in corridor_edges:
+		if corridor_edge.a < 0 or corridor_edge.b < 0:
+			continue
+		if corridor_edge.a >= rooms.size() or corridor_edge.b >= rooms.size() or corridor_edge.a == corridor_edge.b:
+			continue
+		var corridor_points: PackedVector2Array = _build_patrol_points_for_corridor(
+			rooms[corridor_edge.a].center,
+			rooms[corridor_edge.b].center,
 			patrol_point_jitter,
 			rng
 		)
-		metadata.patrol_linked_rooms = linked_rooms
+		var resolved_corridor_points: PackedVector2Array = PackedVector2Array()
+		for corridor_point in corridor_points:
+			resolved_corridor_points.push_back(
+				_resolve_accessible_marker_near_world_point(
+					grid,
+					grid_width,
+					grid_height,
+					world_offset,
+					corridor_point
+				)
+			)
+		if resolved_corridor_points.is_empty():
+			resolved_corridor_points.push_back(_resolve_accessible_marker_near_world_point(
+				grid,
+				grid_width,
+				grid_height,
+				world_offset,
+				(rooms[corridor_edge.a].center + rooms[corridor_edge.b].center) * 0.5
+			))
+		corridor_nodes.append(resolved_corridor_points)
+		if rng.randf() <= 0.5:
+			var midpoint_index: int = int(floor(float(resolved_corridor_points.size()) * 0.5))
+			midpoint_index = clampi(midpoint_index, 0, resolved_corridor_points.size() - 1)
+			marker_data.enemy_corridor.push_back(resolved_corridor_points[midpoint_index])
 
 	var annotation_data: DungeonAnnotationData = DungeonAnnotationData.new()
 	annotation_data.spawn_markers = marker_data
-	annotation_data.patrol_graph = _build_patrol_graph_payload(rooms, room_adjacency, mst_edges)
+	annotation_data.patrol_graph = _build_patrol_graph_payload(rooms, room_adjacency, mst_edges, corridor_edges, corridor_nodes)
 	return annotation_data
 
 # Builds symmetric room adjacency from MST edges.
@@ -841,16 +915,58 @@ func _build_patrol_points_for_room(rect: Rect2i, point_count: int, padding: floa
 
 	return points
 
+# Generates patrol points along corridor centerline between two rooms.
+func _build_patrol_points_for_corridor(from_center: Vector2, to_center: Vector2, jitter: float, rng: RandomNumberGenerator) -> PackedVector2Array:
+	var points: PackedVector2Array = PackedVector2Array()
+	for t in [0.25, 0.5, 0.75]:
+		var centerline: Vector2 = from_center.lerp(to_center, t)
+		var offset: Vector2 = Vector2(
+			rng.randf_range(-jitter, jitter),
+			rng.randf_range(-jitter, jitter)
+		)
+		points.push_back(centerline + offset)
+	return points
+
+# Resolves nearest floor marker to a desired world-grid point.
+func _resolve_accessible_marker_near_world_point(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	world_offset: Vector2i,
+	world_point: Vector2
+) -> Vector2:
+	if width <= 0 or height <= 0:
+		return world_point
+	var local_origin: Vector2i = Vector2i(
+		clampi(int(round(world_point.x - world_offset.x)), 0, width - 1),
+		clampi(int(round(world_point.y - world_offset.y)), 0, height - 1)
+	)
+	var local_floor: Vector2i = _find_nearest_floor_tile(grid, width, height, local_origin)
+	return Vector2(local_floor.x + world_offset.x, local_floor.y + world_offset.y)
+
 # Builds serialized patrol graph payload used by builders and debug consumers.
-func _build_patrol_graph_payload(rooms: Array[DungeonRoomData], room_adjacency: Array[PackedInt32Array], mst_edges: Array[DungeonEdgeData]) -> DungeonPatrolGraphData:
+func _build_patrol_graph_payload(
+	rooms: Array[DungeonRoomData],
+	room_adjacency: Array[PackedInt32Array],
+	mst_edges: Array[DungeonEdgeData],
+	corridor_edges: Array[DungeonEdgeData],
+	corridor_nodes: Array[PackedVector2Array]
+) -> DungeonPatrolGraphData:
 	var patrol_graph: DungeonPatrolGraphData = DungeonPatrolGraphData.new()
 	for room in rooms:
 		patrol_graph.room_nodes.append(room.metadata.patrol_points)
+	for corridor_node_points in corridor_nodes:
+		patrol_graph.corridor_nodes.append(corridor_node_points)
 
 	for edge in mst_edges:
 		if edge.a < 0 or edge.b < 0 or edge.a == edge.b:
 			continue
 		patrol_graph.room_links.append(DungeonEdgeData.new(edge.a, edge.b, edge.weight))
+
+	for edge in corridor_edges:
+		if edge.a < 0 or edge.b < 0 or edge.a == edge.b:
+			continue
+		patrol_graph.corridor_links.append(DungeonEdgeData.new(edge.a, edge.b, edge.weight))
 
 	for room_links in room_adjacency:
 		patrol_graph.room_adjacency.append(room_links)

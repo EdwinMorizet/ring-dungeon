@@ -28,5 +28,9 @@ class_name EnemySpawnManagerConfig
 @export var spawn_clearance_height: float = 1.0
 # Minimum distance between player spawn and enemy spawn marker.
 @export var min_spawn_distance_from_player: float = 8.0
+# Marker selection weight for room-origin enemy spawn markers.
+@export var room_spawn_marker_weight: float = 1.0
+# Marker selection weight for corridor-origin enemy spawn markers.
+@export var corridor_spawn_marker_weight: float = 0.5
 # Allows spawn near fallback point if no marker-based spawn succeeds.
 @export var allow_fallback_spawn: bool = true

@@ -2,8 +2,8 @@ extends DungeonSpecRoomBase
 class_name DungeonSpecRoomHallway
 
 func _init() -> void:
-	min_size = 16
-	max_size = 30
+	min_size = 24
+	max_size = 42
 	min_ratio = 0.5
 	max_ratio = 0.6
 	# Bias north/south entries away from identical center alignment.
@@ -60,3 +60,38 @@ func _is_column_tile(
 
 	var spacing: int = 3
 	return (axis_position - axis_start) % spacing == 0
+
+# Builds patrol points along long and side lanes to follow hallway geometry.
+func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:
+	var points: PackedVector2Array = PackedVector2Array()
+	var center: Vector2 = rect.get_center()
+	var long_axis_is_x: bool = rect.size.x >= rect.size.y
+	if long_axis_is_x:
+		var y_offsets: Array[float] = [-0.18 * rect.size.y, 0.0, 0.18 * rect.size.y]
+		for lane_y in y_offsets:
+			for t in [0.2, 0.5, 0.8]:
+				var x_value: float = lerpf(float(rect.position.x), float(rect.end.x), t)
+				var point: Vector2 = Vector2(x_value, center.y + lane_y)
+				points.push_back(_clamp_point_to_rect(rect, point, padding))
+	else:
+		var x_offsets: Array[float] = [-0.18 * rect.size.x, 0.0, 0.18 * rect.size.x]
+		for lane_x in x_offsets:
+			for t in [0.2, 0.5, 0.8]:
+				var y_value: float = lerpf(float(rect.position.y), float(rect.end.y), t)
+				var point: Vector2 = Vector2(center.x + lane_x, y_value)
+				points.push_back(_clamp_point_to_rect(rect, point, padding))
+	return points
+
+# Builds hallway spawn anchors near lane ends and center lane.
+func build_custom_enemy_spawn_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:
+	var points: PackedVector2Array = PackedVector2Array()
+	var center: Vector2 = rect.get_center()
+	if rect.size.x >= rect.size.y:
+		points.push_back(_clamp_point_to_rect(rect, Vector2(rect.position.x + 2.0, center.y), padding))
+		points.push_back(_clamp_point_to_rect(rect, Vector2(rect.end.x - 2.0, center.y), padding))
+		points.push_back(_clamp_point_to_rect(rect, center, padding))
+	else:
+		points.push_back(_clamp_point_to_rect(rect, Vector2(center.x, rect.position.y + 2.0), padding))
+		points.push_back(_clamp_point_to_rect(rect, Vector2(center.x, rect.end.y - 2.0), padding))
+		points.push_back(_clamp_point_to_rect(rect, center, padding))
+	return points

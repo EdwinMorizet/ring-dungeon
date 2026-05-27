@@ -227,7 +227,8 @@ func _spawn_room_markers(root: Node3D, layout: DungeonLayoutData, tile_size: flo
 
 	var spawn_markers: DungeonSpawnMarkersData = layout.spawn_markers
 	_spawn_marker_group(markers_root, "PlayerStartMarkers", "PlayerStart", spawn_markers.player_start, tile_size, editor_owner)
-	_spawn_marker_group(markers_root, "EnemySpawnMarkers", "EnemySpawn", spawn_markers.enemy, tile_size, editor_owner)
+	_spawn_enemy_marker_group(markers_root, "EnemySpawnRoomMarkers", "EnemySpawn_Room", spawn_markers.enemy, tile_size, editor_owner, "room")
+	_spawn_enemy_marker_group(markers_root, "EnemySpawnCorridorMarkers", "EnemySpawn_Corridor", spawn_markers.enemy_corridor, tile_size, editor_owner, "corridor")
 	_spawn_marker_group(markers_root, "ChestCandidateMarkers", "ChestCandidate", spawn_markers.chest_candidate, tile_size, editor_owner)
 	_spawn_marker_group(markers_root, "FloorExitMarkers", "FloorExit", spawn_markers.floor_exit, tile_size, editor_owner)
 	# Call _spawn_room_lights after spawning room markers
@@ -259,7 +260,38 @@ func _spawn_patrol_nodes(root: Node3D, layout: DungeonLayoutData, tile_size: flo
 			var patrol_point: Vector2 = patrol_points[patrol_index]
 			_spawn_marker(room_group, "PatrolNode_%d_%d" % [i, patrol_index], patrol_point, tile_size, editor_owner)
 
+	_spawn_corridor_patrol_nodes(patrol_root, layout, tile_size, editor_owner)
+
 	_spawn_patrol_link_markers(patrol_root, layout, rooms, tile_size, editor_owner)
+
+# Spawns per-corridor patrol marker groups linked to room endpoints.
+func _spawn_corridor_patrol_nodes(patrol_root: Node3D, layout: DungeonLayoutData, tile_size: float, editor_owner: Node) -> void:
+	var corridor_nodes: Array[PackedVector2Array] = layout.patrol_graph.corridor_nodes
+	var corridor_links: Array[DungeonEdgeData] = layout.patrol_graph.corridor_links
+	if corridor_nodes.is_empty() or corridor_links.is_empty():
+		return
+
+	for corridor_index in range(mini(corridor_nodes.size(), corridor_links.size())):
+		var corridor_points: PackedVector2Array = corridor_nodes[corridor_index]
+		if corridor_points.is_empty():
+			continue
+		var corridor_link: DungeonEdgeData = corridor_links[corridor_index]
+		var corridor_group: Node3D = Node3D.new()
+		corridor_group.name = "PatrolNodes_Corridor_%d" % corridor_index
+		corridor_group.set_meta("corridor_index", corridor_index)
+		corridor_group.set_meta("from_room", corridor_link.a)
+		corridor_group.set_meta("to_room", corridor_link.b)
+		patrol_root.add_child(corridor_group)
+		_assign_owner(corridor_group, editor_owner)
+
+		for patrol_index in range(corridor_points.size()):
+			_spawn_marker(
+				corridor_group,
+				"PatrolNode_Corridor_%d_%d" % [corridor_index, patrol_index],
+				corridor_points[patrol_index],
+				tile_size,
+				editor_owner
+			)
 
 # Spawns marker nodes representing MST-derived cross-room patrol links.
 func _spawn_patrol_link_markers(patrol_root: Node3D, layout: DungeonLayoutData, rooms: Array[DungeonRoomData], tile_size: float, editor_owner: Node) -> void:
@@ -307,6 +339,28 @@ func _spawn_marker_group(root: Node3D, group_name: String, marker_prefix: String
 	_assign_owner(group_root, editor_owner)
 	for i in range(points.size()):
 		_spawn_marker(group_root, "%s_%d" % [marker_prefix, i], points[i], tile_size, editor_owner)
+
+# Spawns enemy marker group and tags each marker by source type.
+func _spawn_enemy_marker_group(
+	root: Node3D,
+	group_name: String,
+	marker_prefix: String,
+	points: PackedVector2Array,
+	tile_size: float,
+	editor_owner: Node,
+	spawn_source: String
+) -> void:
+	var group_root: Node3D = Node3D.new()
+	group_root.name = group_name
+	root.add_child(group_root)
+	_assign_owner(group_root, editor_owner)
+	for i in range(points.size()):
+		var marker: Marker3D = Marker3D.new()
+		marker.name = "%s_%d" % [marker_prefix, i]
+		marker.position = _tile_to_world(points[i].x, points[i].y, tile_size, 0.5)
+		marker.set_meta("spawn_source", spawn_source)
+		group_root.add_child(marker)
+		_assign_owner(marker, editor_owner)
 
 # Spawns one marker node from grid-space coordinates.
 func _spawn_marker(parent: Node3D, marker_name: String, point: Vector2, tile_size: float, editor_owner: Node) -> void:

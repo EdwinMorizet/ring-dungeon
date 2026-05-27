@@ -428,8 +428,10 @@ func get_patrol_debug_snapshot() -> DungeonPatrolDebugSnapshot:
 
 	var rooms: Array[DungeonRoomData] = _runtime_layout.rooms
 	var room_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.room_links
+	var corridor_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.corridor_links
 
 	var room_count: int = 0
+	var corridor_count: int = 0
 	var patrol_node_count: int = 0
 	var topology_parts: PackedStringArray = PackedStringArray()
 
@@ -443,8 +445,9 @@ func get_patrol_debug_snapshot() -> DungeonPatrolDebugSnapshot:
 		topology_parts.push_back("R%d(%d)->[%s]" % [room_index, patrol_points.size(), _packed_int_array_to_csv(linked_rooms)])
 
 	snapshot.room_count = room_count
+	snapshot.corridor_count = corridor_links.size()
 	snapshot.patrol_node_count = patrol_node_count
-	snapshot.patrol_link_count = room_links.size()
+	snapshot.patrol_link_count = room_links.size() + corridor_links.size()
 	snapshot.topology = " | ".join(topology_parts)
 	return snapshot
 
@@ -465,6 +468,7 @@ func run_patrol_smoke_check() -> DungeonPatrolSmokeReport:
 		return report
 
 	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
+	var corridor_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Corridor_*", "Node3D", false, false)
 	var patrol_markers: Array[Node] = patrol_root.find_children("PatrolNode_*", "Marker3D", true, false)
 	var links_root: Node = patrol_root.find_child("PatrolLinks", false, false)
 	var link_markers: Array[Node] = []
@@ -472,12 +476,15 @@ func run_patrol_smoke_check() -> DungeonPatrolSmokeReport:
 		link_markers = links_root.find_children("PatrolLink_*", "Marker3D", false, false)
 
 	var expected_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.room_links
+	var expected_corridor_links: Array[DungeonEdgeData] = _runtime_layout.patrol_graph.corridor_links
 	var snapshot: DungeonPatrolDebugSnapshot = get_patrol_debug_snapshot()
 
 	report.room_groups = room_groups.size()
+	report.corridor_groups = corridor_groups.size()
 	report.patrol_markers = patrol_markers.size()
 	report.link_markers = link_markers.size()
 	report.expected_links = expected_links.size()
+	report.expected_corridor_links = expected_corridor_links.size()
 	report.topology = snapshot.topology
 
 	if patrol_markers.is_empty():
@@ -485,6 +492,9 @@ func run_patrol_smoke_check() -> DungeonPatrolSmokeReport:
 		return report
 	if link_markers.size() != expected_links.size():
 		report.error = "Patrol link marker count mismatch"
+		return report
+	if corridor_groups.size() != expected_corridor_links.size():
+		report.error = "Corridor patrol group count mismatch"
 		return report
 
 	for link_node in link_markers:
@@ -524,6 +534,7 @@ func _rebuild_patrol_link_debug_visual() -> void:
 
 	var line_count: int = 0
 	line_count += _append_room_patrol_loop_lines(mesh, patrol_root)
+	line_count += _append_corridor_patrol_lines(mesh, patrol_root)
 	line_count += _append_cross_room_patrol_lines(mesh, patrol_root)
 
 	mesh.surface_end()
@@ -574,6 +585,30 @@ func _append_cross_room_patrol_lines(mesh: ImmediateMesh, patrol_root: Node) -> 
 			continue
 		_append_line_vertices(mesh, from_position, to_position)
 		lines_added += 1
+	return lines_added
+
+# Appends open polylines within each corridor patrol group and links endpoints to rooms.
+func _append_corridor_patrol_lines(mesh: ImmediateMesh, patrol_root: Node) -> int:
+	var lines_added: int = 0
+	var corridor_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Corridor_*", "Node3D", false, false)
+	for corridor_group in corridor_groups:
+		var markers: Array[Marker3D] = _collect_sorted_patrol_markers(corridor_group)
+		if markers.size() >= 2:
+			for marker_index in range(markers.size() - 1):
+				_append_line_vertices(mesh, markers[marker_index].global_position, markers[marker_index + 1].global_position)
+				lines_added += 1
+		if markers.is_empty():
+			continue
+		if corridor_group.has_meta("from_room"):
+			var from_anchor: Vector3 = _resolve_room_patrol_anchor(patrol_root, int(corridor_group.get_meta("from_room")))
+			if from_anchor != Vector3.INF:
+				_append_line_vertices(mesh, from_anchor, markers[0].global_position)
+				lines_added += 1
+		if corridor_group.has_meta("to_room"):
+			var to_anchor: Vector3 = _resolve_room_patrol_anchor(patrol_root, int(corridor_group.get_meta("to_room")))
+			if to_anchor != Vector3.INF:
+				_append_line_vertices(mesh, to_anchor, markers[markers.size() - 1].global_position)
+				lines_added += 1
 	return lines_added
 
 # Resolves anchor position for a room by taking the first sorted patrol marker.
