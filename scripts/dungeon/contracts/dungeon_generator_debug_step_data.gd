@@ -7,6 +7,7 @@ var rooms: Array[DungeonRoomData] = []
 var delaunay_edges: Array[DungeonEdgeData] = []
 var mst_edges: Array[DungeonEdgeData] = []
 var loop_edges: Array[DungeonEdgeData] = []
+var corridor_edges: Array[DungeonEdgeData] = []
 
 func duplicate_data() -> DungeonGeneratorDebugStepData:
 	var snapshot: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
@@ -21,4 +22,6 @@ func duplicate_data() -> DungeonGeneratorDebugStepData:
 		snapshot.mst_edges.append(edge.duplicate_data())
 	for edge in loop_edges:
 		snapshot.loop_edges.append(edge.duplicate_data())
+	for edge in corridor_edges:
+		snapshot.corridor_edges.append(edge.duplicate_data())
 	return snapshot

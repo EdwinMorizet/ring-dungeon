@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://xogsi6tqw8de"]
 
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_cycqr"]
+[ext_resource type="Resource" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="2_special_pool_list"]
 
 [resource]
 script = ExtResource("1_cycqr")
@@ -8,6 +9,8 @@ generation_seed = 409
 width = 190
 height = 190
 cell_count = 20
+special_room_target_count = 6
+special_room_floor_pool_list = ExtResource("2_special_pool_list")
 spawn_radius = 62.0
 separation_iterations = 240
 min_room_size = 11.0

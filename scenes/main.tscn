@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/merchant_panel.tscn" id="6_merchant_panel"]
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="7_jkv2x"]
 [ext_resource type="Resource" uid="uid://syx50ri3igss" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="8_eb6dy"]
+[ext_resource type="Script" uid="uid://c1mkd3frih4nb" path="res://scripts/dungeon/debug/dungeon_generator_step_visualizer.gd" id="10_a8y0u"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1bvp3"]
 panorama = ExtResource("3_h2yge")
@@ -35,12 +36,22 @@ fog_depth_begin = 20.0
 
 [sub_resource type="Resource" id="Resource_ya4ey"]
 script = ExtResource("7_jkv2x")
+generation_seed = 415657332
 cell_count = 15
 room_min_size = 5
 room_max_size = 20
 spawn_radius = 12.0
 loop_percent = 0.45
+auto_randomize_seed_on_regenerate = true
 metadata/_custom_type_script = "uid://q1jk71bs8y11"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_a8y0u"]
+transparency = 1
+no_depth_test = true
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_jkv2x"]
 
 [node name="Node3D" type="Node3D" unique_id=149825789]
 
@@ -56,6 +67,31 @@ metadata/_custom_type_script = "uid://bla0efmx0rcb4"
 
 [node name="DungeonFloorDebugController" type="Node3D" parent="." unique_id=1549971001]
 script = ExtResource("2_floor_debug")
+generation_debug_step_index = 6
+
+[node name="DungeonGeneratorStepVisualizer" type="Node3D" parent="DungeonFloorDebugController" unique_id=528967493]
+script = ExtResource("10_a8y0u")
+preview_step_index = 6
+
+[node name="@Node3D@57184" type="Node3D" parent="DungeonFloorDebugController/DungeonGeneratorStepVisualizer" unique_id=410193865]
+
+[node name="GenerationPreviewMesh" type="MeshInstance3D" parent="DungeonFloorDebugController/DungeonGeneratorStepVisualizer/@Node3D@57184" unique_id=1828914164]
+material_override = SubResource("StandardMaterial3D_a8y0u")
+mesh = SubResource("ImmediateMesh_jkv2x")
+
+[node name="GenerationPreviewLabels" type="Node3D" parent="DungeonFloorDebugController/DungeonGeneratorStepVisualizer/@Node3D@57184" unique_id=1108443142]
+
+[node name="SpecialRoomLabel_0" type="Label3D" parent="DungeonFloorDebugController/DungeonGeneratorStepVisualizer/@Node3D@57184/GenerationPreviewLabels" unique_id=140309280]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 216, 0.9, 202)
+pixel_size = 0.03
+billboard = 1
+no_depth_test = true
+fixed_size = true
+modulate = Color(1, 0.94, 0.66, 1)
+outline_modulate = Color(0.08, 0.08, 0.08, 0.95)
+text = "No Special Rooms"
+font_size = 44
+outline_size = 10
 
 [node name="DebugFloorHud" parent="." unique_id=1054138337 instance=ExtResource("2_dbgui")]
 

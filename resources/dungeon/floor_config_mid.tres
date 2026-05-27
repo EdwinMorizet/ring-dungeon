@@ -1,11 +1,14 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://cq1rqodoo4by2"]
 
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_1r7tx"]
+[ext_resource type="Resource" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="2_special_pool_list"]
 
 [resource]
 script = ExtResource("1_1r7tx")
 generation_seed = 205
 cell_count = 20
+special_room_target_count = 5
+special_room_floor_pool_list = ExtResource("2_special_pool_list")
 patrol_nodes_per_room_min = 2
 patrol_nodes_per_room_max = 4
 patrol_point_padding = 1.2

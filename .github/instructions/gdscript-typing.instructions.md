@@ -163,6 +163,16 @@ Emit with the correct types:
 took_damage.emit(10, 90)
 ```
 
+## Editor Buttons
+
+- Use `@export_tool_button` to decorate an editor button.
+- Use this pattern to make editor button.
+- Propose an adequat icon or leave empty.
+
+```gdscript
+@export_tool_button("Delete Item", "Remove") var delete_item = _delete_item
+```
+
 ## Review Checklist
 
 When editing .gd files:

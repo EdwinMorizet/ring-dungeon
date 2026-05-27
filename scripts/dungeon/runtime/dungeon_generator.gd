@@ -5,7 +5,7 @@ class_name DungeonGenerator
 # Relation: Driven by DungeonFloorController and delegates graph work to DungeonGraph.
 
 # Margin in tiles/pixels for separation
-const SEPARATION_MARGIN: float = 4.0 
+const SEPARATION_MARGIN: float = 1.0 
 
 # Debug step names recorded for the editor-only generation visualizer.
 const DEBUG_STEP_GENERATE_CELLS: StringName = &"generate_cells"
@@ -14,6 +14,7 @@ const DEBUG_STEP_DESIGNATE_ROOMS: StringName = &"designate_rooms"
 const DEBUG_STEP_DELAUNAY: StringName = &"delaunay"
 const DEBUG_STEP_MST: StringName = &"mst"
 const DEBUG_STEP_LOOP_EDGES: StringName = &"loop_edges"
+const DEBUG_STEP_CORRIDORS: StringName = &"corridors"
 
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
 func generate(
@@ -39,16 +40,17 @@ func generate(
 		centers.push_back(room.center)
 	var graph: DungeonGraph = DungeonGraph.new()
 	var delaunay_edges: Array[DungeonEdgeData] = graph.build_delaunay_edges(centers)
-	_record_debug_step(debug_timeline, DEBUG_STEP_DELAUNAY, [], rooms, delaunay_edges)
+	_record_debug_step(debug_timeline, DEBUG_STEP_DELAUNAY, cells, rooms, delaunay_edges)
 
 	var mst_edges: Array[DungeonEdgeData] = graph.build_mst(centers, delaunay_edges)
-	_record_debug_step(debug_timeline, DEBUG_STEP_MST, [], rooms, delaunay_edges, mst_edges)
+	_record_debug_step(debug_timeline, DEBUG_STEP_MST, cells, rooms, delaunay_edges, mst_edges)
 
 	var corridor_edges: Array[DungeonEdgeData] = graph.add_loop_edges(delaunay_edges, mst_edges, config.loop_percent, rng)
 	var loop_edges: Array[DungeonEdgeData] = []
 	for edge_index in range(mst_edges.size(), corridor_edges.size()):
 		loop_edges.append(corridor_edges[edge_index])
-	_record_debug_step(debug_timeline, DEBUG_STEP_LOOP_EDGES, [], rooms, delaunay_edges, mst_edges, loop_edges)
+	_record_debug_step(debug_timeline, DEBUG_STEP_LOOP_EDGES, cells, rooms, delaunay_edges, mst_edges, loop_edges)
+	_record_debug_step(debug_timeline, DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges)
 
 	var world_rect: Rect2i = _compute_rect_bounds_from_entries(rooms)
 	var world_width := int(world_rect.size.x)
@@ -176,7 +178,8 @@ func _record_debug_step(
 	rooms: Array[DungeonRoomData] = [],
 	delaunay_edges: Array[DungeonEdgeData] = [],
 	mst_edges: Array[DungeonEdgeData] = [],
-	loop_edges: Array[DungeonEdgeData] = []
+	loop_edges: Array[DungeonEdgeData] = [],
+	corridor_edges: Array[DungeonEdgeData] = []
 ) -> void:
 	if debug_timeline == null:
 		return
@@ -192,6 +195,8 @@ func _record_debug_step(
 		step_data.mst_edges.append(edge.duplicate_data())
 	for edge in loop_edges:
 		step_data.loop_edges.append(edge.duplicate_data())
+	for edge in corridor_edges:
+		step_data.corridor_edges.append(edge.duplicate_data())
 	debug_timeline.record_step(step_data)
 
 # Samples room candidate cells from a radial distribution around map center.
@@ -227,26 +232,16 @@ func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, r
 					continue
 				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, int(SEPARATION_MARGIN))
 				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, int(SEPARATION_MARGIN))
-				if rect_a.intersects(rect_b):
+				while rect_a.intersects(rect_b):
+					overlaps += 1
 					var _dir := Vector2(rect_a.position - rect_b.position)
-					var _dist: float = _dir.length_squared()
-					if _dist < _overlaps_dist or _overlaps_dist == -1:
-						overlaps += 1
-						_overlaps_dist = _dist
-						_overlaps_dir = _dir
-			if _overlaps_dist == -1:
-				continue
-			if _overlaps_dist < 0.05:
-				_overlaps_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
-			if _overlaps_dir.is_zero_approx():
-				continue
-			_overlaps_dir = _overlaps_dir.normalized()
-			var _push_dir := Vector2i(int(round(_overlaps_dir.x)), int(round(_overlaps_dir.y)))
-			if _push_dir == Vector2i.ZERO:
-				_push_dir = Vector2i(1, 0)
-			var rect: Rect2i = cells[a].rect
-			rect.position += _push_dir
-			cells[a].rect = _snap_rect_to_grid(rect)
+					if _dir.is_zero_approx():
+						_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
+					var _push_dir := Vector2i(int(round(_dir.x)), int(round(_dir.y)))
+					var rect: Rect2i = cells[a].rect
+					rect.position += _push_dir
+					cells[a].rect = _snap_rect_to_grid(rect)
+					rect_a = _grow_rect_i(cells[a].rect, int(SEPARATION_MARGIN))
 		if overlaps == 0:
 			break
 # Computes a merged Rect2i bounds box from typed room entries.
@@ -265,17 +260,48 @@ func _compute_rect_bounds_from_entries(entries: Array[DungeonRoomData]) -> Rect2
 		return Rect2i()
 	return bounds
 
-# Selects final rooms by keeping only cells tagged as special rooms.
-func designate_rooms(cells: Array[DungeonCellData], _config: DungeonFloorConfig) -> Array[DungeonRoomData]:
-	var rooms: Array[DungeonRoomData] = []
+# Selects final rooms from area-qualified standard candidates plus all special rooms.
+func designate_rooms(cells: Array[DungeonCellData], config: DungeonFloorConfig) -> Array[DungeonRoomData]:
+	var standard_candidates: Array[DungeonRoomData] = []
+	var special_rooms: Array[DungeonRoomData] = []
 	for cell in cells:
-		if not cell.is_special_room:
-			continue
 		var room_rect: Rect2i = _snap_rect_to_grid(cell.rect)
 		if room_rect.size.x <= 0 or room_rect.size.y <= 0:
 			continue
+		var area: int = room_rect.size.x * room_rect.size.y
+		if not cell.is_special_room and float(area) < config.room_area_threshold:
+			continue
 		var room_center: Vector2 = Vector2(room_rect.get_center())
-		rooms.append(DungeonRoomData.new(room_rect, room_center, null, true, cell.special_room_script))
+		var room_data: DungeonRoomData = DungeonRoomData.new(
+			room_rect,
+			room_center,
+			null,
+			cell.is_special_room,
+			cell.special_room_script if cell.is_special_room else null
+		)
+		if cell.is_special_room:
+			special_rooms.append(room_data)
+		else:
+			standard_candidates.append(room_data)
+
+	standard_candidates.sort_custom(
+		func(a: DungeonRoomData, b: DungeonRoomData) -> bool:
+			var area_a: int = a.rect.size.x * a.rect.size.y
+			var area_b: int = b.rect.size.x * b.rect.size.y
+			return area_a > area_b
+	)
+
+	var clamped_keep_ratio: float = clampf(config.room_keep_ratio, 0.0, 1.0)
+	var keep_target: int = int(ceil(float(standard_candidates.size()) * clamped_keep_ratio))
+	if clamped_keep_ratio > 0.0:
+		keep_target = maxi(keep_target, 1)
+	keep_target = mini(keep_target, standard_candidates.size())
+
+	var rooms: Array[DungeonRoomData] = []
+	for room_index in range(keep_target):
+		rooms.append(standard_candidates[room_index])
+	for special_room in special_rooms:
+		rooms.append(special_room)
 	return rooms
 
 # Allocates and initializes a dense tile grid.

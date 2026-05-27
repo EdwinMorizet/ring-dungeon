@@ -35,14 +35,6 @@ const GENERATION_DEBUG_VISUALIZER_NODE_NAME: String = "DungeonGeneratorStepVisua
 
 @export_group("")
 
-# Backing state for one-shot regenerate inspector toggle.
-var _regenerate_toggle: bool = false
-# Backing state for one-shot clear floor inspector toggle.
-var _clear_floor_toggle: bool = false
-# Backing state for one-shot generation preview backward stepping.
-var _generation_debug_step_back_toggle: bool = false
-# Backing state for one-shot generation preview forward stepping.
-var _generation_debug_step_forward_toggle: bool = false
 # Cached generation preview step index exposed in the inspector.
 var _generation_debug_step_index: int = 0
 # Controls whether runtime patrol link debug mesh is displayed.
@@ -252,6 +244,11 @@ func _ensure_generation_debug_visualizer() -> DungeonGeneratorStepVisualizer:
 		_generation_debug_visualizer = visualizer_node as DungeonGeneratorStepVisualizer
 		_generation_debug_visualizer.name = GENERATION_DEBUG_VISUALIZER_NODE_NAME
 		add_child(_generation_debug_visualizer)
+		var editor_owner: Node = get_tree().edited_scene_root
+		if editor_owner == null:
+			editor_owner = owner
+		if editor_owner != null:
+			_generation_debug_visualizer.owner = editor_owner
 		return _generation_debug_visualizer
 	return null
 
