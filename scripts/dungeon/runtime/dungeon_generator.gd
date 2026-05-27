@@ -550,7 +550,7 @@ func _build_orthogonal_corridor_path(grid: PackedInt32Array, width: int, height:
 			return _reconstruct_corridor_path(came_from, start_index, goal_index, width)
 		closed_flags[current_index] = 1
 
-		var current_pos: Vector2i = Vector2i(current_index % width, int(current_index / width))
+		var current_pos: Vector2i = Vector2i(current_index % width, int(current_index / float(width)))
 		for offset in DungeonBuilderConstants.CARDINAL_OFFSETS:
 			var neighbor_pos: Vector2i = current_pos + offset
 			if not _is_corridor_path_walkable(grid, width, height, neighbor_pos, start, goal):
@@ -582,7 +582,7 @@ func _reconstruct_corridor_path(came_from: PackedInt32Array, start_index: int, g
 	var current_index: int = goal_index
 	while current_index != -1:
 		# nocheck
-		path.append(Vector2i(current_index % width, int(current_index / width)))
+		path.append(Vector2i(current_index % width, int(current_index / float(width))))
 		if current_index == start_index:
 			path.reverse()
 			return path

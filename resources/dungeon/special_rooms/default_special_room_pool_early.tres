@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://br8yniyx63g0m" path="res://scripts/dungeon/contracts/rooms/dungeon_specroom_collapsed_library.gd" id="8_collapsed_library"]
 [ext_resource type="Script" uid="uid://djfoh1dkynumk" path="res://scripts/dungeon/contracts/rooms/dungeon_specroom_ossuary_ring.gd" id="9_ossuary_ring"]
 [ext_resource type="Script" uid="uid://bobbq71crbtb1" path="res://scripts/dungeon/contracts/rooms/dungeon_specroom_zigzag_gauntlet.gd" id="10_zigzag_gauntlet"]
+[ext_resource type="Script" uid="uid://cdcnlkytkiq45" path="res://scripts/dungeon/contracts/rooms/dungeon_specroom_cave.gd" id="11_cave"]
 
 [sub_resource type="Resource" id="Resource_hallway"]
 script = ExtResource("2_entry")
@@ -47,6 +48,10 @@ room_script = ExtResource("9_ossuary_ring")
 script = ExtResource("2_entry")
 room_script = ExtResource("10_zigzag_gauntlet")
 
+[sub_resource type="Resource" id="Resource_cave"]
+script = ExtResource("2_entry")
+room_script = ExtResource("11_cave")
+
 [resource]
 script = ExtResource("1_pool")
-entries = Array[ExtResource("2_entry")]([SubResource("Resource_hallway"), SubResource("Resource_chamber"), SubResource("Resource_split_arena"), SubResource("Resource_prison"), SubResource("Resource_ritual_chapel"), SubResource("Resource_collapsed_library"), SubResource("Resource_ossuary_ring"), SubResource("Resource_zigzag_gauntlet")])
+entries = Array[ExtResource("2_entry")]([SubResource("Resource_hallway"), SubResource("Resource_chamber"), SubResource("Resource_split_arena"), SubResource("Resource_prison"), SubResource("Resource_ritual_chapel"), SubResource("Resource_collapsed_library"), SubResource("Resource_ossuary_ring"), SubResource("Resource_zigzag_gauntlet"), SubResource("Resource_cave")])

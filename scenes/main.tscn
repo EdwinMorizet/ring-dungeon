@@ -35,11 +35,13 @@ fog_depth_begin = 20.0
 
 [sub_resource type="Resource" id="Resource_ya4ey"]
 script = ExtResource("7_jkv2x")
-generation_seed = 902137170
+generation_seed = 698127496
 cell_count = 10
+special_room_target_count = 6
 spawn_radius = 40.0
 loop_percent = 0.45
 tile_size = 4.0
+auto_randomize_seed_on_regenerate = true
 metadata/_custom_type_script = "uid://q1jk71bs8y11"
 
 [node name="Node3D" type="Node3D" unique_id=149825789]
