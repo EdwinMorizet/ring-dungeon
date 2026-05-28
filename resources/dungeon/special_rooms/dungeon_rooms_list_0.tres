@@ -2,7 +2,10 @@
 
 [ext_resource type="Script" uid="uid://donenlmv86r3d" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_weighted_entry.gd" id="1_ptbd8"]
 [ext_resource type="Script" uid="uid://c24800kbkmxdx" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_floor_pool_entry.gd" id="2_j574p"]
+[ext_resource type="Resource" uid="uid://cl6u7m5wm4dp0" path="res://resources/dungeon/special_rooms/dungeon_room_standard.tres" id="2_wab3n"]
+[ext_resource type="Resource" uid="uid://b6juuh0um28w2" path="res://resources/dungeon/special_rooms/dungeon_room_hallway.tres" id="3_ifc80"]
 
 [resource]
 script = ExtResource("2_j574p")
+entries = Array[ExtResource("1_ptbd8")]([ExtResource("2_wab3n"), ExtResource("3_ifc80")])
 metadata/_custom_type_script = "uid://c24800kbkmxdx"

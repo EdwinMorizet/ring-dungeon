@@ -2,33 +2,40 @@
 extends RefCounted
 class_name DungeonGraph
 
+var points := PackedVector2Array()
+var edges : Array[DungeonEdgeData] = []
+var mst_edges: Array[DungeonEdgeData] = []
+var added_loop_edges: Array[DungeonEdgeData] = []
+
 # Relation: Called by DungeonGenerator to produce Delaunay, MST, and optional loop edges.
 # Builds undirected weighted edges from room centers using Delaunay triangulation.
-func build_delaunay_edges(points: PackedVector2Array) -> Array[DungeonEdgeData]:
+func build_delaunay_edges(rooms: Array[DungeonRoomData]) -> Array[DungeonEdgeData]:
+	for room in rooms:
+		points.push_back(room.center)
 	if points.size() < 2:
 		return []
 	if points.size() == 2:
-		return [_make_edge(0, 1, points)]
+		return [_make_edge(0, 1)]
 
 	var triangles: PackedInt32Array = Geometry2D.triangulate_delaunay(points)
 	if triangles.is_empty():
 		return []
 
 	var edge_hashes: Array[int] = []
-	var edges: Array[DungeonEdgeData] = []
 	for i in range(0, triangles.size(), 3):
 		var a: int = triangles[i]
 		var b: int = triangles[i + 1]
 		var c: int = triangles[i + 2]
-		_add_edge_if_missing(edges, edge_hashes, a, b, points)
-		_add_edge_if_missing(edges, edge_hashes, b, c, points)
-		_add_edge_if_missing(edges, edge_hashes, c, a, points)
+		_add_edge_if_missing(edge_hashes, a, b)
+		_add_edge_if_missing(edge_hashes, b, c)
+		_add_edge_if_missing(edge_hashes, c, a)
 
 	return edges
 
 # Builds a minimum spanning tree from weighted edges using union-find.
-func build_mst(points: PackedVector2Array, edges: Array[DungeonEdgeData]) -> Array[DungeonEdgeData]:
+func build_mst() -> Array[DungeonEdgeData]:
 	if points.is_empty() or edges.is_empty():
+		push_error("Graph : build delaunay edges first")
 		return []
 
 	var sorted_edges: Array[DungeonEdgeData] = edges.duplicate()
@@ -49,12 +56,13 @@ func build_mst(points: PackedVector2Array, edges: Array[DungeonEdgeData]) -> Arr
 			mst.append(edge)
 			if mst.size() >= points.size() - 1:
 				break
-
+	mst_edges = mst
 	return mst
 
 # Adds a randomized subset of non-MST edges to create dungeon loops.
-func add_loop_edges(edges: Array[DungeonEdgeData], mst_edges: Array[DungeonEdgeData], loop_percent: float, rng: RandomNumberGenerator) -> Array[DungeonEdgeData]:
-	if edges.is_empty():
+func add_loop_edges(loop_percent: float, rng: RandomNumberGenerator) -> Array[DungeonEdgeData]:
+	if edges.is_empty() or mst_edges.is_empty():
+		push_error("Graph : build delaunay edges and mst first")
 		return []
 
 	var result: Array[DungeonEdgeData] = mst_edges.duplicate()
@@ -80,22 +88,23 @@ func add_loop_edges(edges: Array[DungeonEdgeData], mst_edges: Array[DungeonEdgeD
 		candidates[j] = tmp
 
 	for i in range(to_add):
+		added_loop_edges.append(candidates[i])
 		result.append(candidates[i])
 
 	return result
 
 # Inserts one undirected edge if that edge has not been registered yet.
-func _add_edge_if_missing(edges: Array[DungeonEdgeData], edge_hashes: Array[int], a: int, b: int, points: PackedVector2Array) -> void:
+func _add_edge_if_missing(edge_hashes: Array[int], a: int, b: int) -> void:
 	if a == b:
 		return
 	var hash_key: int = _edge_hash(a, b)
 	if _contains_edge_hash(edge_hashes, hash_key):
 		return
 	edge_hashes.append(hash_key)
-	edges.append(_make_edge(a, b, points))
+	edges.append(_make_edge(a, b))
 
 # Normalizes endpoint order and computes Euclidean edge weight.
-func _make_edge(a: int, b: int, points: PackedVector2Array) -> DungeonEdgeData:
+func _make_edge(a: int, b: int) -> DungeonEdgeData:
 	var ai := mini(a, b)
 	var bi := maxi(a, b)
 	return DungeonEdgeData.new(ai, bi, points[ai].distance_to(points[bi]))

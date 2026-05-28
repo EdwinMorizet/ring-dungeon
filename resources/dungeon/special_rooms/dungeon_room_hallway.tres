@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DungeonSpecialRoomWeightedEntry" format=3 uid="uid://b6juuh0um28w2"]
+
+[ext_resource type="Script" uid="uid://cjdmoxqe28sch" path="res://scripts/dungeon/contracts/rooms/dungeon_specroom_hallway.gd" id="1_tw1aj"]
+[ext_resource type="Script" uid="uid://donenlmv86r3d" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_weighted_entry.gd" id="2_0eui0"]
+
+[resource]
+script = ExtResource("2_0eui0")
+room_script = ExtResource("1_tw1aj")
+weight = 3
+metadata/_custom_type_script = "uid://donenlmv86r3d"

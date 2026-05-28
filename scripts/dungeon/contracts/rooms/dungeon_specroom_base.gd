@@ -6,10 +6,10 @@ const SIDE_EAST: int = 1
 const SIDE_SOUTH: int = 2
 const SIDE_WEST: int = 3
 
-var min_size:int=20
-var max_size:int=40
-var min_ratio:float=1
-var max_ratio:float=1
+var min_size: int = 5
+var max_size: int = 15
+var min_ratio: float = 0.9
+var max_ratio: float = 1
 var north_door_anchor: float = 0.5
 var east_door_anchor: float = 0.5
 var south_door_anchor: float = 0.5
@@ -58,7 +58,9 @@ func _rotate_side_clockwise(side: int) -> int:
 
 # Carves this special room shape inside the resolved room rect.
 func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
-	push_error("carve_room() must be implemented by special-room subclasses", rect, world_rect, grid)
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x,rect.end.x):
+			_set_tile(grid, world_rect.size.x, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Returns custom patrol points for this room design. Empty result falls back to generator defaults.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:
@@ -90,13 +92,6 @@ func _clamp_point_to_rect(rect: Rect2i, point: Vector2, padding: float) -> Vecto
 	return Vector2(clampf(point.x, min_x, max_x), clampf(point.y, min_y, max_y))
 
 # Writes one tile while preserving a permanent one-cell wall border.
-func _set_tile(grid: PackedInt32Array, width: int, height: int, x: int, y: int, tile: int) -> void:
-	if x < 0 or y < 0:
-		return
-	if x >= width or y >= height:
-		return
-	if x == 0 or y == 0 or x == width - 1 or y == height - 1:
-		return
+func _set_tile(grid: PackedInt32Array, width: int, x: int, y: int, tile: int) -> void:
 	var index: int = y * width + x
-	if index >= 0 and index < grid.size():
-		grid[index] = tile
+	if index >= 0 and index < grid.size(): grid[index] = tile

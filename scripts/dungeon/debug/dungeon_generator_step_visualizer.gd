@@ -180,19 +180,19 @@ func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
 		&"mst":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
 			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
-			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
+			#_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.39)
 			_append_room_center_markers(mesh, step.rooms, MST_COLOR, 0.4, 0.24)
 		&"loop_edges":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
 			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
-			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
+			#_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.39)
 			_append_room_edges(mesh, step.rooms, step.loop_edges, LOOP_COLOR, 0.44)
 		&"corridors":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
 			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
-			_append_room_edges(mesh, step.rooms, step.corridor_edges, CORRIDOR_COLOR, 0.44)
+			#_append_room_edges(mesh, step.rooms, step.corridor_edges, CORRIDOR_COLOR, 0.44)
 			_append_corridor_path_cells(mesh, step.corridor_paths, CORRIDOR_COLOR, 0.16)
 		&"full_grid":
 			if _has_step_grid_data(step):
@@ -240,8 +240,6 @@ func _append_room_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData
 func _append_standard_room_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], cell_data: Array[DungeonCellData], color: Color, y: float) -> void:
 	var added_count: int = 0
 	for room in room_data:
-		if room.is_special_room:
-			continue
 		_append_rect_outline(mesh, room.rect, color, y)
 		added_count += 1
 	if added_count > 0:
@@ -254,8 +252,6 @@ func _append_standard_room_outlines(mesh: ImmediateMesh, room_data: Array[Dungeo
 # Appends outlines only for special rooms.
 func _append_special_room_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], color: Color, y: float) -> void:
 	for room in room_data:
-		if not room.is_special_room:
-			continue
 		_append_rect_outline(mesh, room.rect, color, y)
 
 # Appends edge lines between room centers.
@@ -297,7 +293,7 @@ func _append_final_grid_tiles(mesh: ImmediateMesh, step: DungeonGeneratorDebugSt
 			if tile_id != DungeonBuilderConstants.TILE_WALL and tile_id != DungeonBuilderConstants.TILE_FLOOR and tile_id != DungeonBuilderConstants.TILE_CORRIDOR and tile_id != DungeonBuilderConstants.TILE_DOOR:
 				continue
 			var tile_color: Color = _resolve_tile_color(tile_id)
-			var world_cell: Vector2i = Vector2i(grid_x, grid_y) + step.grid_offset
+			var world_cell: Vector2i = Vector2i(grid_x, grid_y)
 			_append_rect_outline(mesh, Rect2i(world_cell, Vector2i.ONE), tile_color, y)
 
 # Returns true when the debug step carries a snapped carved grid payload.
@@ -486,8 +482,6 @@ func _append_special_room_labels(step: DungeonGeneratorDebugStepData, parent_nod
 	var label_index: int = 0
 	var used_label_keys: Dictionary = {}
 	for room in step.rooms:
-		if not room.is_special_room and room.special_room_script == null:
-			continue
 		var label_text: String = _resolve_special_room_type_label(room)
 		if label_text.is_empty():
 			continue
@@ -504,7 +498,7 @@ func _append_special_room_labels(step: DungeonGeneratorDebugStepData, parent_nod
 
 	# Fallback for debug timelines where room snapshots do not keep special entries.
 	for cell in step.cells:
-		if not cell.is_special_room and cell.special_room_script == null:
+		if not cell.is_room and cell.special_room_script == null:
 			continue
 		var center: Vector2 = Vector2(cell.rect.get_center())
 		var center_key: String = _build_room_label_key(center)
@@ -553,8 +547,8 @@ func _append_special_room_label(parent_node: Node3D, world_position: Vector3, la
 	label.text = label_text
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
-	label.fixed_size = false
-	label.pixel_size = 0.03
+	label.fixed_size = true
+	label.pixel_size = 0.0008
 	label.font_size = 44
 	label.outline_size = 10
 	label.outline_modulate = SPECIAL_LABEL_OUTLINE_COLOR

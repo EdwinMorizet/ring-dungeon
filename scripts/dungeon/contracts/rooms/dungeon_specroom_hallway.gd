@@ -15,7 +15,6 @@ func _init() -> void:
 # Carves a cross-like hallway shape inside the assigned rect.
 func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
 	var width: int = int(world_rect.size.x)
-	var height: int = int(world_rect.size.y)
 	var start_x: int = rect.position.x - world_rect.position.x
 	var start_y: int = rect.position.y - world_rect.position.y
 	var end_x: int = rect.end.x - world_rect.position.x
@@ -34,7 +33,7 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 		for x in range(start_x, end_x):
 			var is_column_tile: bool = _is_column_tile(x, y, start_x, end_x, start_y, end_y, long_axis_is_x, first_row_coord, second_row_coord)
 			if not is_column_tile:
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+				_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Returns true when a tile should remain wall as a column in one of the long-side rows.
 func _is_column_tile(

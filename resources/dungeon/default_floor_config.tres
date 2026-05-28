@@ -1,15 +1,17 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://7cjyy6eh8qi"]
 
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_2x5xk"]
+[ext_resource type="Resource" uid="uid://bcs0bw4m6focc" path="res://resources/dungeon/special_rooms/dungeon_rooms_pool.tres" id="2_idk7u"]
 
 [resource]
 script = ExtResource("1_2x5xk")
-generation_seed = 863904633
+generation_seed = 1598974988
 auto_randomize_seed_on_regenerate = true
-cell_count = 10
-special_room_target_count = 4
-spawn_radius = 10.0
-loop_percent = 0.05
+cell_count = 20
+special_room_floor_pool_list = ExtResource("2_idk7u")
+spawn_radius = 25.0
+loop_percent = 0.2
+room_keep_corridor_overlap_chance = 0.5
 patrol_nodes_per_room_max = 3
 tile_size = 4.0
 wall_height = 4.0

@@ -10,13 +10,5 @@ class_name DungeonSpecialRoomWeightedEntry
 
 # Creates a typed room-carver instance from the configured script.
 func instantiate_room() -> DungeonSpecRoomBase:
-	if room_script == null:
-		return null
-	if not room_script.can_instantiate():
-		return null
-	if not room_script.has_method("new"):
-		return null
 	var instance: Variant = room_script.new()
-	if instance is DungeonSpecRoomBase:
-		return instance as DungeonSpecRoomBase
-	return null
+	return instance as DungeonSpecRoomBase

@@ -11,105 +11,86 @@ func generate(
 	debug_timeline: DungeonGeneratorDebugTimeline = null,
 	progression_index: int = 0
 ) -> DungeonLayoutData:
+	# Init random seed
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	seed(seed_value)
 
-	var cells: Array[DungeonCellData] = generate_cells(rng, config, progression_index)
+	# Spawn cells
+	var cells: Array[DungeonCellData] = _generate_cells(rng, config, progression_index)
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_GENERATE_CELLS, cells)
 
-	separate_cells(cells, config, rng)
+	# Separate overlapping cells
+	_separate_cells(cells, config, rng)
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_SEPARATE_CELLS, cells)
 
-	var rooms: Array[DungeonRoomData] = designate_rooms(cells, config)
-	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_DESIGNATE_ROOMS, cells, rooms)
+	# Calculate world size
+	var world_rect: Rect2i = _compute_world_rect(cells)
+	var grid := _create_grid(world_rect)
 
-	var centers := PackedVector2Array()
-	for room in rooms:
-		centers.push_back(room.center)
+	# Isolate rooms
+	var rooms: Array[DungeonRoomData] = designate_rooms(cells)
+	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_DESIGNATE_ROOMS, cells, rooms)
+	
+	# Build Delaunay triangulation
 	var graph: DungeonGraph = DungeonGraph.new()
-	var delaunay_edges: Array[DungeonEdgeData] = graph.build_delaunay_edges(centers)
+	var delaunay_edges: Array[DungeonEdgeData] = graph.build_delaunay_edges(rooms)
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_DELAUNAY, cells, rooms, delaunay_edges)
 
-	var mst_edges: Array[DungeonEdgeData] = graph.build_mst(centers, delaunay_edges)
+	# Calculate Minimum Span Tree
+	var mst_edges: Array[DungeonEdgeData] = graph.build_mst()
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_MST, cells, rooms, delaunay_edges, mst_edges)
 
-	var corridor_edges: Array[DungeonEdgeData] = graph.add_loop_edges(delaunay_edges, mst_edges, config.loop_percent, rng)
-	var loop_edges: Array[DungeonEdgeData] = []
-	for edge_index in range(mst_edges.size(), corridor_edges.size()):
-		loop_edges.append(corridor_edges[edge_index])
+	# Create path loops
+	var corridor_edges: Array[DungeonEdgeData] = graph.add_loop_edges(config.loop_percent, rng)
+	var loop_edges: Array[DungeonEdgeData] = graph.added_loop_edges
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_LOOP_EDGES, cells, rooms, delaunay_edges, mst_edges, loop_edges)
 
-	var world_rect: Rect2i = _compute_rect_bounds_from_entries(rooms)
-	var world_width := int(world_rect.size.x)
-	var world_height := int(world_rect.size.y)
-	var grid := _create_grid(world_width, world_height, DungeonBuilderConstants.TILE_WALL)
+	_carve_rooms(grid, world_rect, rooms)
 
-	for room in rooms:
-		_carve_room_for_data(grid, world_rect, room)
+	var corridor_paths: Array[PackedVector2Array] = _carve_corridor_doors_and_paths(grid, world_rect, rooms, corridor_edges)
+	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
 
-	var debug_corridor_paths: Array[PackedVector2Array] = _carve_corridor_doors_and_paths(
-		grid,
-		world_width,
-		world_height,
-		world_rect,
-		rooms,
-		corridor_edges
-	)
-
-	_enforce_border_walls(grid, world_width, world_height)
 	_reclaim_discarded_standard_rooms_after_corridors(
 		cells,
 		rooms,
-		debug_corridor_paths,
-		config.room_keep_corridor_overlap_chance,
+		corridor_paths,
 		config,
 		rng
 	)
-	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths)
+	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
 
-	var exit_index := -1
-	var start_index := -1
-	if not rooms.is_empty():
-		exit_index = _find_farthest_room_index(rooms)
-		start_index = _find_farthest_from_room_index(rooms, exit_index)
+	return
+
+	var exit_index := _find_farthest_room_index(rooms)
+	var start_index := _find_farthest_from_room_index(rooms, exit_index)
 
 	var annotation_data: DungeonAnnotationData = _annotate_rooms_with_metadata(
 		rooms,
 		start_index,
 		exit_index,
-		config.chest_candidate_ratio,
 		mst_edges,
 		corridor_edges,
 		grid,
-		world_width,
-		world_height,
-		world_rect.position,
+		world_rect,
 		rng,
-		config.patrol_nodes_per_room_min,
-		config.patrol_nodes_per_room_max,
-		config.patrol_point_padding,
-		config.patrol_point_jitter
+		config
 	)
 	var marker_data: DungeonSpawnMarkersData = annotation_data.spawn_markers
-	if start_index >= 0 and start_index < rooms.size() and world_width > 0 and world_height > 0:
-		var start_marker: Vector2 = _resolve_accessible_marker_for_room(
-			grid,
-			world_width,
-			world_height,
-			world_rect.position,
-			rooms[start_index]
-		)
-		marker_data.player_start = PackedVector2Array([start_marker])
-	if exit_index >= 0 and exit_index < rooms.size() and world_width > 0 and world_height > 0:
-		var exit_marker: Vector2 = _resolve_accessible_marker_for_room(
-			grid,
-			world_width,
-			world_height,
-			world_rect.position,
-			rooms[exit_index]
-		)
-		marker_data.floor_exit = PackedVector2Array([exit_marker])
+	var start_marker: Vector2 = _resolve_accessible_marker_for_room(
+		grid,
+		world_rect,
+		rooms[start_index]
+	)
+	marker_data.player_start = PackedVector2Array([start_marker])
+	
+	var exit_marker: Vector2 = _resolve_accessible_marker_for_room(
+		grid,
+		world_rect,
+		rooms[exit_index]
+	)
+	marker_data.floor_exit = PackedVector2Array([exit_marker])
+	
 	var patrol_graph: DungeonPatrolGraphData = annotation_data.patrol_graph
 	var patrol_node_total: int = 0
 	for room_points in patrol_graph.room_nodes:
@@ -131,8 +112,6 @@ func generate(
 
 	var layout: DungeonLayoutData = DungeonLayoutData.new()
 	layout.grid = grid
-	layout.width = world_width
-	layout.height = world_height
 	layout.grid_offset = world_rect.position
 	layout.rooms = rooms
 	layout.edges = delaunay_edges
@@ -145,43 +124,45 @@ func generate(
 	layout.stats = stats
 	if debug_timeline != null:
 		debug_timeline.set_final_layout(layout)
-		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
-		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_PATROL, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
-		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_SPAWNS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
-		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_CHESTS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths, grid, world_rect)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_PATROL, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths, grid, world_rect)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_SPAWNS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths, grid, world_rect)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_CHESTS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths, grid, world_rect)
 	return layout
 
 # Samples room candidate cells from a radial distribution around map center.
-func generate_cells(rng: RandomNumberGenerator, config: DungeonFloorConfig, progression_index: int = 0) -> Array[DungeonCellData]:
+func _generate_cells(rng: RandomNumberGenerator, config: DungeonFloorConfig, progression_index: int = 0) -> Array[DungeonCellData]:
 	var floor_pool_entry = config.special_room_floor_pool_list.resolve_for_progression_index(progression_index)
 	
 	var remaining_specials = config.special_room_target_count
 	var cells: Array[DungeonCellData] = []
 	for _i in config.cell_count:
-		
 		var room: DungeonSpecialRoomWeightedEntry = null
+		var is_room: bool = false
 		if remaining_specials > 0:
 			remaining_specials -= 1
 			room = floor_pool_entry.get_random_entrie()
+			is_room = true
 		else:
 			room = floor_pool_entry.get_standard_entrie()
 		
-		# randomize position inside circle radius
+		# randomize position and size inside circle radius
+		# offset pos by half size and round
 		var angle := rng.randf() * TAU
 		var dist : float = config.spawn_radius * sqrt(rng.randf())
 		var pos := Vector2(cos(angle), sin(angle)).normalized() * dist
+		var room_size = room.instantiate_room().get_size(rng)
+		pos -= room_size * 0.5
 		pos = pos.round()
-		
-		room.instantiate_room()
-		var room_h :int = rng.randi_range(config.room_min_size, config.room_max_size)
-		var room_w :int = rng.randi_range(config.room_min_size, config.room_max_size)
-		var rect: Rect2i = Rect2i(pos, Vector2i(room_w, room_h))
+		var rect: Rect2i = Rect2i(pos, room_size)
 
-		cells.append(DungeonCellData.new((rect), room.room_script))
+		cells.append(DungeonCellData.new((rect), room.room_script, is_room))
+	cells.shuffle()
 	return cells
 
 # Resolves overlapping room candidates using iterative pairwise push separation.
-func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
+func _separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:
+	# Separate cells
 	var overlaps: int = 0
 	for i in config.separation_iterations:
 		overlaps = 0
@@ -189,27 +170,45 @@ func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, r
 			var _overlaps_dist: float = -1
 			var _overlaps_dir: Vector2 = Vector2.ZERO
 			for b in cells.size():
-				if a == b:
-					continue
-				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, config.separation_margin)
-				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin)
+				if a == b: continue
+				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, config.separation_margin) if cells[a].is_room else cells[a].rect
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin) if cells[b].is_room else cells[b].rect
 				while rect_a.intersects(rect_b):
 					overlaps += 1
-					var _dir := Vector2(rect_a.position - rect_b.position)
+					var _dir := Vector2(rect_a.position - rect_b.position).normalized()
 					if _dir.is_zero_approx():
 						_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
-					_dir = _dir.normalized()
 					var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
 					cells[a].rect = Rect2i(cells[a].rect.position + _push_dir, cells[a].rect.size)
 					rect_a = _grow_rect_i(cells[a].rect, config.separation_margin)
-		if overlaps == 0:
-			break
+		if overlaps == 0: break
+	# Consolidate to far away cells
+	var no_move := true
+	for i in config.separation_iterations:
+		no_move = true
+		for a in cells.size():
+			var _dir := Vector2(cells[a].rect.get_center()).normalized()
+			if _dir.is_zero_approx(): continue
+			var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
+			var rect_a: Rect2i = _grow_rect_i(Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size), config.separation_margin)  if cells[a].is_room else Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size)
+			var can_move := true
+			for b in cells.size():
+				if a == b: continue
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin) if cells[b].is_room else cells[b].rect
+				if rect_a.intersects(rect_b): 
+					can_move = false
+					break
+			if can_move:
+				no_move = false
+				cells[a].rect = Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size)
+		if no_move: break
 
 # Selects final rooms from area-qualified standard candidates plus all special rooms.
-func designate_rooms(cells: Array[DungeonCellData], config: DungeonFloorConfig) -> Array[DungeonRoomData]:
+func designate_rooms(cells: Array[DungeonCellData]) -> Array[DungeonRoomData]:
 	var rooms: Array[DungeonRoomData] = []
 	for cell in cells:
-		var room_rect: Rect2i = (cell.rect)
+		if not cell.is_room : continue
+		var room_rect: Rect2i = cell.rect
 		var room_data: DungeonRoomData = DungeonRoomData.new(
 			room_rect,
 			cell.special_room_script
@@ -218,11 +217,39 @@ func designate_rooms(cells: Array[DungeonCellData], config: DungeonFloorConfig) 
 		
 	return rooms
 
+# Computes a merged Rect2i bounds box from typed room entries.
+func _compute_world_rect(entries: Array[DungeonCellData]) -> Rect2i:
+	var bounds: Rect2i = entries[0].rect
+	for entry in entries:
+		bounds = bounds.merge(entry.rect)
+	
+	bounds = bounds.grow(1)
+	
+	for entry in entries:
+		entry.rect = Rect2i(entry.rect.position - bounds.position, entry.rect.size)
+		
+	var world_bounds: Rect2i = entries[0].rect
+	for entry in entries:
+		world_bounds = bounds.merge(entry.rect)
+	
+	return world_bounds
+
+# Allocates and initializes a dense tile grid.
+func _create_grid(world_rect:Rect2i) -> PackedInt32Array:
+	var grid := PackedInt32Array()
+	grid.resize(int(world_rect.size.x) * int(world_rect.size.y))
+	grid.fill(0)
+	return grid
+
+# Carves rooms by dispatching to special-room scripts.
+func _carve_rooms(grid: PackedInt32Array, world_rect: Rect2i, rooms: Array[DungeonRoomData]) -> void:
+	for room in rooms:
+		var room_carver: DungeonSpecRoomBase = room.special_room_script.new()
+		room_carver.carve_room(grid, world_rect, room.rect)
+
 # Carves door endpoints and corridor paths for each valid corridor edge.
 func _carve_corridor_doors_and_paths(
 	grid: PackedInt32Array,
-	world_width: int,
-	world_height: int,
 	world_rect: Rect2i,
 	rooms: Array[DungeonRoomData],
 	corridor_edges: Array[DungeonEdgeData]
@@ -230,11 +257,13 @@ func _carve_corridor_doors_and_paths(
 	var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
 	var door_side_used: PackedInt32Array = PackedInt32Array()
 	door_side_used.resize(door_side_totals.size())
-	var debug_corridor_paths: Array[PackedVector2Array] = []
+	var corridor_paths: Array[PackedVector2Array] = []
+	var world_width = world_rect.size.x
+	var world_height = world_rect.size.y
 
 	for edge in corridor_edges:
-		if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
-			continue
+		#if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
+			#continue
 
 		var room_a: DungeonRoomData = rooms[edge.a]
 		var room_b: DungeonRoomData = rooms[edge.b]
@@ -252,153 +281,65 @@ func _carve_corridor_doors_and_paths(
 
 		var door_a_world: Vector2i = _resolve_room_door_cell(room_a, side_a, slot_index_a, slot_total_a)
 		var door_b_world: Vector2i = _resolve_room_door_cell(room_b, side_b, slot_index_b, slot_total_b)
-		var door_a: Vector2i = door_a_world - world_rect.position
-		var door_b: Vector2i = door_b_world - world_rect.position
+		var door_a: Vector2i = door_a_world
+		var door_b: Vector2i = door_b_world
 
-		_set_tile(grid, world_width, world_height, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
-		_set_tile(grid, world_width, world_height, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
+		_set_tile(grid, world_width, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
+		_set_tile(grid, world_width, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
 		var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
 		var world_corridor_path: PackedVector2Array = PackedVector2Array()
 		for local_cell in local_corridor_path:
-			world_corridor_path.push_back(Vector2(local_cell + world_rect.position))
-		debug_corridor_paths.append(world_corridor_path)
+			world_corridor_path.push_back(Vector2(local_cell))
+		corridor_paths.append(world_corridor_path)
 
-	return debug_corridor_paths
-
-# Records one generation step into the optional editor-only debug timeline.
-func _record_debug_step(
-	debug_timeline: DungeonGeneratorDebugTimeline,
-	step_name: StringName,
-	cells: Array[DungeonCellData] = [],
-	rooms: Array[DungeonRoomData] = [],
-	delaunay_edges: Array[DungeonEdgeData] = [],
-	mst_edges: Array[DungeonEdgeData] = [],
-	loop_edges: Array[DungeonEdgeData] = [],
-	corridor_edges: Array[DungeonEdgeData] = [],
-	corridor_paths: Array[PackedVector2Array] = [],
-	grid: PackedInt32Array = PackedInt32Array(),
-	grid_width: int = 0,
-	grid_height: int = 0,
-	grid_offset: Vector2i = Vector2i.ZERO
-) -> void:
-	if debug_timeline == null:
-		return
-	var step_data: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
-	step_data.step_name = step_name
-	for cell in cells:
-		step_data.cells.append(cell.duplicate_data())
-	for room in rooms:
-		step_data.rooms.append(room.duplicate_data())
-	for edge in delaunay_edges:
-		step_data.delaunay_edges.append(edge.duplicate_data())
-	for edge in mst_edges:
-		step_data.mst_edges.append(edge.duplicate_data())
-	for edge in loop_edges:
-		step_data.loop_edges.append(edge.duplicate_data())
-	for edge in corridor_edges:
-		step_data.corridor_edges.append(edge.duplicate_data())
-	for corridor_path in corridor_paths:
-		var path_snapshot: PackedVector2Array = PackedVector2Array()
-		for cell in corridor_path:
-			path_snapshot.push_back(cell)
-		step_data.corridor_paths.append(path_snapshot)
-	step_data.grid_width = grid_width
-	step_data.grid_height = grid_height
-	step_data.grid_offset = grid_offset
-	if not grid.is_empty():
-		step_data.grid = grid.duplicate()
-	debug_timeline.record_step(step_data)
-
-# Computes a merged Rect2i bounds box from typed room entries.
-func _compute_rect_bounds_from_entries(entries: Array[DungeonRoomData]) -> Rect2i:
-	var has_bounds: bool = false
-	var bounds: Rect2i = Rect2i()
-	for entry in entries:
-		var rect: Rect2i = entry.rect
-		if not has_bounds:
-			bounds = rect
-			has_bounds = true
-		else:
-			bounds = bounds.merge(rect)
-
-	if not has_bounds:
-		return Rect2i()
-	return bounds
-
-
-# Allocates and initializes a dense tile grid.
-func _create_grid(width: int, height: int, default_tile: int) -> PackedInt32Array:
-	var grid := PackedInt32Array()
-	grid.resize(width * height)
-	for i in grid.size():
-		grid[i] = default_tile
-	return grid
-
-# Carves one room by dispatching to special-room scripts when available.
-func _carve_room_for_data(grid: PackedInt32Array, world_rect: Rect2i, room: DungeonRoomData) -> void:
-	if room.is_special_room and room.special_room_script != null:
-		var room_carver: DungeonSpecRoomBase = _instantiate_special_room_script(room.special_room_script)
-		if room_carver != null:
-			room_carver.carve_room(grid, world_rect, room.rect)
-			return
-	_carve_room(grid, world_rect, room.rect)
-
-# Carves a rectangular room into floor tiles within safe interior bounds.
-func _carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
-	var start_x: int = rect.position.x - world_rect.position.x
-	var start_y: int = rect.position.y - world_rect.position.y
-	var end_x: int = rect.end.x - world_rect.position.x
-	var end_y: int = rect.end.y - world_rect.position.y
-	for y in range(start_y, end_y):
-		for x in range(start_x, end_x):
-			_set_tile(grid, int(world_rect.size.x), int(world_rect.size.y), x, y, DungeonBuilderConstants.TILE_FLOOR)
+	return corridor_paths
 
 # Carves corridors between connected rooms and returns world-space debug corridor paths.
-func _carve_corridors_for_edges(
-	grid: PackedInt32Array,
-	world_width: int,
-	world_height: int,
-	world_rect: Rect2i,
-	rooms: Array[DungeonRoomData],
-	corridor_edges: Array[DungeonEdgeData]
-) -> Array[PackedVector2Array]:
-	var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
-	var door_side_used: PackedInt32Array = PackedInt32Array()
-	door_side_used.resize(door_side_totals.size())
-	var debug_corridor_paths: Array[PackedVector2Array] = []
-
-	for edge in corridor_edges:
-		if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
-			continue
-
-		var room_a: DungeonRoomData = rooms[edge.a]
-		var room_b: DungeonRoomData = rooms[edge.b]
-		var side_a: int = _resolve_room_side_for_target(room_a.center, room_b.center)
-		var side_b: int = _resolve_room_side_for_target(room_b.center, room_a.center)
-
-		var key_a: int = edge.a * 4 + side_a
-		var key_b: int = edge.b * 4 + side_b
-		var slot_total_a: int = maxi(1, door_side_totals[key_a])
-		var slot_total_b: int = maxi(1, door_side_totals[key_b])
-		var slot_index_a: int = mini(door_side_used[key_a], slot_total_a - 1)
-		var slot_index_b: int = mini(door_side_used[key_b], slot_total_b - 1)
-		door_side_used[key_a] = door_side_used[key_a] + 1
-		door_side_used[key_b] = door_side_used[key_b] + 1
-
-		var door_a_world: Vector2i = _resolve_room_door_cell(room_a, side_a, slot_index_a, slot_total_a)
-		var door_b_world: Vector2i = _resolve_room_door_cell(room_b, side_b, slot_index_b, slot_total_b)
-		var door_a: Vector2i = door_a_world - world_rect.position
-		var door_b: Vector2i = door_b_world - world_rect.position
-
-		_set_tile(grid, world_width, world_height, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
-		_set_tile(grid, world_width, world_height, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
-		var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
-		var world_corridor_path: PackedVector2Array = PackedVector2Array()
-		for local_cell in local_corridor_path:
-			world_corridor_path.push_back(Vector2(local_cell + world_rect.position))
-		debug_corridor_paths.append(world_corridor_path)
-
-	return debug_corridor_paths
+#func _carve_corridors_for_edges(
+	#grid: PackedInt32Array,
+	#world_width: int,
+	#world_height: int,
+	#world_rect: Rect2i,
+	#rooms: Array[DungeonRoomData],
+	#corridor_edges: Array[DungeonEdgeData]
+#) -> Array[PackedVector2Array]:
+	#var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
+	#var door_side_used: PackedInt32Array = PackedInt32Array()
+	#door_side_used.resize(door_side_totals.size())
+	#var corridor_paths: Array[PackedVector2Array] = []
+#
+	#for edge in corridor_edges:
+		##if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
+			##continue
+#
+		#var room_a: DungeonRoomData = rooms[edge.a]
+		#var room_b: DungeonRoomData = rooms[edge.b]
+		#var side_a: int = _resolve_room_side_for_target(room_a.center, room_b.center)
+		#var side_b: int = _resolve_room_side_for_target(room_b.center, room_a.center)
+#
+		#var key_a: int = edge.a * 4 + side_a
+		#var key_b: int = edge.b * 4 + side_b
+		#var slot_total_a: int = maxi(1, door_side_totals[key_a])
+		#var slot_total_b: int = maxi(1, door_side_totals[key_b])
+		#var slot_index_a: int = mini(door_side_used[key_a], slot_total_a - 1)
+		#var slot_index_b: int = mini(door_side_used[key_b], slot_total_b - 1)
+		#door_side_used[key_a] = door_side_used[key_a] + 1
+		#door_side_used[key_b] = door_side_used[key_b] + 1
+#
+		#var door_a_world: Vector2i = _resolve_room_door_cell(room_a, side_a, slot_index_a, slot_total_a)
+		#var door_b_world: Vector2i = _resolve_room_door_cell(room_b, side_b, slot_index_b, slot_total_b)
+		#var door_a: Vector2i = door_a_world - world_rect.position
+		#var door_b: Vector2i = door_b_world - world_rect.position
+#
+		#_set_tile(grid, world_width, world_height, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
+		#_set_tile(grid, world_width, world_height, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
+		#var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
+		#var world_corridor_path: PackedVector2Array = PackedVector2Array()
+		#for local_cell in local_corridor_path:
+			#world_corridor_path.push_back(Vector2(local_cell + world_rect.position))
+		#corridor_paths.append(world_corridor_path)
+#
+	#return corridor_paths
 
 # Carves an orthogonal A* corridor that prefers merging into existing corridor tiles.
 func _carve_orthogonal_a_star_corridor_between_doors(grid: PackedInt32Array, width: int, height: int, a: Vector2i, b: Vector2i) -> Array[Vector2i]:
@@ -407,7 +348,7 @@ func _carve_orthogonal_a_star_corridor_between_doors(grid: PackedInt32Array, wid
 		return path
 	for i in range(1, path.size() - 1):
 		var cell: Vector2i = path[i]
-		_set_tile(grid, width, height, cell.x, cell.y, DungeonBuilderConstants.TILE_CORRIDOR)
+		_set_tile(grid, width, cell.x, cell.y, DungeonBuilderConstants.TILE_CORRIDOR)
 	return path
 
 # Re-adds previously discarded standard cells when carved corridors traverse their bounds.
@@ -415,43 +356,19 @@ func _reclaim_discarded_standard_rooms_after_corridors(
 	cells: Array[DungeonCellData],
 	rooms: Array[DungeonRoomData],
 	corridor_paths: Array[PackedVector2Array],
-	reclaim_chance: float,
 	config: DungeonFloorConfig,
 	rng: RandomNumberGenerator
 ) -> void:
 	if corridor_paths.is_empty():
 		return
-	var clamped_reclaim_chance: float = clampf(reclaim_chance, 0.0, 1.0)
-	if clamped_reclaim_chance <= 0.0:
-		return
-
-	var existing_room_keys: Dictionary = {}
-	for room in rooms:
-		existing_room_keys[_build_rect_key(room.rect)] = true
-
 	for cell_index in range(cells.size()):
 		var cell: DungeonCellData = cells[cell_index]
-		if cell.is_special_room:
-			continue
-		var room_rect: Rect2i = (cell.rect)
-		if room_rect.size.x <= 0 or room_rect.size.y <= 0:
-			continue
-		var area: int = room_rect.size.x * room_rect.size.y
-		if float(area) < config.room_area_threshold:
-			continue
-
-		var room_key: String = _build_rect_key(room_rect)
-		if existing_room_keys.has(room_key):
-			continue
-		if not _does_any_corridor_path_touch_rect(corridor_paths, room_rect):
-			continue
-		if rng.randf() > clamped_reclaim_chance:
-			continue
-
-		rooms.append(DungeonRoomData.new(room_rect, Vector2(room_rect.get_center()), null, false, null))
-		existing_room_keys[room_key] = true
-		cell.is_room = true
-		cells[cell_index] = cell
+		if cell.is_room: continue
+		var room_rect: Rect2i = cell.rect
+		if rng.randf() > config.room_keep_corridor_overlap_chance: continue
+		if not _does_any_corridor_path_touch_rect(corridor_paths, room_rect): continue
+		rooms.append(DungeonRoomData.new(room_rect, cell.special_room_script))
+		cells[cell_index].is_room = true
 
 # Returns true when any carved corridor path includes a cell inside a target rect.
 func _does_any_corridor_path_touch_rect(corridor_paths: Array[PackedVector2Array], rect: Rect2i) -> bool:
@@ -462,10 +379,6 @@ func _does_any_corridor_path_touch_rect(corridor_paths: Array[PackedVector2Array
 			if rect.has_point(Vector2i(tile_x, tile_y)):
 				return true
 	return false
-
-# Builds a stable key for Rect2i identity comparisons.
-func _build_rect_key(rect: Rect2i) -> String:
-	return "%d:%d:%d:%d" % [rect.position.x, rect.position.y, rect.size.x, rect.size.y]
 
 # Builds an orthogonal A* path that prefers existing corridor tiles over fresh wall carving.
 func _build_orthogonal_corridor_path(grid: PackedInt32Array, width: int, height: int, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
@@ -622,8 +535,8 @@ func _build_room_side_door_counts(rooms: Array[DungeonRoomData], edges: Array[Du
 	var counts: PackedInt32Array = PackedInt32Array()
 	counts.resize(rooms.size() * 4)
 	for edge in edges:
-		if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
-			continue
+		#if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
+			#continue
 		var side_a: int = _resolve_room_side_for_target(rooms[edge.a].center, rooms[edge.b].center)
 		var side_b: int = _opposite_side(side_a)
 		var key_a: int = edge.a * 4 + side_a
@@ -672,11 +585,8 @@ func _resolve_room_door_cell(room: DungeonRoomData, side: int, side_slot_index: 
 
 # Resolves preferred anchor for one room side, using special-room script when available.
 func _resolve_room_side_anchor(room: DungeonRoomData, side: int) -> float:
-	if room.is_special_room and room.special_room_script != null:
-		var room_carver: DungeonSpecRoomBase = _instantiate_special_room_script(room.special_room_script)
-		if room_carver != null:
-			return room_carver.get_oriented_preferred_door_anchor(side, room.rect)
-	return 0.5
+	var room_carver: DungeonSpecRoomBase = room.special_room_script.new()
+	return room_carver.get_oriented_preferred_door_anchor(side, room.rect)
 
 # Converts a normalized side anchor into a clamped integer axis coordinate.
 func _resolve_axis_anchor_coordinate(min_value: int, max_value: int, anchor: float) -> int:
@@ -691,7 +601,7 @@ func _carve_hall_segment(grid: PackedInt32Array, width: int, _height: int, from_
 	var x := from_x
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, _height, x, y + t, DungeonBuilderConstants.TILE_CORRIDOR)
+			_set_tile(grid, width, x, y + t, DungeonBuilderConstants.TILE_CORRIDOR)
 		if x == to_x:
 			break
 		x += step
@@ -702,7 +612,7 @@ func _carve_hall_segment_vertical(grid: PackedInt32Array, width: int, _height: i
 	var y := from_y
 	while true:
 		for t in range(-1, 2):
-			_set_tile(grid, width, _height, x + t, y, DungeonBuilderConstants.TILE_CORRIDOR)
+			_set_tile(grid, width, x + t, y, DungeonBuilderConstants.TILE_CORRIDOR)
 		if y == to_y:
 			break
 		y += step
@@ -725,14 +635,7 @@ func _is_floor_like_tile(tile: int) -> bool:
 	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
 
 # Writes a tile value with bounds checks and a permanent one-tile outer wall border.
-func _set_tile(grid: PackedInt32Array, width: int, height: int, x: int, y: int, tile: int) -> void:
-	if x < 0 or y < 0:
-		return
-	if x >= width or y >= height:
-		return
-	# Keep a permanent 1-tile wall border around the map.
-	if x == 0 or y == 0 or x == width - 1 or y == height - 1:
-		return
+func _set_tile(grid: PackedInt32Array, width: int, x: int, y: int, tile: int) -> void:
 	var index := y * width + x
 	if index >= 0 and index < grid.size():
 		grid[index] = tile
@@ -748,18 +651,6 @@ func _get_tile(grid: PackedInt32Array, width: int, x: int, y: int) -> int:
 	if index < 0 or index >= grid.size():
 		return DungeonBuilderConstants.TILE_WALL
 	return grid[index]
-
-# Force-writes map perimeter cells as wall tiles.
-func _enforce_border_walls(grid: PackedInt32Array, width: int, height: int) -> void:
-	if width < 2 or height < 2:
-		return
-	for x in range(width):
-		grid[x] = DungeonBuilderConstants.TILE_WALL
-		grid[(height - 1) * width + x] = DungeonBuilderConstants.TILE_WALL
-	for y in range(height):
-		grid[y * width] = DungeonBuilderConstants.TILE_WALL
-		grid[y * width + (width - 1)] = DungeonBuilderConstants.TILE_WALL
-
 
 # Picks one weighted special-room entry from a list of eligible entries.
 func _pick_weighted_special_room_entry(eligible_entries: Array[DungeonSpecialRoomWeightedEntry], rng: RandomNumberGenerator) -> DungeonSpecialRoomWeightedEntry:
@@ -819,11 +710,12 @@ func _create_special_room_rect(center: Vector2, special_room: DungeonSpecRoomBas
 # Resolves a marker on a walkable tile within the room, with a global floor fallback.
 func _resolve_accessible_marker_for_room(
 	grid: PackedInt32Array,
-	width: int,
-	height: int,
-	world_offset: Vector2i,
+	world_rect: Rect2i,
 	room: DungeonRoomData
 ) -> Vector2:
+	var world_offset = world_rect.position
+	var width = world_rect.size.x
+	var height = world_rect.size.y
 	var local_min_x: int = clampi(room.rect.position.x - world_offset.x, 0, width - 1)
 	var local_min_y: int = clampi(room.rect.position.y - world_offset.y, 0, height - 1)
 	var local_max_x: int = clampi(room.rect.end.x - world_offset.x - 1, 0, width - 1)
@@ -871,20 +763,6 @@ func _find_nearest_floor_tile(grid: PackedInt32Array, width: int, height: int, o
 				best_dist = dist
 				best_cell = Vector2i(x, y)
 	return best_cell
-
-# Instantiates a special-room script and validates the expected base type.
-func _instantiate_special_room_script(room_script: Script) -> DungeonSpecRoomBase:
-	if room_script == null:
-		return null
-	if not room_script.can_instantiate():
-		return null
-	if not room_script.has_method("new"):
-		return null
-	var instance: Variant = room_script.new()
-	if instance is DungeonSpecRoomBase:
-		return instance as DungeonSpecRoomBase
-	return null
-
 
 # Grows an integer-grid rectangle by a margin on all sides.
 func _grow_rect_i(rect: Rect2i, margin: int) -> Rect2i:
@@ -934,19 +812,21 @@ func _annotate_rooms_with_metadata(
 	rooms: Array[DungeonRoomData],
 	start_index: int,
 	exit_index: int,
-	chest_candidate_ratio: float,
 	mst_edges: Array[DungeonEdgeData],
 	corridor_edges: Array[DungeonEdgeData],
 	grid: PackedInt32Array,
-	grid_width: int,
-	grid_height: int,
-	world_offset: Vector2i,
+	world_rect: Rect2i,
 	rng: RandomNumberGenerator,
-	patrol_nodes_per_room_min: int,
-	patrol_nodes_per_room_max: int,
-	patrol_point_padding: float,
-	patrol_point_jitter: float
+	config: DungeonFloorConfig
 	) -> DungeonAnnotationData:
+	var chest_candidate_ratio: float = config.chest_candidate_ratio
+	var patrol_nodes_per_room_min: int = config.patrol_nodes_per_room_min
+	var patrol_nodes_per_room_max: int = config.patrol_nodes_per_room_max
+	var patrol_point_padding: float = config.patrol_point_padding
+	var patrol_point_jitter: float = config.patrol.point.jitter
+	var world_offset: Vector2i = world_rect.position
+	var grid_width: int = world_rect.size.x
+	var grid_height: int =  world_rect.size.y
 	var marker_data: DungeonSpawnMarkersData = DungeonSpawnMarkersData.new()
 	var room_adjacency: Array[PackedInt32Array] = _build_mst_room_adjacency(rooms.size(), mst_edges)
 
@@ -989,7 +869,7 @@ func _annotate_rooms_with_metadata(
 		var metadata: DungeonRoomMetadataData = room.metadata
 		var room_carver: DungeonSpecRoomBase = null
 		if room.is_special_room and room.special_room_script != null:
-			room_carver = _instantiate_special_room_script(room.special_room_script)
+			room_carver = room.special_room_script.new()
 		var linked_rooms: PackedInt32Array = PackedInt32Array()
 		if i >= 0 and i < room_adjacency.size():
 			linked_rooms = room_adjacency[i]
@@ -1014,7 +894,7 @@ func _annotate_rooms_with_metadata(
 			if room_carver != null:
 				custom_spawn_points = room_carver.build_custom_enemy_spawn_points(room.rect, patrol_point_padding, rng)
 			if custom_spawn_points.is_empty():
-				marker_data.enemy.push_back(_resolve_accessible_marker_for_room(grid, grid_width, grid_height, world_offset, room))
+				marker_data.enemy.push_back(_resolve_accessible_marker_for_room(grid, world_rect, room))
 			else:
 				for spawn_point in custom_spawn_points:
 					var resolved_point: Vector2 = _resolve_accessible_marker_near_world_point(
@@ -1199,3 +1079,49 @@ func _build_patrol_graph_payload(
 		patrol_graph.room_adjacency.append(room_links)
 
 	return patrol_graph
+
+# Records one generation step into the optional editor-only debug timeline.
+func _record_debug_step(
+	debug_timeline: DungeonGeneratorDebugTimeline,
+	step_name: StringName,
+	cells: Array[DungeonCellData] = [],
+	rooms: Array[DungeonRoomData] = [],
+	delaunay_edges: Array[DungeonEdgeData] = [],
+	mst_edges: Array[DungeonEdgeData] = [],
+	loop_edges: Array[DungeonEdgeData] = [],
+	corridor_edges: Array[DungeonEdgeData] = [],
+	corridor_paths: Array[PackedVector2Array] = [],
+	grid: PackedInt32Array = PackedInt32Array(),
+	world_rect: Rect2i = Rect2i()
+) -> void:
+	if debug_timeline == null:
+		return
+	var grid_width: int = world_rect.size.x
+	var grid_height: int =  world_rect.size.y
+	var grid_offset: Vector2i = world_rect.position
+	var step_data: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
+	step_data.step_name = step_name
+	step_data.cells = cells.duplicate(true)
+	#for cell in cells:
+		#step_data.cells.append(cell.duplicate_data())
+	for room in rooms:
+		step_data.rooms.append(room.duplicate_data())
+	for edge in delaunay_edges:
+		step_data.delaunay_edges.append(edge.duplicate_data())
+	for edge in mst_edges:
+		step_data.mst_edges.append(edge.duplicate_data())
+	for edge in loop_edges:
+		step_data.loop_edges.append(edge.duplicate_data())
+	for edge in corridor_edges:
+		step_data.corridor_edges.append(edge.duplicate_data())
+	for corridor_path in corridor_paths:
+		var path_snapshot: PackedVector2Array = PackedVector2Array()
+		for cell in corridor_path:
+			path_snapshot.push_back(cell)
+		step_data.corridor_paths.append(path_snapshot)
+	step_data.grid_width = grid_width
+	step_data.grid_height = grid_height
+	step_data.grid_offset = grid_offset
+	if not grid.is_empty():
+		step_data.grid = grid.duplicate()
+	debug_timeline.record_step(step_data)
