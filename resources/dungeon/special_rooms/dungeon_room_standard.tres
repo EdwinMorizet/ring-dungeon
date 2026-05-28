@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="DungeonSpecialRoomWeightedEntry" format=3 uid="uid://cl6u7m5wm4dp0"]
+
+[ext_resource type="Script" uid="uid://donenlmv86r3d" path="res://scripts/dungeon/resources/special_rooms/dungeon_special_room_weighted_entry.gd" id="1_cu4n1"]
+
+[resource]
+script = ExtResource("1_cu4n1")
+metadata/_custom_type_script = "uid://donenlmv86r3d"

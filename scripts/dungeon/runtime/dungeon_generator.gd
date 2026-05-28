@@ -4,11 +4,6 @@ class_name DungeonGenerator
 
 # Relation: Driven by DungeonFloorController and delegates graph work to DungeonGraph.
 
-# Margin in tiles/pixels for separation
-const SEPARATION_MARGIN: float = 1.0 
-
-
-
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
 func generate(
 	seed_value: int,
@@ -18,8 +13,9 @@ func generate(
 ) -> DungeonLayoutData:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
+	seed(seed_value)
 
-	var cells: Array[DungeonCellData] = generate_cells(config.cell_count, rng, config, progression_index)
+	var cells: Array[DungeonCellData] = generate_cells(rng, config, progression_index)
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_GENERATE_CELLS, cells)
 
 	separate_cells(cells, config, rng)
@@ -147,7 +143,80 @@ func generate(
 	layout.spawn_markers = marker_data
 	layout.patrol_graph = patrol_graph
 	layout.stats = stats
+	if debug_timeline != null:
+		debug_timeline.set_final_layout(layout)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_PATROL, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_SPAWNS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
+		_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_FULL_GRID_CHESTS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, debug_corridor_paths, grid, world_width, world_height, world_rect.position)
 	return layout
+
+# Samples room candidate cells from a radial distribution around map center.
+func generate_cells(rng: RandomNumberGenerator, config: DungeonFloorConfig, progression_index: int = 0) -> Array[DungeonCellData]:
+	var floor_pool_entry = config.special_room_floor_pool_list.resolve_for_progression_index(progression_index)
+	
+	var remaining_specials = config.special_room_target_count
+	var cells: Array[DungeonCellData] = []
+	for _i in config.cell_count:
+		
+		var room: DungeonSpecialRoomWeightedEntry = null
+		if remaining_specials > 0:
+			remaining_specials -= 1
+			room = floor_pool_entry.get_random_entrie()
+		else:
+			room = floor_pool_entry.get_standard_entrie()
+		
+		# randomize position inside circle radius
+		var angle := rng.randf() * TAU
+		var dist : float = config.spawn_radius * sqrt(rng.randf())
+		var pos := Vector2(cos(angle), sin(angle)).normalized() * dist
+		pos = pos.round()
+		
+		room.instantiate_room()
+		var room_h :int = rng.randi_range(config.room_min_size, config.room_max_size)
+		var room_w :int = rng.randi_range(config.room_min_size, config.room_max_size)
+		var rect: Rect2i = Rect2i(pos, Vector2i(room_w, room_h))
+
+		cells.append(DungeonCellData.new((rect), room.room_script))
+	return cells
+
+# Resolves overlapping room candidates using iterative pairwise push separation.
+func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
+	var overlaps: int = 0
+	for i in config.separation_iterations:
+		overlaps = 0
+		for a in cells.size():
+			var _overlaps_dist: float = -1
+			var _overlaps_dir: Vector2 = Vector2.ZERO
+			for b in cells.size():
+				if a == b:
+					continue
+				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, config.separation_margin)
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin)
+				while rect_a.intersects(rect_b):
+					overlaps += 1
+					var _dir := Vector2(rect_a.position - rect_b.position)
+					if _dir.is_zero_approx():
+						_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
+					_dir = _dir.normalized()
+					var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
+					cells[a].rect = Rect2i(cells[a].rect.position + _push_dir, cells[a].rect.size)
+					rect_a = _grow_rect_i(cells[a].rect, config.separation_margin)
+		if overlaps == 0:
+			break
+
+# Selects final rooms from area-qualified standard candidates plus all special rooms.
+func designate_rooms(cells: Array[DungeonCellData], config: DungeonFloorConfig) -> Array[DungeonRoomData]:
+	var rooms: Array[DungeonRoomData] = []
+	for cell in cells:
+		var room_rect: Rect2i = (cell.rect)
+		var room_data: DungeonRoomData = DungeonRoomData.new(
+			room_rect,
+			cell.special_room_script
+		)
+		rooms.append(room_data)
+		
+	return rooms
 
 # Carves door endpoints and corridor paths for each valid corridor edge.
 func _carve_corridor_doors_and_paths(
@@ -206,7 +275,11 @@ func _record_debug_step(
 	mst_edges: Array[DungeonEdgeData] = [],
 	loop_edges: Array[DungeonEdgeData] = [],
 	corridor_edges: Array[DungeonEdgeData] = [],
-	corridor_paths: Array[PackedVector2Array] = []
+	corridor_paths: Array[PackedVector2Array] = [],
+	grid: PackedInt32Array = PackedInt32Array(),
+	grid_width: int = 0,
+	grid_height: int = 0,
+	grid_offset: Vector2i = Vector2i.ZERO
 ) -> void:
 	if debug_timeline == null:
 		return
@@ -229,64 +302,12 @@ func _record_debug_step(
 		for cell in corridor_path:
 			path_snapshot.push_back(cell)
 		step_data.corridor_paths.append(path_snapshot)
+	step_data.grid_width = grid_width
+	step_data.grid_height = grid_height
+	step_data.grid_offset = grid_offset
+	if not grid.is_empty():
+		step_data.grid = grid.duplicate()
 	debug_timeline.record_step(step_data)
-
-# Samples room candidate cells from a radial distribution around map center.
-func generate_cells(cell_count: int, rng: RandomNumberGenerator, config: DungeonFloorConfig, progression_index: int = 0) -> Array[DungeonCellData]:
-	var cells: Array[DungeonCellData] = []
-	var center := Vector2(config.width * 0.5, config.height * 0.5)
-	for _i in cell_count:
-		var angle := rng.randf() * TAU
-		var dist : float = config.spawn_radius * sqrt(rng.randf())
-		var pos := center + Vector2(cos(angle), sin(angle)).normalized() * dist
-		
-		pos = pos.round()
-		
-		# var mean: float = (config.min_room_size + float(config.room_max_size)) * 0.5
-		# var room_w: float = clampf(rng.randfn(mean, float(config.room_size_deviation)), config.min_room_size, float(config.room_max_size))
-		# var room_h: float = clampf(rng.randfn(mean, float(config.room_size_deviation)), config.min_room_size, float(config.room_max_size))
-
-		var room_h :int = rng.randi_range(config.room_min_size, config.room_max_size)
-		var room_w :int = rng.randi_range(config.room_min_size, config.room_max_size)
-
-		if room_w % 2 != 0:
-			room_w += 1
-		if room_h % 2 != 0:
-			room_h += 1
-
-		# var rect: Rect2i = _build_cell_rect_from_dimensions(pos, room_w, room_h)
-
-		var rect: Rect2i = Rect2i(pos, Vector2i(room_w, room_h))
-
-		cells.append(DungeonCellData.new((rect), false, false, null))
-
-	_assign_special_room_cells(cells, rng, config, progression_index)
-	return cells
-
-# Resolves overlapping room candidates using iterative pairwise push separation.
-func separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:	
-	var overlaps: int = 0
-	for i in config.separation_iterations:
-		overlaps = 0
-		for a in cells.size():
-			var _overlaps_dist: float = -1
-			var _overlaps_dir: Vector2 = Vector2.ZERO
-			for b in cells.size():
-				if a == b:
-					continue
-				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, int(SEPARATION_MARGIN))
-				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, int(SEPARATION_MARGIN))
-				while rect_a.intersects(rect_b):
-					overlaps += 1
-					var _dir := Vector2(rect_a.position - rect_b.position)
-					if _dir.is_zero_approx():
-						_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
-					_dir = _dir.normalized()
-					var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
-					cells[a].rect = Rect2i(cells[a].rect.position + _push_dir, cells[a].rect.size)
-					rect_a = _grow_rect_i(cells[a].rect, int(SEPARATION_MARGIN))
-		if overlaps == 0:
-			break
 
 # Computes a merged Rect2i bounds box from typed room entries.
 func _compute_rect_bounds_from_entries(entries: Array[DungeonRoomData]) -> Rect2i:
@@ -304,49 +325,6 @@ func _compute_rect_bounds_from_entries(entries: Array[DungeonRoomData]) -> Rect2
 		return Rect2i()
 	return bounds
 
-# Selects final rooms from area-qualified standard candidates plus all special rooms.
-func designate_rooms(cells: Array[DungeonCellData], config: DungeonFloorConfig) -> Array[DungeonRoomData]:
-	var standard_candidates: Array[DungeonRoomData] = []
-	var special_rooms: Array[DungeonRoomData] = []
-	for cell in cells:
-		var room_rect: Rect2i = (cell.rect)
-		if room_rect.size.x <= 0 or room_rect.size.y <= 0:
-			continue
-		var area: int = room_rect.size.x * room_rect.size.y
-		if not cell.is_special_room and float(area) < config.room_area_threshold:
-			continue
-		var room_center: Vector2 = Vector2(room_rect.get_center())
-		var room_data: DungeonRoomData = DungeonRoomData.new(
-			room_rect,
-			room_center,
-			null,
-			cell.is_special_room,
-			cell.special_room_script if cell.is_special_room else null
-		)
-		if cell.is_special_room:
-			special_rooms.append(room_data)
-		else:
-			standard_candidates.append(room_data)
-
-	standard_candidates.sort_custom(
-		func(a: DungeonRoomData, b: DungeonRoomData) -> bool:
-			var area_a: int = a.rect.size.x * a.rect.size.y
-			var area_b: int = b.rect.size.x * b.rect.size.y
-			return area_a > area_b
-	)
-
-	var clamped_keep_ratio: float = clampf(config.room_keep_ratio, 0.0, 1.0)
-	var keep_target: int = int(ceil(float(standard_candidates.size()) * clamped_keep_ratio))
-	if clamped_keep_ratio > 0.0:
-		keep_target = maxi(keep_target, 1)
-	keep_target = mini(keep_target, standard_candidates.size())
-
-	var rooms: Array[DungeonRoomData] = []
-	for room_index in range(keep_target):
-		rooms.append(standard_candidates[room_index])
-	for special_room in special_rooms:
-		rooms.append(special_room)
-	return rooms
 
 # Allocates and initializes a dense tile grid.
 func _create_grid(width: int, height: int, default_tile: int) -> PackedInt32Array:
@@ -782,60 +760,6 @@ func _enforce_border_walls(grid: PackedInt32Array, width: int, height: int) -> v
 		grid[y * width] = DungeonBuilderConstants.TILE_WALL
 		grid[y * width + (width - 1)] = DungeonBuilderConstants.TILE_WALL
 
-# Assigns special-room tags and scripts to a fixed number of generated cells.
-func _assign_special_room_cells(cells: Array[DungeonCellData], rng: RandomNumberGenerator, config: DungeonFloorConfig, progression_index: int) -> void:
-	if cells.is_empty():
-		return
-	if config.special_room_target_count <= 0:
-		return
-
-	var floor_pool_entry: DungeonSpecialRoomFloorPoolEntry = null
-	if config.special_room_floor_pool_list != null:
-		if config.special_room_floor_pool_list.has_method("resolve_for_progression_index"):
-			floor_pool_entry = config.special_room_floor_pool_list.resolve_for_progression_index(progression_index)
-	if floor_pool_entry == null or floor_pool_entry.pool == null:
-		return
-
-	var eligible_entries: Array[DungeonSpecialRoomWeightedEntry] = floor_pool_entry.pool.get_eligible_entries()
-	if eligible_entries.is_empty():
-		return
-
-	var target_count: int = mini(config.special_room_target_count, cells.size())
-	var spawn_chance: float = clampf(floor_pool_entry.special_spawn_chance, 0.0, 1.0)
-	var spawn_count: int = 0
-	for _slot in target_count:
-		if rng.randf() <= spawn_chance:
-			spawn_count += 1
-	if spawn_count <= 0 and spawn_chance > 0.0:
-		spawn_count = 1
-	spawn_count = mini(spawn_count, cells.size())
-	if spawn_count <= 0:
-		return
-
-	var indices: Array[int] = []
-	for cell_index in range(cells.size()):
-		indices.append(cell_index)
-	for i in range(indices.size() - 1, 0, -1):
-		var swap_index: int = rng.randi_range(0, i)
-		var tmp_index: int = indices[i]
-		indices[i] = indices[swap_index]
-		indices[swap_index] = tmp_index
-
-	for i in range(spawn_count):
-		var cell_index: int = indices[i]
-		var selected_entry: DungeonSpecialRoomWeightedEntry = _pick_weighted_special_room_entry(eligible_entries, rng)
-		if selected_entry == null:
-			continue
-		var special_room: DungeonSpecRoomBase = selected_entry.instantiate_room()
-		if special_room == null:
-			continue
-
-		var cell: DungeonCellData = cells[cell_index]
-		var center: Vector2 = cell.rect.get_center()
-		cell.rect = _create_special_room_rect(center, special_room, rng)
-		cell.is_special_room = true
-		cell.special_room_script = selected_entry.room_script
-		cells[cell_index] = cell
 
 # Picks one weighted special-room entry from a list of eligible entries.
 func _pick_weighted_special_room_entry(eligible_entries: Array[DungeonSpecialRoomWeightedEntry], rng: RandomNumberGenerator) -> DungeonSpecialRoomWeightedEntry:

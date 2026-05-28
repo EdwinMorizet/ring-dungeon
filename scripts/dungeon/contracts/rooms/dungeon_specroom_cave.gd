@@ -43,7 +43,8 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 	# _carve_center_access_paths(grid, world_rect, rect, start_x, start_y, end_x, end_y)
 
 # Ensures every side has a wide tunnel that reaches the cavern center.
-# func _carve_center_access_paths(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+
+func _carve_center_access_paths(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	var width: int = int(world_rect.size.x)
 	var height: int = int(world_rect.size.y)
 	var center_x: int = int(round(rect.get_center().x - world_rect.position.x))
@@ -58,7 +59,8 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 	_carve_hub(grid, width, height, center_x, center_y, hub_radius)
 
 # Carves a vertical band between two Y coordinates.
-# func _carve_vertical_band(grid: PackedInt32Array, width: int, height: int, x: int, from_y: int, to_y: int, radius: int) -> void:
+
+func _carve_vertical_band(grid: PackedInt32Array, width: int, height: int, x: int, from_y: int, to_y: int, radius: int) -> void:
 	var start_y: int = mini(from_y, to_y)
 	var end_y: int = maxi(from_y, to_y)
 	for y in range(start_y, end_y + 1):
@@ -66,7 +68,8 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 			_set_tile(grid, width, height, x + offset_x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Carves a horizontal band between two X coordinates.
-# func _carve_horizontal_band(grid: PackedInt32Array, width: int, height: int, from_x: int, to_x: int, y: int, radius: int) -> void:
+
+func _carve_horizontal_band(grid: PackedInt32Array, width: int, height: int, from_x: int, to_x: int, y: int, radius: int) -> void:
 	var start_x: int = mini(from_x, to_x)
 	var end_x: int = maxi(from_x, to_x)
 	for x in range(start_x, end_x + 1):
@@ -74,7 +77,8 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 			_set_tile(grid, width, height, x, y + offset_y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Carves a solid square hub around the room center.
-# func _carve_hub(grid: PackedInt32Array, width: int, height: int, center_x: int, center_y: int, radius: int) -> void:
+
+func _carve_hub(grid: PackedInt32Array, width: int, height: int, center_x: int, center_y: int, radius: int) -> void:
 	for y in range(center_y - radius, center_y + radius + 1):
 		for x in range(center_x - radius, center_x + radius + 1):
 			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)

@@ -15,6 +15,12 @@ var east_door_anchor: float = 0.5
 var south_door_anchor: float = 0.5
 var west_door_anchor: float = 0.5
 
+# Returns widht and height
+func get_size(rng:RandomNumberGenerator) -> Vector2i:
+	var width := rng.randi_range(min_size, max_size)
+	var height := roundi(width * rng.randf_range(min_ratio, max_ratio))
+	return Vector2i(width, height) 
+
 # Returns normalized preferred door anchor on the requested side.
 func get_preferred_door_anchor(side: int) -> float:
 	match side:

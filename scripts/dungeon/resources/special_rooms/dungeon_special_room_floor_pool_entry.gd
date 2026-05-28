@@ -3,9 +3,14 @@
 extends Resource
 class_name DungeonSpecialRoomFloorPoolEntry
 
-# First progression index where this pool mapping becomes eligible.
-@export var start_progression_index: int = 0
-# Chance applied per special-room spawn slot for this floor mapping.
-@export var special_spawn_chance: float = 1.0
-# Weighted pool used when this floor mapping is active.
-@export var pool: DungeonSpecialRoomPool
+@export var entries: Array[DungeonSpecialRoomWeightedEntry] = []
+
+func get_standard_entrie() -> DungeonSpecialRoomWeightedEntry:
+	return entries[0]
+
+func get_random_entrie() -> DungeonSpecialRoomWeightedEntry:
+	var pool: Array[DungeonSpecialRoomWeightedEntry] = []
+	for entry in entries:
+		for i in range(0, entry.weight):
+			pool.append(entry)
+	return pool.pick_random()

@@ -1,26 +1,16 @@
 [gd_resource type="Resource" script_class="DungeonFloorConfig" format=3 uid="uid://7cjyy6eh8qi"]
 
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_2x5xk"]
-[ext_resource type="PackedScene" uid="uid://dugyl3r82m3qw" path="res://scenes/items/chest_interactable.tscn" id="1_bjrfy"]
-[ext_resource type="PackedScene" uid="uid://djyryd2kvvusk" path="res://scenes/enemies/enemy_basic.tscn" id="1_xx3vb"]
-[ext_resource type="PackedScene" uid="uid://d2c638kyuv2vk" path="res://scenes/merchant/merchant_room.tscn" id="2_6cpke"]
-[ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="3_bjrfy"]
-[ext_resource type="Resource" uid="uid://syx50ri3igss" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="4_special_pool_list"]
 
 [resource]
 script = ExtResource("1_2x5xk")
 generation_seed = 863904633
-width = 200
-height = 200
+auto_randomize_seed_on_regenerate = true
 cell_count = 10
 special_room_target_count = 4
-room_min_size = 5
-room_max_size = 15
-room_size_deviation = 5
 spawn_radius = 10.0
-room_area_threshold = 50.0
 loop_percent = 0.05
 patrol_nodes_per_room_max = 3
 tile_size = 4.0
 wall_height = 4.0
-auto_randomize_seed_on_regenerate = true
+metadata/_custom_type_script = "uid://q1jk71bs8y11"

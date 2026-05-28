@@ -9,6 +9,10 @@ var mst_edges: Array[DungeonEdgeData] = []
 var loop_edges: Array[DungeonEdgeData] = []
 var corridor_edges: Array[DungeonEdgeData] = []
 var corridor_paths: Array[PackedVector2Array] = []
+var grid: PackedInt32Array = PackedInt32Array()
+var grid_width: int = 0
+var grid_height: int = 0
+var grid_offset: Vector2i = Vector2i.ZERO
 
 func duplicate_data() -> DungeonGeneratorDebugStepData:
 	var snapshot: DungeonGeneratorDebugStepData = DungeonGeneratorDebugStepData.new()
@@ -30,4 +34,9 @@ func duplicate_data() -> DungeonGeneratorDebugStepData:
 		for cell in corridor_path:
 			path_snapshot.push_back(cell)
 		snapshot.corridor_paths.append(path_snapshot)
+	snapshot.grid_width = grid_width
+	snapshot.grid_height = grid_height
+	snapshot.grid_offset = grid_offset
+	if not grid.is_empty():
+		snapshot.grid = grid.duplicate()
 	return snapshot
