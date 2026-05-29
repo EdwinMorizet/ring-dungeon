@@ -32,6 +32,7 @@ var _enemy_spawn_manager: Node
 var _runtime_generation_seed: int = 0
 # Last generated layout payload from DungeonGenerator.
 var _runtime_layout: DungeonLayoutData = null
+var _runtime_player_spawn_position: Vector3 = Vector3.ZERO
 
 # Generates an initial floor in runtime unless progression manager takes ownership.
 func _ready() -> void:
@@ -87,7 +88,7 @@ func regenerate_now() -> void:
 	var editor_owner: Node = null
 	if Engine.is_editor_hint() and get_tree() != null:
 		editor_owner = get_tree().edited_scene_root
-	_generated_root = builder.build(self, layout, _build_builder_params(), editor_owner)
+	_generated_root = builder.build(self, layout, config, editor_owner)
 	_spawn_chests_for_floor(generation_seed)
 	_spawn_or_reposition_player()
 	_spawn_enemies_for_floor(generation_seed)
@@ -114,21 +115,23 @@ func get_generated_root() -> Node3D:
 func get_runtime_layout() -> DungeonLayoutData:
 	return _runtime_layout
 
+func get_current_floor_start_position() -> Vector3:
+	return _runtime_player_spawn_position
+
+func get_current_floor_exit_position() -> Vector3:
+	if _generated_root == null or not is_instance_valid(_generated_root):
+		return Vector3.ZERO
+	var exit_trigger: Node = _generated_root.find_child("FloorExitTrigger", true, false)
+	if exit_trigger is Node3D:
+		return (exit_trigger as Node3D).global_position
+	var exit_marker: Node = _generated_root.find_child("FloorExit_0", true, false)
+	if exit_marker is Marker3D:
+		return (exit_marker as Marker3D).global_position
+	return Vector3.ZERO
+
 # Clears generated floor content through a public orchestration API.
 func clear_generated_now() -> void:
 	_clear_generated()
-
-
-# Builds typed parameters consumed by DungeonBuilder3D.build.
-func _build_builder_params() -> DungeonBuilderParams:
-	var floor_config := _get_config()
-	var params: DungeonBuilderParams = DungeonBuilderParams.new()
-	params.tile_size = floor_config.tile_size
-	params.wall_height = floor_config.wall_height
-	params.floor_thickness = floor_config.floor_thickness
-	params.use_multimesh = floor_config.use_multimesh
-	params.create_floor_collision = floor_config.create_floor_collision
-	return params
 
 # Resolves active floor config, preferring runtime progression override when applicable.
 func _get_config() -> DungeonFloorConfig:
@@ -178,6 +181,7 @@ func _spawn_or_reposition_player() -> void:
 		return
 
 	var spawn_position: Vector3 = _find_player_spawn_position()
+	_runtime_player_spawn_position = spawn_position
 	_player_instance.global_position = spawn_position
 	_player_instance.velocity = Vector3.ZERO
 

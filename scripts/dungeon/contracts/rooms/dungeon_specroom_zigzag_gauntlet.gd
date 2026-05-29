@@ -31,13 +31,13 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 		_add_vertical_zigzag_blockers(grid, width, height, start_x, start_y, end_x, end_y)
 
 # Carves a solid interior floor region first.
-func _carve_full_room(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _carve_full_room(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	for y in range(start_y, end_y):
 		for x in range(start_x, end_x):
-			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Adds vertical blockers that alternate top/bottom openings for snake navigation.
-func _add_horizontal_zigzag_blockers(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _add_horizontal_zigzag_blockers(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	var blocker_step: int = 4
 	var opening_size: int = 3
 	var blocker_index: int = 0
@@ -47,11 +47,11 @@ func _add_horizontal_zigzag_blockers(grid: PackedInt32Array, width: int, height:
 		for y in range(start_y + 1, end_y - 1):
 			if y >= opening_from_y and y < opening_to_y:
 				continue
-			_set_tile(grid, width, height, blocker_x, y, DungeonBuilderConstants.TILE_WALL)
+			_set_tile(grid, width, blocker_x, y, DungeonBuilderConstants.TILE_WALL)
 		blocker_index += 1
 
 # Adds horizontal blockers that alternate left/right openings for snake navigation.
-func _add_vertical_zigzag_blockers(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _add_vertical_zigzag_blockers(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	var blocker_step: int = 4
 	var opening_size: int = 3
 	var blocker_index: int = 0
@@ -61,7 +61,7 @@ func _add_vertical_zigzag_blockers(grid: PackedInt32Array, width: int, height: i
 		for x in range(start_x + 1, end_x - 1):
 			if x >= opening_from_x and x < opening_to_x:
 				continue
-			_set_tile(grid, width, height, x, blocker_y, DungeonBuilderConstants.TILE_WALL)
+			_set_tile(grid, width, x, blocker_y, DungeonBuilderConstants.TILE_WALL)
 		blocker_index += 1
 
 # Builds a snake patrol route that alternates openings along the gauntlet axis.

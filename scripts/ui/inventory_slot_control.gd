@@ -3,6 +3,7 @@ extends Button
 class_name InventorySlotControl
 
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+const InventoryDragPayloadScript = preload("res://scripts/inventory/contracts/inventory_drag_payload.gd")
 
 var _slot_kind: InventoryItemDefinition.ItemKind = InventoryItemDefinition.ItemKind.RING
 var _slot_index: int = 0
@@ -30,7 +31,7 @@ func _make_custom_tooltip(for_text: String) -> Control:
 	var label: Label = Label.new()
 	label.text = for_text
 	label.custom_minimum_size = Vector2(264.0, 0.0)
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.clip_text = false
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
@@ -45,19 +46,25 @@ func setup(slot_index: int, slot_kind: InventoryItemDefinition.ItemKind) -> void
 func refresh() -> void:
 	_refresh()
 
+func _get_drag_payload(data: Variant) -> InventoryDragPayload:
+	if not (data is InventoryDragPayload):
+		return null
+	var payload: InventoryDragPayload = data as InventoryDragPayload
+	if payload == null or not payload.is_valid_payload():
+		return null
+	return payload
+
 func _get_drag_allowed_definition(data: Variant) -> InventoryItemDefinition:
-	if data is Dictionary:
-		var item_value: Variant = data.get("item_definition", null)
-		if item_value is InventoryItemDefinition:
-			return item_value as InventoryItemDefinition
-	return null
+	var payload: InventoryDragPayload = _get_drag_payload(data)
+	if payload == null:
+		return null
+	return payload.item_definition
 
 func _get_drag_world_item(data: Variant) -> InventoryWorldItem:
-	if data is Dictionary:
-		var world_item_value: Variant = data.get("world_item", null)
-		if world_item_value is InventoryWorldItem:
-			return world_item_value as InventoryWorldItem
-	return null
+	var payload: InventoryDragPayload = _get_drag_payload(data)
+	if payload == null:
+		return null
+	return payload.world_item
 
 func _refresh() -> void:
 	var manager := InventoryManager

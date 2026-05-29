@@ -74,6 +74,10 @@ func generate(
 		rng,
 		config
 	)
+	if annotation_data == null:
+		annotation_data = DungeonAnnotationData.new()
+		annotation_data.spawn_markers = DungeonSpawnMarkersData.new()
+		annotation_data.patrol_graph = DungeonPatrolGraphData.new()
 	var marker_data: DungeonSpawnMarkersData = annotation_data.spawn_markers
 	var start_marker: Vector2 = _resolve_accessible_marker_for_room(
 		grid,
@@ -874,7 +878,7 @@ func _annotate_rooms_with_metadata(
 				room.rect,
 				patrol_point_count,
 				 config.patrol_point_padding,
-				config.patrol.point.jitter,
+				config.patrol_point_jitter,
 				rng
 			)
 		else:
@@ -907,7 +911,7 @@ func _annotate_rooms_with_metadata(
 		var corridor_points: PackedVector2Array = _build_patrol_points_for_corridor(
 			rooms[corridor_edge.a].center,
 			rooms[corridor_edge.b].center,
-			config.patrol.point.jitter,
+			config.patrol_point_jitter,
 			rng
 		)
 		var resolved_corridor_points: PackedVector2Array = PackedVector2Array()

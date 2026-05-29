@@ -15,7 +15,7 @@ func _init() -> void:
 # Carves a rounded ring chamber with a central cross corridor.
 func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
 	var width: int = int(world_rect.size.x)
-	var height: int = int(world_rect.size.y)
+	var _height: int = int(world_rect.size.y)
 	var start_x: int = rect.position.x - world_rect.position.x
 	var start_y: int = rect.position.y - world_rect.position.y
 	var end_x: int = rect.end.x - world_rect.position.x
@@ -39,7 +39,7 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 			var carve_ring: bool = inner_metric >= 0.36
 			var carve_cross: bool = absf(float(x) - center_x) <= 1.0 or absf(float(y) - center_y) <= 1.0
 			if carve_ring or carve_cross:
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+				_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds a circular patrol loop plus center cross anchor for chamber navigation.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

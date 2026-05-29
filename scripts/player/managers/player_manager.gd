@@ -364,11 +364,15 @@ func clear_runtime_press_tracking() -> void:
 func tick_runtime_timers(delta: float) -> void:
 	if delta <= 0.0:
 		return
+	var was_speed_active: bool = speed_active_remaining > 0.0
 	cast_cooldown_remaining = max(cast_cooldown_remaining - delta, 0.0)
 	speed_active_remaining = max(speed_active_remaining - delta, 0.0)
 	speed_active_cooldown_remaining = max(speed_active_cooldown_remaining - delta, 0.0)
 	heal_active_cooldown_remaining = max(heal_active_cooldown_remaining - delta, 0.0)
 	shield_active_cooldown_remaining = max(shield_active_cooldown_remaining - delta, 0.0)
+	var is_speed_active: bool = speed_active_remaining > 0.0
+	if was_speed_active != is_speed_active:
+		refresh_runtime_derived_stats()
 
 func spend_mana(amount: float) -> bool:
 	if amount <= 0.0:
@@ -466,6 +470,7 @@ func _resolve_player() -> Node3D:
 	return _player
 
 func _apply_controls_state() -> void:
+	var was_controls_enabled: bool = controls_enabled
 	var next_controls_enabled: bool = are_controls_enabled()
 	controls_enabled = next_controls_enabled
 	var player: Node3D = _player
@@ -473,7 +478,8 @@ func _apply_controls_state() -> void:
 		var player_controller: PlayerFpsControllerScript = player as PlayerFpsControllerScript
 		if player_controller != null:
 			player_controller.set_controls_enabled(next_controls_enabled)
-	controls_changed.emit(next_controls_enabled)
+	if was_controls_enabled != next_controls_enabled:
+		controls_changed.emit(next_controls_enabled)
 
 func _currency_changed() -> void:
 	currency_changed.emit(_gold, _gems)

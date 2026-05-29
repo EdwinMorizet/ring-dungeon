@@ -33,9 +33,10 @@ func _process(delta: float) -> void:
 	_update_prompt_visual(delta)
 	if not _is_player_in_range or not _is_player_looking_at_merchant:
 		return
-	if MerchantManager.is_shop_open():
-		return
 	if Input.is_action_just_pressed("interact"):
+		if MerchantManager.is_shop_open():
+			MerchantManager.close_shop()
+			return
 		interact_requested.emit()
 
 func _refresh_prompt_visibility() -> void:

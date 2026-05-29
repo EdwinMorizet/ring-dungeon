@@ -3,6 +3,7 @@ extends Button
 class_name InventoryItemEntry
 
 const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+const InventoryDragPayloadScript = preload("res://scripts/inventory/contracts/inventory_drag_payload.gd")
 
 var _world_item: InventoryWorldItem = null
 
@@ -29,7 +30,7 @@ func _make_custom_tooltip(for_text: String) -> Control:
 	var label: Label = Label.new()
 	label.text = for_text
 	label.custom_minimum_size = Vector2(264.0, 0.0)
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.clip_text = false
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
@@ -73,7 +74,4 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	var preview: Label = Label.new()
 	preview.text = _world_item.item_definition.display_name
 	set_drag_preview(preview)
-	return {
-		"world_item": _world_item,
-		"item_definition": _world_item.item_definition,
-	}
+	return InventoryDragPayloadScript.from_world_item(_world_item)

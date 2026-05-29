@@ -2,10 +2,9 @@
 extends CanvasLayer
 class_name InventoryPanel
 
-const _BAND_SLOT_COUNT: int = 4
-const _RING_SLOT_COUNT: int = 4
 const _NONE_EQUIPPED_TEXT: String = "None equipped"
 const _PANEL_HEIGHT_RATIO: float = 0.9
+const _ACTUAL_STATS_REFRESH_INTERVAL: float = 0.12
 
 enum NearbySortMode {
 	RARITY_DESC,
@@ -24,9 +23,14 @@ enum NearbySortMode {
 @onready var _nearby_bands_container: VBoxContainer = $Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyBands/NearbyBandsScroll/BandsList
 @onready var _nearby_rings_container: VBoxContainer = $Root/Panel/Margin/VBox/NearbySection/NearbyRow/NearbyRings/NearbyRingsScroll/RingsList
 
+var _actual_stats_refresh_timer: float = 0.0
+
 func _ready() -> void:
 	visible = false
 	_build_slots()
+	var viewport: Viewport = get_viewport()
+	if viewport != null and not viewport.size_changed.is_connected(_on_viewport_size_changed):
+		viewport.size_changed.connect(_on_viewport_size_changed)
 	if not InventoryManager.inventory_open_changed.is_connected(_on_inventory_open_changed):
 		InventoryManager.inventory_open_changed.connect(_on_inventory_open_changed)
 	if not InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
@@ -39,12 +43,21 @@ func _ready() -> void:
 	_update_panel_layout()
 
 func _process(_delta: float) -> void:
-	_update_panel_layout()
 	if not visible:
 		return
+	_actual_stats_refresh_timer -= _delta
+	if _actual_stats_refresh_timer > 0.0:
+		return
+	_actual_stats_refresh_timer = _ACTUAL_STATS_REFRESH_INTERVAL
 	_refresh_actual_stats()
 
+func _on_viewport_size_changed() -> void:
+	_update_panel_layout()
+
 func _exit_tree() -> void:
+	var viewport: Viewport = get_viewport()
+	if viewport != null and viewport.size_changed.is_connected(_on_viewport_size_changed):
+		viewport.size_changed.disconnect(_on_viewport_size_changed)
 	if InventoryManager.inventory_open_changed.is_connected(_on_inventory_open_changed):
 		InventoryManager.inventory_open_changed.disconnect(_on_inventory_open_changed)
 	if InventoryManager.inventory_changed.is_connected(_on_inventory_changed):
@@ -55,12 +68,14 @@ func _exit_tree() -> void:
 func _build_slots() -> void:
 	_clear_container(_band_slots)
 	_clear_container(_ring_slots)
-	for slot_index: int in _BAND_SLOT_COUNT:
+	var band_slot_count: int = InventoryManager.get_left_hand_slots().size()
+	var ring_slot_count: int = InventoryManager.get_right_hand_slots().size()
+	for slot_index: int in band_slot_count:
 		var slot_button: InventorySlotControl = InventorySlotControl.new()
 		slot_button.custom_minimum_size = Vector2(160.0, 72.0)
 		slot_button.setup(slot_index, InventoryItemDefinition.ItemKind.BAND)
 		_band_slots.add_child(slot_button)
-	for slot_index: int in _RING_SLOT_COUNT:
+	for slot_index: int in ring_slot_count:
 		var slot_button: InventorySlotControl = InventorySlotControl.new()
 		slot_button.custom_minimum_size = Vector2(160.0, 72.0)
 		slot_button.setup(slot_index, InventoryItemDefinition.ItemKind.RING)
@@ -69,10 +84,15 @@ func _build_slots() -> void:
 func _on_inventory_open_changed(is_open: bool) -> void:
 	visible = is_open
 	if is_open:
+		_actual_stats_refresh_timer = 0.0
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		_refresh_actual_stats()
 
 func _on_inventory_changed() -> void:
+	_ensure_slot_count_synced()
 	_refresh_slots()
+	if visible:
+		_refresh_actual_stats()
 
 func _on_nearby_items_changed() -> void:
 	_refresh_nearby_items()
@@ -85,6 +105,15 @@ func _refresh_slots() -> void:
 		if child is InventorySlotControl:
 			(child as InventorySlotControl).refresh()
 	_refresh_equipment_summaries()
+
+func _ensure_slot_count_synced() -> void:
+	if _band_slots == null or _ring_slots == null:
+		return
+	var expected_band_slots: int = InventoryManager.get_left_hand_slots().size()
+	var expected_ring_slots: int = InventoryManager.get_right_hand_slots().size()
+	if _band_slots.get_child_count() == expected_band_slots and _ring_slots.get_child_count() == expected_ring_slots:
+		return
+	_build_slots()
 
 func _refresh_nearby_items() -> void:
 	_clear_container(_nearby_bands_container)
@@ -197,7 +226,6 @@ func _build_player_actual_stats_text() -> String:
 	var mana_regen: float = PlayerManager.mana_regen_rate
 	var current_ap: float = PlayerManager.current_ap
 	var max_ap: float = PlayerManager.max_ap
-	var ap_regen: float = PlayerManager.ap_regen_rate
 	var walk_speed: float = PlayerManager.actual_walk_speed
 	var sprint_speed: float = PlayerManager.actual_sprint_speed
 	var gold: int = PlayerManager.gold
@@ -208,7 +236,6 @@ func _build_player_actual_stats_text() -> String:
 	lines.append("🔵 MP %.0f / %.0f" % [current_mana, max_mana])
 	lines.append("♻️ Mana Regen +%.1f/s" % mana_regen)
 	lines.append("⚡ AP %.0f / %.0f" % [current_ap, max_ap])
-	lines.append("⚡ AP Regen +%.1f/s" % ap_regen)
 	lines.append("👟 Walk %.2f" % walk_speed)
 	lines.append("👟 Sprint %.2f" % sprint_speed)
 	lines.append("🪙 Gold %d" % gold)
@@ -273,7 +300,7 @@ func _build_band_summary_text() -> String:
 	if not is_zero_approx(mana_regen_bonus):
 		lines.append(_format_float_line(&"mana_regen_flat", mana_regen_bonus, 1))
 	if not is_zero_approx(max_ap_slots_bonus):
-		lines.append(_format_float_line(&"max_ap_slots", max_ap_slots_bonus, 0))
+		lines.append(_format_int_line(&"max_ap_slots", int(roundf(max_ap_slots_bonus))))
 	if not is_equal_approx(speed_mult, 1.0):
 		lines.append(_format_mult_line(&"speed_mult", speed_mult))
 	if not is_zero_approx(active_heal_bonus):
@@ -345,11 +372,14 @@ func _format_float_line(key: StringName, value: float, decimals: int) -> String:
 	var emoji: String = InventoryItemDefinition.get_stat_emoji(key)
 	var label: String = InventoryItemDefinition.get_stat_label(key)
 	var format_string: String = "%s %s %+.1f"
+	var suffix: String = ""
 	if decimals <= 0:
 		format_string = "%s %s %+.0f"
 	elif decimals == 2:
 		format_string = "%s %s %+.2f"
-	return format_string % [emoji, label, value]
+	if key == &"bounce_chance" or key == &"pierce_chance" or key == &"active_speed_mult_flat":
+		suffix = "%"
+	return "%s%s" % [format_string % [emoji, label, value], suffix]
 
 func _format_int_line(key: StringName, value: int) -> String:
 	var emoji: String = InventoryItemDefinition.get_stat_emoji(key)

@@ -68,7 +68,7 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 func _carve_rect(
 	grid: PackedInt32Array,
 	width: int,
-	height: int,
+	_height: int,
 	from_x: int,
 	from_y: int,
 	to_x: int,
@@ -76,7 +76,7 @@ func _carve_rect(
 ) -> void:
 	for y in range(from_y, to_y):
 		for x in range(from_x, to_x):
-			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds patrol points for each arena lobe and bridge connector.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

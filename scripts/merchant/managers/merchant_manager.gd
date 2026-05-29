@@ -10,6 +10,10 @@ const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contract
 
 const SPECIAL_BAG_ID: int = MerchantSpecialModifierIdScript.Id.BAG_SLOT_1
 const SPECIAL_MAP_ID: int = MerchantSpecialModifierIdScript.Id.DUNGEON_MAP
+const SPECIAL_ARCANE_COMPASS_ID: int = MerchantSpecialModifierIdScript.Id.ARCANE_COMPASS
+const SPECIAL_REFORGING_SEAL_ID: int = MerchantSpecialModifierIdScript.Id.REFORGING_SEAL
+const SPECIAL_RING_SLOT_EXPANSION_ID: int = MerchantSpecialModifierIdScript.Id.RING_SLOT_EXPANSION
+const SPECIAL_BAND_SLOT_EXPANSION_ID: int = MerchantSpecialModifierIdScript.Id.BAND_SLOT_EXPANSION
 
 enum OfferKind {
 	ITEM,
@@ -22,7 +26,6 @@ signal special_unlocks_changed()
 
 var _is_shop_open: bool = false
 var _offers: Array = []
-var _special_unlocks: Variant = MerchantSpecialUnlocksDataScript.new()
 var _session_counter: int = 0
 var _session_progression_index: int = 0
 var _session_seed: int = 1
@@ -61,10 +64,19 @@ func get_offers() -> Array:
 	return cloned
 
 func get_special_unlocks() -> Variant:
-	return _special_unlocks.duplicate_data()
+	if _has_progression_manager():
+		return GameProgressionManager.get_special_unlocks_snapshot()
+	return MerchantSpecialUnlocksDataScript.new()
 
 func is_special_modifier_unlocked(modifier_id: int) -> bool:
-	return _special_unlocks.is_unlocked(modifier_id)
+	if _has_progression_manager():
+		return bool(GameProgressionManager.is_special_modifier_unlocked(modifier_id))
+	return false
+
+func get_special_modifier_stack_count(modifier_id: int) -> int:
+	if _has_progression_manager():
+		return int(GameProgressionManager.get_special_modifier_stack_count(modifier_id))
+	return 0
 
 func get_offer_purchase_block_reason(index: int) -> String:
 	if index < 0 or index >= _offers.size():
@@ -86,7 +98,7 @@ func get_offer_purchase_block_reason(index: int) -> String:
 			return "No free band slot"
 	else:
 		var modifier_id: int = offer.special_modifier_id
-		if is_special_modifier_unlocked(modifier_id):
+		if not MerchantSpecialModifierIdScript.is_repeatable_purchase(modifier_id) and is_special_modifier_unlocked(modifier_id):
 			return "Already unlocked"
 	return ""
 
@@ -110,8 +122,9 @@ func buy_offer(index: int) -> Variant:
 			return failed.mark_failure("Could not equip item")
 	else:
 		var modifier_id: int = offer.special_modifier_id
-		_special_unlocks.set_unlocked(modifier_id, true)
-		special_unlocks_changed.emit()
+		var effect_error: String = _apply_special_modifier_purchase(modifier_id)
+		if not effect_error.is_empty():
+			return failed.mark_failure(effect_error)
 
 	if not _spend_player_gold(price_gold):
 		return failed.mark_failure("Gold spend failed")
@@ -119,6 +132,30 @@ func buy_offer(index: int) -> Variant:
 	_offers[index] = offer
 	offers_changed.emit()
 	return MerchantBuyResultScript.new().mark_success(price_gold)
+
+func reforge_equipped_item(item_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> bool:
+	if not _has_progression_manager():
+		return false
+	if not GameProgressionManager.consume_special_modifier_stack(SPECIAL_REFORGING_SEAL_ID, 1):
+		return false
+	var rerolled: bool = InventoryManager.reroll_equipped_item(item_kind, slot_index, _session_progression_index)
+	if rerolled:
+		special_unlocks_changed.emit()
+		return true
+	GameProgressionManager.add_special_modifier_stack(SPECIAL_REFORGING_SEAL_ID, 1)
+	return false
+
+func reforge_world_item(world_item: InventoryWorldItem) -> bool:
+	if not _has_progression_manager():
+		return false
+	if not GameProgressionManager.consume_special_modifier_stack(SPECIAL_REFORGING_SEAL_ID, 1):
+		return false
+	var rerolled: bool = InventoryManager.reroll_world_item(world_item, _session_progression_index)
+	if rerolled:
+		special_unlocks_changed.emit()
+		return true
+	GameProgressionManager.add_special_modifier_stack(SPECIAL_REFORGING_SEAL_ID, 1)
+	return false
 
 func _generate_offers() -> void:
 	_offers.clear()
@@ -154,16 +191,43 @@ func _build_special_or_fallback_offer(rng: RandomNumberGenerator, offer_index: i
 		candidates.append(MerchantSpecialOfferTemplateScript.new(
 			SPECIAL_BAG_ID,
 			MerchantSpecialModifierIdScript.to_label(SPECIAL_BAG_ID),
-			"Placeholder unlock: future ring storage slot.",
+			MerchantSpecialModifierIdScript.to_description(SPECIAL_BAG_ID),
 			90
 		))
 	if not is_special_modifier_unlocked(SPECIAL_MAP_ID):
 		candidates.append(MerchantSpecialOfferTemplateScript.new(
 			SPECIAL_MAP_ID,
 			MerchantSpecialModifierIdScript.to_label(SPECIAL_MAP_ID),
-			"Placeholder unlock: future floor-map reveal.",
+			MerchantSpecialModifierIdScript.to_description(SPECIAL_MAP_ID),
 			120
 		))
+	if not is_special_modifier_unlocked(SPECIAL_ARCANE_COMPASS_ID):
+		candidates.append(MerchantSpecialOfferTemplateScript.new(
+			SPECIAL_ARCANE_COMPASS_ID,
+			MerchantSpecialModifierIdScript.to_label(SPECIAL_ARCANE_COMPASS_ID),
+			MerchantSpecialModifierIdScript.to_description(SPECIAL_ARCANE_COMPASS_ID),
+			160
+		))
+	if not is_special_modifier_unlocked(SPECIAL_RING_SLOT_EXPANSION_ID):
+		candidates.append(MerchantSpecialOfferTemplateScript.new(
+			SPECIAL_RING_SLOT_EXPANSION_ID,
+			MerchantSpecialModifierIdScript.to_label(SPECIAL_RING_SLOT_EXPANSION_ID),
+			MerchantSpecialModifierIdScript.to_description(SPECIAL_RING_SLOT_EXPANSION_ID),
+			175
+		))
+	if not is_special_modifier_unlocked(SPECIAL_BAND_SLOT_EXPANSION_ID):
+		candidates.append(MerchantSpecialOfferTemplateScript.new(
+			SPECIAL_BAND_SLOT_EXPANSION_ID,
+			MerchantSpecialModifierIdScript.to_label(SPECIAL_BAND_SLOT_EXPANSION_ID),
+			MerchantSpecialModifierIdScript.to_description(SPECIAL_BAND_SLOT_EXPANSION_ID),
+			175
+		))
+	candidates.append(MerchantSpecialOfferTemplateScript.new(
+		SPECIAL_REFORGING_SEAL_ID,
+		MerchantSpecialModifierIdScript.to_label(SPECIAL_REFORGING_SEAL_ID),
+		MerchantSpecialModifierIdScript.to_description(SPECIAL_REFORGING_SEAL_ID),
+		110
+	))
 	if candidates.is_empty():
 		return _build_item_offer(rng, offer_index)
 	var chosen: Variant = candidates[rng.randi_range(0, candidates.size() - 1)]
@@ -210,3 +274,37 @@ func _equip_item_offer(item_definition: InventoryItemDefinition) -> bool:
 	if item_definition == null:
 		return false
 	return bool(InventoryManager.equip_item_definition_to_first_free_slot(item_definition))
+
+func _apply_special_modifier_purchase(modifier_id: int) -> String:
+	if not _has_progression_manager():
+		return "Progression manager unavailable"
+	match modifier_id:
+		SPECIAL_REFORGING_SEAL_ID:
+			var next_count: int = int(GameProgressionManager.add_special_modifier_stack(modifier_id, 1))
+			if next_count <= 0:
+				return "Could not grant seal"
+			special_unlocks_changed.emit()
+			return ""
+		SPECIAL_RING_SLOT_EXPANSION_ID:
+			if not InventoryManager.expand_ring_slots(1):
+				return "Could not expand ring slots"
+			GameProgressionManager.unlock_special_modifier(modifier_id)
+			special_unlocks_changed.emit()
+			return ""
+		SPECIAL_BAND_SLOT_EXPANSION_ID:
+			if not InventoryManager.expand_band_slots(1):
+				return "Could not expand band slots"
+			GameProgressionManager.unlock_special_modifier(modifier_id)
+			special_unlocks_changed.emit()
+			return ""
+		_:
+			if not GameProgressionManager.unlock_special_modifier(modifier_id):
+				return "Already unlocked"
+			special_unlocks_changed.emit()
+			return ""
+
+func _has_progression_manager() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		return false
+	return tree.root.has_node("GameProgressionManager")

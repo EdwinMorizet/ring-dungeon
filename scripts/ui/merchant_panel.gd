@@ -6,6 +6,7 @@ const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_const
 const MerchantOfferDataScript = preload("res://scripts/merchant/contracts/merchant_offer_data.gd")
 const MerchantBuyResultScript = preload("res://scripts/merchant/contracts/merchant_buy_result.gd")
 const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/contracts/merchant_special_unlocks_data.gd")
+const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contracts/merchant_special_modifier_id.gd")
 const MERCHANT_LOCK_ID: StringName = &"merchant_shop_open"
 const _MUTED_TEXT_COLOR: Color = Color(0.82, 0.82, 0.82, 1.0)
 const _WARNING_TEXT_COLOR: Color = Color(1.0, 0.74, 0.52, 1.0)
@@ -200,6 +201,7 @@ func _build_item_offer_summary(item_definition: InventoryItemDefinition, price_g
 func _refresh_owned_lists() -> void:
 	_clear_container(_ring_list)
 	_clear_container(_band_list)
+	var reforging_seal_charges: int = MerchantManager.get_special_modifier_stack_count(MerchantSpecialModifierIdScript.Id.REFORGING_SEAL)
 	var left_slots: Array[InventoryItemDefinition] = InventoryManager.get_left_hand_slots()
 	var right_slots: Array[InventoryItemDefinition] = InventoryManager.get_right_hand_slots()
 
@@ -207,13 +209,13 @@ func _refresh_owned_lists() -> void:
 		var ring_definition: InventoryItemDefinition = right_slots[slot_index]
 		if ring_definition == null:
 			continue
-		_ring_list.add_child(_build_sell_equipped_entry(ring_definition, InventoryItemDefinition.ItemKind.RING, slot_index))
+		_ring_list.add_child(_build_sell_equipped_entry(ring_definition, InventoryItemDefinition.ItemKind.RING, slot_index, reforging_seal_charges))
 
 	for slot_index: int in left_slots.size():
 		var band_definition: InventoryItemDefinition = left_slots[slot_index]
 		if band_definition == null:
 			continue
-		_band_list.add_child(_build_sell_equipped_entry(band_definition, InventoryItemDefinition.ItemKind.BAND, slot_index))
+		_band_list.add_child(_build_sell_equipped_entry(band_definition, InventoryItemDefinition.ItemKind.BAND, slot_index, reforging_seal_charges))
 
 	var nearby_items: Array[InventoryWorldItem] = InventoryManager.get_nearby_items()
 	for world_item: InventoryWorldItem in nearby_items:
@@ -222,16 +224,16 @@ func _refresh_owned_lists() -> void:
 		if world_item.item_definition == null:
 			continue
 		if world_item.item_definition.item_kind == InventoryItemDefinition.ItemKind.RING:
-			_ring_list.add_child(_build_sell_world_entry(world_item))
+			_ring_list.add_child(_build_sell_world_entry(world_item, reforging_seal_charges))
 		else:
-			_band_list.add_child(_build_sell_world_entry(world_item))
+			_band_list.add_child(_build_sell_world_entry(world_item, reforging_seal_charges))
 
 	if _ring_list.get_child_count() == 0:
 		_add_info_label(_ring_list, "No rings to sell")
 	if _band_list.get_child_count() == 0:
 		_add_info_label(_band_list, "No bands to sell")
 
-func _build_sell_equipped_entry(item_definition: InventoryItemDefinition, item_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> Control:
+func _build_sell_equipped_entry(item_definition: InventoryItemDefinition, item_kind: InventoryItemDefinition.ItemKind, slot_index: int, reforging_seal_charges: int) -> Control:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -246,9 +248,15 @@ func _build_sell_equipped_entry(item_definition: InventoryItemDefinition, item_k
 	button.pressed.connect(_on_sell_equipped_pressed.bind(item_kind, slot_index))
 	button.tooltip_text = item_definition.build_tooltip_text()
 	row.add_child(button)
+	if reforging_seal_charges > 0:
+		var reforge_button: Button = Button.new()
+		reforge_button.text = "Reforge (%d)" % reforging_seal_charges
+		reforge_button.tooltip_text = "Spend one Reforging Seal charge to reroll this item."
+		reforge_button.pressed.connect(_on_reforge_equipped_pressed.bind(item_kind, slot_index))
+		row.add_child(reforge_button)
 	return row
 
-func _build_sell_world_entry(world_item: InventoryWorldItem) -> Control:
+func _build_sell_world_entry(world_item: InventoryWorldItem, reforging_seal_charges: int) -> Control:
 	var item_definition: InventoryItemDefinition = world_item.item_definition
 	var row: HBoxContainer = HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -264,12 +272,35 @@ func _build_sell_world_entry(world_item: InventoryWorldItem) -> Control:
 	button.pressed.connect(_on_sell_world_pressed.bind(world_item))
 	button.tooltip_text = item_definition.build_tooltip_text()
 	row.add_child(button)
+	if reforging_seal_charges > 0:
+		var reforge_button: Button = Button.new()
+		reforge_button.text = "Reforge (%d)" % reforging_seal_charges
+		reforge_button.tooltip_text = "Spend one Reforging Seal charge to reroll this item."
+		reforge_button.pressed.connect(_on_reforge_world_pressed.bind(world_item))
+		row.add_child(reforge_button)
 	return row
 
 func _refresh_unlocks() -> void:
-	var bag_unlocked: bool = bool(MerchantManager.is_special_modifier_unlocked(MerchantManager.SPECIAL_BAG_ID))
-	var map_unlocked: bool = bool(MerchantManager.is_special_modifier_unlocked(MerchantManager.SPECIAL_MAP_ID))
-	_unlocks_label.text = "Special Unlocks: Bag [%s] | Dungeon Map [%s]" % ["ON" if bag_unlocked else "OFF", "ON" if map_unlocked else "OFF"]
+	var unlock_states: Array[String] = []
+	var known_ids: Array[int] = [
+		MerchantSpecialModifierIdScript.Id.BAG_SLOT_1,
+		MerchantSpecialModifierIdScript.Id.DUNGEON_MAP,
+		MerchantSpecialModifierIdScript.Id.ARCANE_COMPASS,
+		MerchantSpecialModifierIdScript.Id.RING_SLOT_EXPANSION,
+		MerchantSpecialModifierIdScript.Id.BAND_SLOT_EXPANSION,
+	]
+	for modifier_id: int in known_ids:
+		var label: String = MerchantSpecialModifierIdScript.to_label(modifier_id)
+		var enabled: bool = bool(MerchantManager.is_special_modifier_unlocked(modifier_id))
+		unlock_states.append("%s [%s]" % [label, "ON" if enabled else "OFF"])
+	unlock_states.append("%s [%d]" % [
+		MerchantSpecialModifierIdScript.to_label(MerchantSpecialModifierIdScript.Id.REFORGING_SEAL),
+		MerchantManager.get_special_modifier_stack_count(MerchantSpecialModifierIdScript.Id.REFORGING_SEAL),
+	])
+	if unlock_states.is_empty():
+		_unlocks_label.text = "Special Unlocks: None"
+		return
+	_unlocks_label.text = "Special Unlocks: %s" % " | ".join(unlock_states)
 
 func _on_buy_offer_pressed(offer_index: int) -> void:
 	var result: Variant = MerchantManager.buy_offer(offer_index)
@@ -303,6 +334,24 @@ func _on_sell_world_pressed(world_item: InventoryWorldItem) -> void:
 	else:
 		_status_label.text = "Sold for %dg" % sold_for
 		_status_label.modulate = Color(0.62, 1.0, 0.68, 1.0)
+	_refresh_all()
+
+func _on_reforge_equipped_pressed(item_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> void:
+	if MerchantManager.reforge_equipped_item(item_kind, slot_index):
+		_status_label.text = "Item reforged"
+		_status_label.modulate = Color(0.62, 1.0, 0.68, 1.0)
+	else:
+		_status_label.text = "Reforge failed"
+		_status_label.modulate = Color(1.0, 0.62, 0.62, 1.0)
+	_refresh_all()
+
+func _on_reforge_world_pressed(world_item: InventoryWorldItem) -> void:
+	if MerchantManager.reforge_world_item(world_item):
+		_status_label.text = "Item reforged"
+		_status_label.modulate = Color(0.62, 1.0, 0.68, 1.0)
+	else:
+		_status_label.text = "Reforge failed"
+		_status_label.modulate = Color(1.0, 0.62, 0.62, 1.0)
 	_refresh_all()
 
 func _acquire_input_lock() -> void:

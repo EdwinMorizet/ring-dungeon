@@ -86,8 +86,24 @@ static func generate_item(item_kind: InventoryItemDefinition.ItemKind, floor_dep
 	var rarity: InventoryItemDefinition.Rarity = _roll_rarity(floor_depth, rng)
 	var item: InventoryItemDefinition = InventoryItemDefinition.new()
 	item.item_kind = item_kind
-	item.rarity = rarity
+	item.item_id = StringName("%s_%d" % [item.get_kind_label().to_lower(), rng.randi()])
+	_roll_item(item, rarity, floor_depth, rng)
+	return item
 
+static func reroll_item(item: InventoryItemDefinition, floor_depth: int, rng: RandomNumberGenerator) -> InventoryItemDefinition:
+	_ensure_pools_initialized()
+	if item == null:
+		return null
+	var preserved_rarity: InventoryItemDefinition.Rarity = item.rarity
+	_roll_item(item, preserved_rarity, floor_depth, rng)
+	return item
+
+static func _roll_item(item: InventoryItemDefinition, rarity: InventoryItemDefinition.Rarity, floor_depth: int, rng: RandomNumberGenerator) -> void:
+	if item == null:
+		return
+	item.rarity = rarity
+	item.major_trait_label = ""
+	var item_kind: InventoryItemDefinition.ItemKind = item.item_kind
 	var picked_affixes: Array[AffixEntry] = _pick_affixes(item_kind, rarity, rng)
 	item.compiled_modifiers = _compile_modifiers(rarity, picked_affixes, rng)
 	item.benefit_lines = _build_affix_lines(picked_affixes, true)
@@ -109,11 +125,8 @@ static func generate_item(item_kind: InventoryItemDefinition.ItemKind, floor_dep
 			_apply_required_tradeoffs_for_major_trait(item, legendary_trait, rarity, rng)
 
 	_clamp_discrete_modifiers(item.compiled_modifiers)
-
 	item.display_name = _build_display_name(item)
-	item.item_id = StringName("%s_%d" % [item.get_kind_label().to_lower(), rng.randi()])
 	item.gold_value = _compute_gold_value(item, floor_depth)
-	return item
 
 static func _roll_rarity(floor_depth: int, rng: RandomNumberGenerator) -> InventoryItemDefinition.Rarity:
 	var depth_step: int = maxi(floor_depth, 0)

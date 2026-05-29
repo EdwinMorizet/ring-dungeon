@@ -65,11 +65,11 @@ func _carve_prison_horizontal(
 
 		if top_room_to_y - top_room_from_y >= 2 and room_to_x - room_from_x >= 2:
 			_carve_rect(grid, width, height, room_from_x, top_room_from_y, room_to_x, top_room_to_y)
-			_set_tile(grid, width, height, door_x, corridor_from_y - 1, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, door_x, corridor_from_y - 1, DungeonBuilderConstants.TILE_FLOOR)
 
 		if bottom_room_to_y - bottom_room_from_y >= 2 and room_to_x - room_from_x >= 2:
 			_carve_rect(grid, width, height, room_from_x, bottom_room_from_y, room_to_x, bottom_room_to_y)
-			_set_tile(grid, width, height, door_x, corridor_to_y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, door_x, corridor_to_y, DungeonBuilderConstants.TILE_FLOOR)
 
 		cursor_x = segment_end_x + segment_gap
 
@@ -105,11 +105,11 @@ func _carve_prison_vertical(
 
 		if left_room_to_x - left_room_from_x >= 2 and room_to_y - room_from_y >= 2:
 			_carve_rect(grid, width, height, left_room_from_x, room_from_y, left_room_to_x, room_to_y)
-			_set_tile(grid, width, height, corridor_from_x - 1, door_y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, corridor_from_x - 1, door_y, DungeonBuilderConstants.TILE_FLOOR)
 
 		if right_room_to_x - right_room_from_x >= 2 and room_to_y - room_from_y >= 2:
 			_carve_rect(grid, width, height, right_room_from_x, room_from_y, right_room_to_x, room_to_y)
-			_set_tile(grid, width, height, corridor_to_x, door_y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, corridor_to_x, door_y, DungeonBuilderConstants.TILE_FLOOR)
 
 		cursor_y = segment_end_y + segment_gap
 
@@ -117,7 +117,7 @@ func _carve_prison_vertical(
 func _carve_rect(
 	grid: PackedInt32Array,
 	width: int,
-	height: int,
+	_height: int,
 	from_x: int,
 	from_y: int,
 	to_x: int,
@@ -125,7 +125,7 @@ func _carve_rect(
 ) -> void:
 	for y in range(from_y, to_y):
 		for x in range(from_x, to_x):
-			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds patrol points through central corridor with branch points near cell rows.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

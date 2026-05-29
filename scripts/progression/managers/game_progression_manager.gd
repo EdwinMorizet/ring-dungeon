@@ -5,9 +5,14 @@ extends Node
 const DefaultGameProgressionManagerConfig: GameProgressionManagerConfig = preload("res://resources/progression/default_game_progression_manager_config.tres")
 const DefaultDifficultyTable: FloorDifficultyTable = preload("res://resources/dungeon/default_floor_difficulty_table.tres")
 const DefaultFloorConfig: DungeonFloorConfig = preload("res://resources/dungeon/default_floor_config.tres")
+const MerchantSpecialUnlocksDataScript = preload("res://scripts/merchant/contracts/merchant_special_unlocks_data.gd")
+const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contracts/merchant_special_modifier_id.gd")
+
+const ARCANE_COMPASS_MIN_EXPLORATION_DISTANCE: float = 18.0
 
 signal floor_changed(display_floor: int, progression_index: int, config_path: String)
 signal phase_changed(phase: StringName)
+signal merchant_special_state_changed()
 
 # Active parameter resource for this autoload manager.
 var _config: GameProgressionManagerConfig = DefaultGameProgressionManagerConfig
@@ -16,6 +21,7 @@ var _progression_index: int = 0
 var _display_floor: int = 0
 var _phase: StringName = &"dungeon"
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _merchant_special_unlocks: MerchantSpecialUnlocksData = MerchantSpecialUnlocksDataScript.new()
 
 func _ready() -> void:
 	_rng.randomize()
@@ -33,6 +39,10 @@ func reset_default_config() -> void:
 func start_run() -> void:
 	_progression_index = 0
 	_display_floor = _config.start_floor_display
+	_merchant_special_unlocks = MerchantSpecialUnlocksDataScript.new()
+	merchant_special_state_changed.emit()
+	if _has_inventory_manager():
+		InventoryManager.reset_runtime_slot_capacities()
 	_set_phase(_config.dungeon_phase)
 	_request_current_floor()
 
@@ -77,6 +87,42 @@ func get_progression_index() -> int:
 
 func get_phase() -> StringName:
 	return _phase
+
+func get_special_unlocks_snapshot() -> MerchantSpecialUnlocksData:
+	return _merchant_special_unlocks.duplicate_data()
+
+func is_special_modifier_unlocked(modifier_id: int) -> bool:
+	return _merchant_special_unlocks.is_unlocked(modifier_id)
+
+func get_special_modifier_stack_count(modifier_id: int) -> int:
+	return _merchant_special_unlocks.get_stack_count(modifier_id)
+
+func unlock_special_modifier(modifier_id: int) -> bool:
+	if not MerchantSpecialModifierIdScript.is_valid(modifier_id):
+		return false
+	if _merchant_special_unlocks.is_unlocked(modifier_id):
+		return false
+	_merchant_special_unlocks.set_unlocked(modifier_id, true)
+	merchant_special_state_changed.emit()
+	return true
+
+func add_special_modifier_stack(modifier_id: int, amount: int = 1) -> int:
+	if not MerchantSpecialModifierIdScript.is_valid(modifier_id):
+		return 0
+	var next_count: int = _merchant_special_unlocks.add_stack_count(modifier_id, amount)
+	merchant_special_state_changed.emit()
+	return next_count
+
+func consume_special_modifier_stack(modifier_id: int, amount: int = 1) -> bool:
+	if not MerchantSpecialModifierIdScript.is_valid(modifier_id):
+		return false
+	var consumed: bool = _merchant_special_unlocks.consume_stack_count(modifier_id, amount)
+	if consumed:
+		merchant_special_state_changed.emit()
+	return consumed
+
+func get_arcane_compass_min_exploration_distance() -> float:
+	return ARCANE_COMPASS_MIN_EXPLORATION_DISTANCE
 
 func _request_current_floor() -> void:
 	var selected_config: DungeonFloorConfig = resolve_floor_config_for_index(_progression_index)
@@ -145,3 +191,9 @@ func _get_floor_controller() -> DungeonFloorController:
 	if controller_node is DungeonFloorController:
 		return controller_node as DungeonFloorController
 	return null
+
+func _has_inventory_manager() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		return false
+	return tree.root.has_node("InventoryManager")

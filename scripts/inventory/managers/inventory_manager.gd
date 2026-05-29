@@ -114,6 +114,18 @@ func find_first_free_slot_index(slot_kind: InventoryItemDefinition.ItemKind) -> 
 			return slot_index
 	return -1
 
+func reset_runtime_slot_capacities() -> void:
+	_left_hand_slots = _create_empty_slots(maxi(_config.left_hand_slot_count, 0))
+	_right_hand_slots = _create_empty_slots(maxi(_config.right_hand_slot_count, 0))
+	inventory_changed.emit()
+	equipment_changed.emit()
+
+func expand_ring_slots(amount: int = 1) -> bool:
+	return _expand_slot_array(_right_hand_slots, amount)
+
+func expand_band_slots(amount: int = 1) -> bool:
+	return _expand_slot_array(_left_hand_slots, amount)
+
 func equip_item_definition_to_slot(item_definition: InventoryItemDefinition, slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> bool:
 	if item_definition == null:
 		return false
@@ -122,6 +134,8 @@ func equip_item_definition_to_slot(item_definition: InventoryItemDefinition, slo
 	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
 	if slots.is_empty() or not _is_valid_slot_index(slots, slot_index):
 		return false
+	if slots[slot_index] != null:
+		_drop_item_definition(slots[slot_index], _get_player_spawn_position())
 	slots[slot_index] = item_definition
 	inventory_changed.emit()
 	equipment_changed.emit()
@@ -175,6 +189,33 @@ func sell_world_item(world_item: InventoryWorldItem) -> int:
 	world_item.queue_free()
 	add_player_gold(sale_value)
 	return sale_value
+
+func reroll_equipped_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int, floor_depth: int = -1) -> bool:
+	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
+	if slots.is_empty() or not _is_valid_slot_index(slots, slot_index):
+		return false
+	var item_definition: InventoryItemDefinition = slots[slot_index]
+	if item_definition == null:
+		return false
+	var rerolled_item: InventoryItemDefinition = _reroll_item_definition(item_definition, floor_depth)
+	if rerolled_item == null:
+		return false
+	inventory_changed.emit()
+	equipment_changed.emit()
+	return true
+
+func reroll_world_item(world_item: InventoryWorldItem, floor_depth: int = -1) -> bool:
+	if world_item == null or not is_instance_valid(world_item):
+		return false
+	var item_definition: InventoryItemDefinition = world_item.item_definition
+	if item_definition == null:
+		return false
+	var rerolled_item: InventoryItemDefinition = _reroll_item_definition(item_definition, floor_depth)
+	if rerolled_item == null:
+		return false
+	world_item.configure(rerolled_item)
+	inventory_changed.emit()
+	return true
 
 func register_world_item(world_item: InventoryWorldItem) -> void:
 	if world_item == null or not is_instance_valid(world_item):
@@ -441,6 +482,7 @@ func _resolve_player_node() -> Node:
 	return null
 
 func _refresh_nearby_items() -> void:
+	_prune_invalid_world_items()
 	var player: Node3D = _player
 	if player == null or not is_instance_valid(player):
 		if not _nearby_items.is_empty():
@@ -459,6 +501,24 @@ func _refresh_nearby_items() -> void:
 		_nearby_items = next_nearby_items
 		nearby_items_changed.emit()
 
+func _prune_invalid_world_items() -> void:
+	var removed_any: bool = false
+	for index in range(_world_items.size() - 1, -1, -1):
+		var world_item: InventoryWorldItem = _world_items[index]
+		if world_item != null and is_instance_valid(world_item):
+			continue
+		_world_items.remove_at(index)
+		removed_any = true
+	if not removed_any:
+		return
+	for index in range(_nearby_items.size() - 1, -1, -1):
+		var world_item: InventoryWorldItem = _nearby_items[index]
+		if world_item != null and is_instance_valid(world_item) and _world_items.has(world_item):
+			continue
+		_nearby_items.remove_at(index)
+	nearby_items_changed.emit()
+	inventory_changed.emit()
+
 func _same_world_item_list(left: Array[InventoryWorldItem], right: Array[InventoryWorldItem]) -> bool:
 	if left.size() != right.size():
 		return false
@@ -473,6 +533,18 @@ func _create_empty_slots(slot_count: int) -> Array[InventoryItemDefinition]:
 	for index: int in slot_count:
 		slots[index] = null
 	return slots
+
+func _expand_slot_array(slots: Array[InventoryItemDefinition], amount: int) -> bool:
+	var extra_slots: int = maxi(amount, 0)
+	if extra_slots <= 0:
+		return false
+	var previous_size: int = slots.size()
+	slots.resize(previous_size + extra_slots)
+	for index: int in range(previous_size, slots.size()):
+		slots[index] = null
+	inventory_changed.emit()
+	equipment_changed.emit()
+	return true
 
 func _get_slot_array(slot_kind: InventoryItemDefinition.ItemKind) -> Array[InventoryItemDefinition]:
 	if slot_kind == InventoryItemDefinition.ItemKind.BAND:
@@ -494,6 +566,22 @@ func _get_player_spawn_position() -> Vector3:
 
 func _drop_item_definition(item_definition: InventoryItemDefinition, spawn_position: Vector3) -> void:
 	spawn_world_item(item_definition, spawn_position)
+
+func _reroll_item_definition(item_definition: InventoryItemDefinition, floor_depth: int) -> InventoryItemDefinition:
+	if item_definition == null:
+		return null
+	var reroll_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	reroll_rng.randomize()
+	var resolved_floor_depth: int = floor_depth
+	if resolved_floor_depth < 0:
+		resolved_floor_depth = _resolve_current_floor_depth()
+	return ItemAffixGeneratorScript.reroll_item(item_definition, resolved_floor_depth, reroll_rng)
+
+func _resolve_current_floor_depth() -> int:
+	var tree: SceneTree = get_tree()
+	if tree != null and tree.root != null and tree.root.has_node("GameProgressionManager"):
+		return int(GameProgressionManager.get_progression_index())
+	return 0
 
 func _unregister_world_item(world_item: InventoryWorldItem) -> void:
 	if world_item == null:

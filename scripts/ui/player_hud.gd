@@ -5,6 +5,7 @@ class_name PlayerHud
 const _DEFAULT_MAX_HEALTH: float = 100.0
 const _DEFAULT_MAX_MANA: float = 100.0
 const _DEFAULT_MAX_AP: float = 0.0
+const MerchantSpecialModifierIdScript = preload("res://scripts/merchant/contracts/merchant_special_modifier_id.gd")
 
 @export var max_health: float = _DEFAULT_MAX_HEALTH
 @export var max_mana: float = _DEFAULT_MAX_MANA
@@ -21,20 +22,27 @@ const _DEFAULT_MAX_AP: float = 0.0
 @onready var _ap_bar: ProgressBar = get_node_or_null("Root/APContainer/VBox/APBar") as ProgressBar
 @onready var _gold_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GoldValue") as Label
 @onready var _gems_value_label: Label = get_node_or_null("Root/CurrencyContainer/VBox/GemsValue") as Label
+@onready var _compass_label: Label = get_node_or_null("Root/CompassLabel") as Label
 
 func _ready() -> void:
 	_setup_bar_style(_health_bar, Color(0.88, 0.15, 0.15, 1.0))
 	_setup_bar_style(_mana_bar, Color(0.2, 0.45, 0.95, 1.0))
 	if _ap_bar != null:
 		_setup_bar_style(_ap_bar, Color(0.2, 0.82, 0.52, 1.0))
+	if not PlayerManager.currency_changed.is_connected(_on_currency_changed):
+		PlayerManager.currency_changed.connect(_on_currency_changed)
 	set_health(current_health, max_health)
 	set_mana(current_mana, max_mana)
 	set_ap(current_ap, max_ap)
-	set_gold(current_gold)
-	set_gems(current_gems)
+	_on_currency_changed(PlayerManager.gold, PlayerManager.gems)
+
+func _exit_tree() -> void:
+	if PlayerManager.currency_changed.is_connected(_on_currency_changed):
+		PlayerManager.currency_changed.disconnect(_on_currency_changed)
 
 func _process(_delta: float) -> void:
 	if not PlayerManager.has_live_player():
+		_update_compass_guidance()
 		return
 	var health_current_value: float = PlayerManager.current_health
 	var health_max_value: float = PlayerManager.max_health
@@ -46,8 +54,11 @@ func _process(_delta: float) -> void:
 		var ap_current_value: float = PlayerManager.current_ap
 		var ap_max_value: float = PlayerManager.max_ap
 		set_ap(ap_current_value, ap_max_value)
-	set_gold(PlayerManager.gold)
-	set_gems(PlayerManager.gems)
+	_update_compass_guidance()
+
+func _on_currency_changed(gold: int, gems: int) -> void:
+	set_gold(gold)
+	set_gems(gems)
 
 func set_health(value: float, maximum: float = -1.0) -> void:
 	if maximum > 0.0:
@@ -109,3 +120,67 @@ func _setup_bar_style(bar: ProgressBar, fill_color: Color) -> void:
 
 	bar.add_theme_stylebox_override("background", background_style)
 	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _update_compass_guidance() -> void:
+	if _compass_label == null:
+		return
+	_compass_label.visible = false
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null or not tree.root.has_node("GameProgressionManager"):
+		return
+	if not bool(GameProgressionManager.is_special_modifier_unlocked(MerchantSpecialModifierIdScript.Id.ARCANE_COMPASS)):
+		return
+	if GameProgressionManager.get_phase() != &"dungeon":
+		return
+	var controller: DungeonFloorController = _get_floor_controller()
+	if controller == null:
+		return
+	var player_node: Node3D = PlayerManager.get_player_node()
+	if player_node == null:
+		return
+	var spawn_position: Vector3 = controller.get_current_floor_start_position()
+	var exit_position: Vector3 = controller.get_current_floor_exit_position()
+	if exit_position == Vector3.ZERO:
+		return
+	if player_node.global_position.distance_to(spawn_position) < GameProgressionManager.get_arcane_compass_min_exploration_distance():
+		return
+	var to_exit: Vector3 = exit_position - player_node.global_position
+	to_exit.y = 0.0
+	if to_exit.length_squared() <= 0.0001:
+		_compass_label.text = "Arcane Compass: Exit"
+		_compass_label.visible = true
+		return
+	var forward: Vector3 = -player_node.global_transform.basis.z.normalized()
+	var right: Vector3 = player_node.global_transform.basis.x.normalized()
+	var direction_label: String = _describe_local_direction(forward.dot(to_exit.normalized()), right.dot(to_exit.normalized()))
+	_compass_label.text = "Arcane Compass: %s %.0fm" % [direction_label, to_exit.length()]
+	_compass_label.visible = true
+
+func _describe_local_direction(forward_dot: float, right_dot: float) -> String:
+	if forward_dot >= 0.6:
+		if right_dot >= 0.35:
+			return "Front-Right"
+		if right_dot <= -0.35:
+			return "Front-Left"
+		return "Forward"
+	if forward_dot <= -0.6:
+		if right_dot >= 0.35:
+			return "Back-Right"
+		if right_dot <= -0.35:
+			return "Back-Left"
+		return "Behind"
+	if right_dot >= 0.0:
+		return "Right"
+	return "Left"
+
+func _get_floor_controller() -> DungeonFloorController:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var current_scene: Node = tree.current_scene
+	if current_scene == null:
+		return null
+	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
+	if controller_node is DungeonFloorController:
+		return controller_node as DungeonFloorController
+	return null

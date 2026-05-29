@@ -4,7 +4,7 @@ extends RefCounted
 class_name DungeonBuilder3D
 
 # Builds dungeon meshes, colliders, and gameplay markers under a generated root node.
-func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderParams, editor_owner: Node) -> Node3D:
+func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig, editor_owner: Node) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GeneratedDungeon"
 	parent.add_child(root)
@@ -18,11 +18,8 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 		return root
 	var grid_offset: Vector2 = Vector2(layout.grid_offset)
 
-	var tile_size: float = params.tile_size
-	var wall_height: float = params.wall_height
-	var floor_thickness: float = params.floor_thickness
-	var create_floor_collision: bool = params.create_floor_collision
-	var use_multimesh: bool = params.use_multimesh
+	var tile_size: float = config.tile_size
+	var wall_height: float = config.wall_height
 
 	var floor_parent := Node3D.new()
 	floor_parent.name = "FloorTiles"
@@ -35,7 +32,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 	_assign_owner(wall_parent, editor_owner)
 
 	var floor_mesh := BoxMesh.new()
-	floor_mesh.size = Vector3(tile_size, floor_thickness, tile_size)
+	floor_mesh.size = Vector3(tile_size, tile_size, tile_size)
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(tile_size, wall_height, tile_size)
 
@@ -60,7 +57,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 			if idx < 0 or idx >= grid.size():
 				continue
 			if _is_walkable_tile(grid[idx]):
-				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, floor_thickness * 0.5)))
+				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, tile_size * 0.5)))
 				# No per-tile floor collider
 			else:
 				if _has_floor_neighbor(grid, width, height, x, y):
@@ -70,43 +67,38 @@ func build(parent: Node3D, layout: DungeonLayoutData, params: DungeonBuilderPara
 	_spawn_merged_wall_colliders(wall_parent, wall_collision_mask, width, height, tile_size, wall_height, grid_offset, editor_owner)
 
 	# Add a single floor collider if requested
-	if create_floor_collision:
-		var min_x := 0
-		var min_y := 0
-		var max_x := width - 1
-		var max_y := height - 1
-		# Find bounds of all floor tiles
-		var found := false
-		for y in height:
-			for x in width:
-				var idx := y * width + x
-				if _is_walkable_tile(grid[idx]):
-					if not found:
-						min_x = x
-						max_x = x
-						min_y = y
-						max_y = y
-						found = true
-					else:
-						min_x = min(min_x, x)
-						max_x = max(max_x, x)
-						min_y = min(min_y, y)
-						max_y = max(max_y, y)
-		if found:
-			var size_x = float(max_x - min_x + 1) * tile_size
-			var size_z = float(max_y - min_y + 1) * tile_size
-			var center_x = (float(min_x + max_x) * 0.5 + grid_offset.x) * tile_size
-			var center_z = (float(min_y + max_y) * 0.5 + grid_offset.y) * tile_size
-			var center_y = floor_thickness * 0.5
-			_spawn_single_floor_collider(floor_parent, Vector3(size_x, floor_thickness, size_z), Vector3(center_x, center_y, center_z), editor_owner)
+	var min_x := 0
+	var min_y := 0
+	var max_x := width - 1
+	var max_y := height - 1
+	# Find bounds of all floor tiles
+	var found := false
+	for y in height:
+		for x in width:
+			var idx := y * width + x
+			if _is_walkable_tile(grid[idx]):
+				if not found:
+					min_x = x
+					max_x = x
+					min_y = y
+					max_y = y
+					found = true
+				else:
+					min_x = min(min_x, x)
+					max_x = max(max_x, x)
+					min_y = min(min_y, y)
+					max_y = max(max_y, y)
+	if found:
+		var size_x = float(max_x - min_x + 1) * tile_size
+		var size_z = float(max_y - min_y + 1) * tile_size
+		var center_x = (float(min_x + max_x) * 0.5 + grid_offset.x) * tile_size
+		var center_z = (float(min_y + max_y) * 0.5 + grid_offset.y) * tile_size
+		var center_y = tile_size * 0.5
+		_spawn_single_floor_collider(floor_parent, Vector3(size_x, tile_size, size_z), Vector3(center_x, center_y, center_z), editor_owner)
 
 	# Spawn tiles and markers
-	if use_multimesh:
-		_spawn_multimesh_tiles(floor_parent, floor_mesh, floor_transforms, editor_owner, "FloorBatch")
-		_spawn_multimesh_tiles(wall_parent, wall_mesh, wall_transforms, editor_owner, "WallBatch")
-	else:
-		_spawn_mesh_tiles(floor_parent, floor_mesh, floor_transforms, editor_owner)
-		_spawn_mesh_tiles(wall_parent, wall_mesh, wall_transforms, editor_owner)
+	_spawn_multimesh_tiles(floor_parent, floor_mesh, floor_transforms, editor_owner, "FloorBatch")
+	_spawn_multimesh_tiles(wall_parent, wall_mesh, wall_transforms, editor_owner, "WallBatch")
 
 	_spawn_room_markers(root, layout, tile_size, editor_owner)
 	_spawn_patrol_nodes(root, layout, tile_size, editor_owner)

@@ -27,6 +27,7 @@ signal died(enemy: EnemyBasic)
 @export var overhead_height_offset: float = 0.15
 @export var overhead_fade_start_distance: float = 14.0
 @export var overhead_fade_end_distance: float = 30.0
+@export var overhead_ui_update_interval_seconds: float = 0.2
 
 var _health: int = 100
 var _is_dead: bool = false
@@ -39,6 +40,8 @@ var _is_registered_with_enemy_manager: bool = false
 var _behavior_state_label: String = "Idle"
 var _overhead_hud: EnemyOverheadHud = null
 var _overhead_base_height: float = 0.0
+var _overhead_refresh_cooldown_seconds: float = 0.0
+var _is_overhead_ui_dirty: bool = false
 
 func _ready() -> void:
 	contact_monitor = true
@@ -52,11 +55,16 @@ func _ready() -> void:
 	_contact_damage_cooldown = 0.0
 	_set_behavior_state_label("Idle")
 	_setup_overhead_ui()
-	_update_overhead_ui()
+	_mark_overhead_ui_dirty()
+	_update_overhead_ui(true)
 	_register_with_enemy_manager()
 
 func _process(_delta: float) -> void:
-	_update_overhead_ui()
+	if _overhead_hud == null:
+		return
+	_overhead_refresh_cooldown_seconds = maxf(_overhead_refresh_cooldown_seconds - _delta, 0.0)
+	if _is_overhead_ui_dirty or _overhead_refresh_cooldown_seconds <= 0.0:
+		_update_overhead_ui()
 
 func _exit_tree() -> void:
 	_unregister_from_enemy_manager()
@@ -123,7 +131,8 @@ func _process_incoming_damage(amount: int, source: Node = null) -> void:
 	_health = max(_health - amount, 0)
 	_spawn_damage_number(amount)
 	damaged.emit(amount, _health)
-	_update_overhead_ui()
+	_mark_overhead_ui_dirty()
+	_update_overhead_ui(true)
 	if _health == 0:
 		_die()
 
@@ -169,10 +178,13 @@ func _handle_idle_without_target(_delta: float) -> bool:
 	return false
 
 func _set_behavior_state_label(state_label: String) -> void:
-	if state_label.is_empty():
-		_behavior_state_label = "Idle"
+	var resolved_state_label: String = "Idle"
+	if not state_label.is_empty():
+		resolved_state_label = state_label
+	if _behavior_state_label == resolved_state_label:
 		return
-	_behavior_state_label = state_label
+	_behavior_state_label = resolved_state_label
+	_mark_overhead_ui_dirty()
 
 func _get_behavior_state_label() -> String:
 	if _behavior_state_label.is_empty():
@@ -195,21 +207,30 @@ func _get_enemy_type_display_label() -> String:
 
 func _setup_overhead_ui() -> void:
 	if not overhead_ui_enabled:
+		set_process(false)
 		return
 	if _overhead_hud != null:
+		set_process(true)
 		return
 	var hud_node: Node = EnemyOverheadHudScene.instantiate()
 	if not (hud_node is EnemyOverheadHud):
 		hud_node.queue_free()
+		set_process(false)
 		return
 	_overhead_hud = hud_node as EnemyOverheadHud
 	_overhead_hud.name = "EnemyOverheadHud"
 	add_child(_overhead_hud)
 	_overhead_base_height = _compute_collider_top_height_local()
 	_overhead_hud.position = Vector3(0.0, _overhead_base_height + maxf(overhead_height_offset, 0.0), 0.0)
+	set_process(true)
 
-func _update_overhead_ui() -> void:
+func _mark_overhead_ui_dirty() -> void:
+	_is_overhead_ui_dirty = true
+
+func _update_overhead_ui(force_refresh: bool = false) -> void:
 	if _overhead_hud == null:
+		return
+	if not force_refresh and not _is_overhead_ui_dirty and _overhead_refresh_cooldown_seconds > 0.0:
 		return
 	_refresh_overhead_base_height_runtime()
 	_overhead_hud.position = Vector3(0.0, _overhead_base_height + maxf(overhead_height_offset, 0.0), 0.0)
@@ -221,6 +242,8 @@ func _update_overhead_ui() -> void:
 		overhead_fade_start_distance,
 		overhead_fade_end_distance
 	)
+	_overhead_refresh_cooldown_seconds = maxf(overhead_ui_update_interval_seconds, 0.05)
+	_is_overhead_ui_dirty = false
 
 func _refresh_overhead_base_height_runtime() -> void:
 	var runtime_height: float = _compute_collider_top_height_local()
@@ -360,7 +383,8 @@ func _spawn_damage_number(amount: int) -> void:
 func _die() -> void:
 	_is_dead = true
 	_set_behavior_state_label("Dead")
-	_update_overhead_ui()
+	_mark_overhead_ui_dirty()
+	_update_overhead_ui(true)
 	var enemy_manager: Node = _get_enemy_manager_node()
 	if enemy_manager != null:
 		EnemyManager.notify_enemy_died(self)

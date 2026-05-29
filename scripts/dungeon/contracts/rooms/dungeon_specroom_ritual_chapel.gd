@@ -30,10 +30,10 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 		for x in range(start_x, end_x):
 			var in_nave: bool = abs(x - center_x) <= nave_half_width
 			var in_transept: bool = abs(y - center_y) <= transept_half_height
-			var in_altar: bool = abs(x - center_x) <= altar_half_size and abs(y - center_y) <= altar_half_size
+			var _in_altar: bool = abs(x - center_x) <= altar_half_size and abs(y - center_y) <= altar_half_size
 			# if (in_nave or in_transept) and not in_altar:
 			if in_nave or in_transept :
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+				_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds patrol points along chapel nave and transept around the altar island.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

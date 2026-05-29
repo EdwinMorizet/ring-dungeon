@@ -10,6 +10,7 @@ class_name EnemyZombie
 var _roam_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _roam_cooldown: float = 0.0
 var _roam_target: Vector3 = Vector3.INF
+var _roam_anchor_position: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	if enemy_type_id == StringName() or enemy_type_id == &"enemy_basic":
@@ -18,6 +19,7 @@ func _ready() -> void:
 	_seed_roam_rng()
 	_roam_cooldown = 0.0
 	_roam_target = Vector3.INF
+	_roam_anchor_position = global_position
 
 func _handle_idle_without_target(delta: float) -> bool:
 	_roam_cooldown = maxf(_roam_cooldown - delta, 0.0)
@@ -51,12 +53,12 @@ func _should_pick_new_roam_target() -> bool:
 func _pick_new_roam_target() -> void:
 	var safe_radius: float = maxf(roam_radius, 0.0)
 	if safe_radius <= 0.0:
-		_roam_target = global_position
+		_roam_target = _roam_anchor_position
 		return
 	var angle: float = _roam_rng.randf_range(0.0, TAU)
 	var offset_distance: float = safe_radius * sqrt(_roam_rng.randf())
 	var offset: Vector3 = Vector3(cos(angle) * offset_distance, 0.0, sin(angle) * offset_distance)
-	_roam_target = global_position + offset
+	_roam_target = _roam_anchor_position + offset
 
 func _seed_roam_rng() -> void:
 	var seed_source: int = int(get_instance_id())

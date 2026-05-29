@@ -73,6 +73,9 @@ func unregister_enemy(enemy: EnemyBasic) -> void:
 func notify_enemy_died(enemy: EnemyBasic) -> void:
 	if not _is_enemy_valid(enemy):
 		return
+	var removed: bool = _remove_enemy(enemy)
+	if removed:
+		enemy_unregistered.emit(enemy)
 	enemy_died.emit(enemy)
 
 func clear_registry() -> void:

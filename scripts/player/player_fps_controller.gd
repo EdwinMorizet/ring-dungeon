@@ -1,6 +1,8 @@
 # Drives first-person player movement, look input, and core combat interactions.
 extends CharacterBody3D
 
+const INVENTORY_TOGGLE_ACTION: StringName = &"inventory_toggle"
+
 @onready var _camera_pivot: Node3D = $CameraPivot
 @onready var _camera: Camera3D = $CameraPivot/Camera3D
 
@@ -22,7 +24,7 @@ func _exit_tree() -> void:
 	PlayerManager.unregister_player(self)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+	if event.is_action_pressed(INVENTORY_TOGGLE_ACTION):
 		InventoryManager.toggle_inventory()
 		_sync_mouse_mode()
 		return
@@ -98,7 +100,6 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	PlayerManager.regen_mana(delta)
-	PlayerManager.refresh_runtime_derived_stats()
 	PlayerManager.tick_runtime_timers(delta)
 	_process_mouse_press_actions(delta)
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
@@ -204,6 +205,7 @@ func _on_right_single_click() -> void:
 		return
 	PlayerManager.speed_active_remaining = max(PlayerManager.active_speed_duration_seconds, 0.0)
 	PlayerManager.speed_active_cooldown_remaining = max(PlayerManager.active_speed_cooldown_seconds, 0.0)
+	PlayerManager.refresh_runtime_derived_stats()
 
 func _process_right_long_press(delta: float) -> void:
 	_process_right_long_heal(delta)

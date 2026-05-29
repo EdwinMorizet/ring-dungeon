@@ -16,6 +16,19 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="CompassLabel" type="Label" parent="Root"]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -180.0
+offset_top = 26.0
+offset_right = 180.0
+offset_bottom = 52.0
+grow_horizontal = 2
+horizontal_alignment = 1
+text = "Arcane Compass"
+
 [node name="CenterCrosshair" type="Control" parent="Root" unique_id=889042011]
 anchors_preset = 0
 anchor_left = 0.5

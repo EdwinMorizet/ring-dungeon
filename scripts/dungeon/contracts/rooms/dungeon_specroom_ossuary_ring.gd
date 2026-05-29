@@ -14,7 +14,7 @@ func _init() -> void:
 # Carves an outer ring corridor while preserving a mostly blocked center with small crossings.
 func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
 	var width: int = int(world_rect.size.x)
-	var height: int = int(world_rect.size.y)
+	var _height: int = int(world_rect.size.y)
 	var start_x: int = rect.position.x - world_rect.position.x
 	var start_y: int = rect.position.y - world_rect.position.y
 	var end_x: int = rect.end.x - world_rect.position.x
@@ -33,7 +33,7 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 			var in_outer_ring: bool = metric <= 1.0 and metric >= 0.42
 			var in_crossing: bool = absf(dx) <= 0.12 or absf(dy) <= 0.12
 			if in_outer_ring or in_crossing:
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+				_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds patrol points around the ossuary ring with crossing anchors.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

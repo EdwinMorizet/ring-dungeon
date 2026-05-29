@@ -14,7 +14,7 @@ func _init() -> void:
 # Carves a large noisy cavern with guaranteed center access from every side.
 func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> void:
 	var width: int = int(world_rect.size.x)
-	var height: int = int(world_rect.size.y)
+	var _height: int = int(world_rect.size.y)
 	var start_x: int = rect.position.x - world_rect.position.x
 	var start_y: int = rect.position.y - world_rect.position.y
 	var end_x: int = rect.end.x - world_rect.position.x
@@ -38,7 +38,7 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 			var noise_value: float = cave_noise.get_noise_2d(float(x) * 0.12, float(y) * 0.12)
 			var carve_score: float = shape_falloff * 0.95 + noise_value * 0.4
 			if carve_score >= 0.55:
-				_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+				_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 	# _carve_center_access_paths(grid, world_rect, rect, start_x, start_y, end_x, end_y)
 
@@ -60,28 +60,28 @@ func _carve_center_access_paths(grid: PackedInt32Array, world_rect: Rect2i, rect
 
 # Carves a vertical band between two Y coordinates.
 
-func _carve_vertical_band(grid: PackedInt32Array, width: int, height: int, x: int, from_y: int, to_y: int, radius: int) -> void:
+func _carve_vertical_band(grid: PackedInt32Array, width: int, _height: int, x: int, from_y: int, to_y: int, radius: int) -> void:
 	var start_y: int = mini(from_y, to_y)
 	var end_y: int = maxi(from_y, to_y)
 	for y in range(start_y, end_y + 1):
 		for offset_x in range(-radius, radius + 1):
-			_set_tile(grid, width, height, x + offset_x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x + offset_x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Carves a horizontal band between two X coordinates.
 
-func _carve_horizontal_band(grid: PackedInt32Array, width: int, height: int, from_x: int, to_x: int, y: int, radius: int) -> void:
+func _carve_horizontal_band(grid: PackedInt32Array, width: int, _height: int, from_x: int, to_x: int, y: int, radius: int) -> void:
 	var start_x: int = mini(from_x, to_x)
 	var end_x: int = maxi(from_x, to_x)
 	for x in range(start_x, end_x + 1):
 		for offset_y in range(-radius, radius + 1):
-			_set_tile(grid, width, height, x, y + offset_y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y + offset_y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Carves a solid square hub around the room center.
 
-func _carve_hub(grid: PackedInt32Array, width: int, height: int, center_x: int, center_y: int, radius: int) -> void:
+func _carve_hub(grid: PackedInt32Array, width: int, _height: int, center_x: int, center_y: int, radius: int) -> void:
 	for y in range(center_y - radius, center_y + radius + 1):
 		for x in range(center_x - radius, center_x + radius + 1):
-			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Builds a deterministic noise seed from the room placement.
 func _build_noise_seed(rect: Rect2i, world_rect: Rect2i) -> int:

@@ -8,6 +8,10 @@ const DefaultEnemySpawnManagerConfig: EnemySpawnManagerConfig = preload("res://r
 var _config: EnemySpawnManagerConfig = DefaultEnemySpawnManagerConfig
 var _spawned_enemies: Array[RigidBody3D] = []
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _patrol_room_markers_by_index: Dictionary = {}
+var _patrol_corridor_markers_by_index: Dictionary = {}
+var _patrol_corridor_indices_by_room: Dictionary = {}
+var _patrol_room_indices_by_corridor: Dictionary = {}
 
 func set_config(config: EnemySpawnManagerConfig) -> void:
 	if config != null:
@@ -21,6 +25,7 @@ func clear_spawned_enemies() -> void:
 		if enemy != null and is_instance_valid(enemy):
 			enemy.queue_free()
 	_spawned_enemies.clear()
+	_reset_patrol_route_index()
 	var enemy_manager: Node = _get_enemy_manager_node()
 	if enemy_manager != null:
 		EnemyManager.clear_registry()
@@ -33,6 +38,8 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 		return
 	if enemy_scene == null:
 		return
+	_seed_spawn_rng(floor_seed, progression_index)
+	_build_patrol_route_index(generated_root)
 
 	var target_count: int = _resolve_enemy_count(progression_index)
 	if target_count <= 0:
@@ -41,7 +48,7 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 	var candidate_markers: Array[Marker3D] = _collect_enemy_markers(generated_root)
 	var valid_markers: Array[Marker3D] = _filter_markers_by_distance(candidate_markers, player_spawn_position)
 	var required_markers: int = _resolve_required_marker_count(target_count)
-	var selected_markers: Array[Marker3D] = _select_markers(valid_markers, required_markers, floor_seed, progression_index)
+	var selected_markers: Array[Marker3D] = _select_markers(valid_markers, required_markers)
 
 	for marker in selected_markers:
 		var remaining_spawns: int = target_count - _spawned_enemies.size()
@@ -176,16 +183,12 @@ func _filter_markers_by_distance(markers: Array[Marker3D], player_spawn_position
 		filtered_markers.append(marker)
 	return filtered_markers
 
-func _select_markers(markers: Array[Marker3D], target_count: int, floor_seed: int, progression_index: int) -> Array[Marker3D]:
+func _select_markers(markers: Array[Marker3D], target_count: int) -> Array[Marker3D]:
 	var selected_markers: Array[Marker3D] = []
 	if markers.is_empty() or target_count <= 0:
 		return selected_markers
 
 	var marker_pool: Array[Marker3D] = markers.duplicate()
-	var combined_seed: int = floor_seed + (progression_index * 4099)
-	if combined_seed <= 0:
-		combined_seed = absi(combined_seed) + 1
-	_rng.seed = combined_seed
 
 	var picks: int = mini(target_count, marker_pool.size())
 	for _i in range(picks):
@@ -195,6 +198,12 @@ func _select_markers(markers: Array[Marker3D], target_count: int, floor_seed: in
 		selected_markers.append(marker_pool[picked_index])
 		marker_pool.remove_at(picked_index)
 	return selected_markers
+
+func _seed_spawn_rng(floor_seed: int, progression_index: int) -> void:
+	var combined_seed: int = floor_seed + (progression_index * 4099)
+	if combined_seed <= 0:
+		combined_seed = absi(combined_seed) + 1
+	_rng.seed = combined_seed
 
 func _pick_weighted_marker_index(marker_pool: Array[Marker3D]) -> int:
 	var total_weight: float = 0.0
@@ -284,19 +293,103 @@ func _resolve_patrol_route_for_spawn_marker(generated_root: Node3D, marker: Mark
 
 	return route
 
-func _resolve_closest_patrol_room_index(generated_root: Node3D, spawn_position: Vector3) -> int:
+func _reset_patrol_route_index() -> void:
+	_patrol_room_markers_by_index.clear()
+	_patrol_corridor_markers_by_index.clear()
+	_patrol_corridor_indices_by_room.clear()
+	_patrol_room_indices_by_corridor.clear()
+
+func _build_patrol_route_index(generated_root: Node3D) -> void:
+	_reset_patrol_route_index()
+	if generated_root == null or not is_instance_valid(generated_root):
+		return
 	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
 	if patrol_root == null:
-		return -1
+		return
 
 	var room_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Room_*", "Node3D", false, false)
-	var closest_room_index: int = -1
-	var closest_distance_sq: float = INF
 	for room_group in room_groups:
 		var room_index: int = _parse_room_index_from_group_name(room_group.name)
 		if room_index < 0:
 			continue
-		var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+		_patrol_room_markers_by_index[room_index] = _collect_room_patrol_markers(room_group)
+
+	var corridor_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Corridor_*", "Node3D", false, false)
+	for corridor_group in corridor_groups:
+		var corridor_index: int = _parse_corridor_index_from_group_name(corridor_group.name)
+		if corridor_index < 0:
+			continue
+		_patrol_corridor_markers_by_index[corridor_index] = _collect_corridor_patrol_markers(corridor_group)
+		if corridor_group.has_meta("from_room"):
+			var from_room: int = int(corridor_group.get_meta("from_room"))
+			_append_unique_index_to_map_array(_patrol_room_indices_by_corridor, corridor_index, from_room)
+			_append_unique_index_to_map_array(_patrol_corridor_indices_by_room, from_room, corridor_index)
+		if corridor_group.has_meta("to_room"):
+			var to_room: int = int(corridor_group.get_meta("to_room"))
+			_append_unique_index_to_map_array(_patrol_room_indices_by_corridor, corridor_index, to_room)
+			_append_unique_index_to_map_array(_patrol_corridor_indices_by_room, to_room, corridor_index)
+
+func _append_unique_index_to_map_array(index_map: Dictionary, map_key: int, value: int) -> void:
+	if value < 0:
+		return
+	var existing_values: Array[int] = _get_map_array_values(index_map, map_key)
+	for existing_value in existing_values:
+		if existing_value == value:
+			return
+	existing_values.append(value)
+	index_map[map_key] = existing_values
+
+func _get_map_array_values(index_map: Dictionary, map_key: int) -> Array[int]:
+	if not index_map.has(map_key):
+		return []
+	var values_variant: Variant = index_map.get(map_key, [])
+	if values_variant is Array[int]:
+		return values_variant
+	if values_variant is Array:
+		var converted: Array[int] = []
+		for value in values_variant:
+			converted.append(int(value))
+		return converted
+	return []
+
+func _get_room_patrol_markers_from_index(room_index: int) -> Array[Marker3D]:
+	if not _patrol_room_markers_by_index.has(room_index):
+		return []
+	var markers_variant: Variant = _patrol_room_markers_by_index.get(room_index, [])
+	if markers_variant is Array[Marker3D]:
+		return markers_variant
+	if markers_variant is Array:
+		var converted: Array[Marker3D] = []
+		for marker_node in markers_variant:
+			if marker_node is Marker3D:
+				converted.append(marker_node as Marker3D)
+		return converted
+	return []
+
+func _get_corridor_patrol_markers_from_index(corridor_index: int) -> Array[Marker3D]:
+	if not _patrol_corridor_markers_by_index.has(corridor_index):
+		return []
+	var markers_variant: Variant = _patrol_corridor_markers_by_index.get(corridor_index, [])
+	if markers_variant is Array[Marker3D]:
+		return markers_variant
+	if markers_variant is Array:
+		var converted: Array[Marker3D] = []
+		for marker_node in markers_variant:
+			if marker_node is Marker3D:
+				converted.append(marker_node as Marker3D)
+		return converted
+	return []
+
+func _resolve_closest_patrol_room_index(generated_root: Node3D, spawn_position: Vector3) -> int:
+	if generated_root == null or not is_instance_valid(generated_root):
+		return -1
+	if _patrol_room_markers_by_index.is_empty():
+		_build_patrol_route_index(generated_root)
+	var closest_room_index: int = -1
+	var closest_distance_sq: float = INF
+	for room_index_variant in _patrol_room_markers_by_index.keys():
+		var room_index: int = int(room_index_variant)
+		var patrol_markers: Array[Marker3D] = _get_room_patrol_markers_from_index(room_index)
 		if patrol_markers.is_empty():
 			continue
 		var reference_marker: Marker3D = patrol_markers[0]
@@ -308,27 +401,24 @@ func _resolve_closest_patrol_room_index(generated_root: Node3D, spawn_position: 
 	return closest_room_index
 
 func _append_room_patrol_points(generated_root: Node3D, room_index: int, route: Array[Vector3]) -> void:
-	var room_group: Node = _find_patrol_room_group(generated_root, room_index)
-	if room_group == null:
-		return
-	var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+	if _patrol_room_markers_by_index.is_empty():
+		_build_patrol_route_index(generated_root)
+	var patrol_markers: Array[Marker3D] = _get_room_patrol_markers_from_index(room_index)
 	for patrol_marker in patrol_markers:
 		_append_unique_route_point(route, patrol_marker.global_position)
 
 func _append_first_room_patrol_point(generated_root: Node3D, room_index: int, route: Array[Vector3]) -> void:
-	var room_group: Node = _find_patrol_room_group(generated_root, room_index)
-	if room_group == null:
-		return
-	var patrol_markers: Array[Marker3D] = _collect_room_patrol_markers(room_group)
+	if _patrol_room_markers_by_index.is_empty():
+		_build_patrol_route_index(generated_root)
+	var patrol_markers: Array[Marker3D] = _get_room_patrol_markers_from_index(room_index)
 	if patrol_markers.is_empty():
 		return
 	_append_unique_route_point(route, patrol_markers[0].global_position)
 
 func _append_corridor_patrol_points(generated_root: Node3D, corridor_index: int, route: Array[Vector3]) -> void:
-	var corridor_group: Node = _find_patrol_corridor_group(generated_root, corridor_index)
-	if corridor_group == null:
-		return
-	var patrol_markers: Array[Marker3D] = _collect_corridor_patrol_markers(corridor_group)
+	if _patrol_corridor_markers_by_index.is_empty():
+		_build_patrol_route_index(generated_root)
+	var patrol_markers: Array[Marker3D] = _get_corridor_patrol_markers_from_index(corridor_index)
 	for patrol_marker in patrol_markers:
 		_append_unique_route_point(route, patrol_marker.global_position)
 
@@ -363,17 +453,15 @@ func _collect_corridor_patrol_markers(corridor_group: Node) -> Array[Marker3D]:
 	return markers
 
 func _resolve_closest_patrol_corridor_index(generated_root: Node3D, spawn_position: Vector3) -> int:
-	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
-	if patrol_root == null:
+	if generated_root == null or not is_instance_valid(generated_root):
 		return -1
-	var corridor_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Corridor_*", "Node3D", false, false)
+	if _patrol_corridor_markers_by_index.is_empty():
+		_build_patrol_route_index(generated_root)
 	var closest_corridor_index: int = -1
 	var closest_distance_sq: float = INF
-	for corridor_group in corridor_groups:
-		var corridor_index: int = _parse_corridor_index_from_group_name(corridor_group.name)
-		if corridor_index < 0:
-			continue
-		var patrol_markers: Array[Marker3D] = _collect_corridor_patrol_markers(corridor_group)
+	for corridor_index_variant in _patrol_corridor_markers_by_index.keys():
+		var corridor_index: int = int(corridor_index_variant)
+		var patrol_markers: Array[Marker3D] = _get_corridor_patrol_markers_from_index(corridor_index)
 		if patrol_markers.is_empty():
 			continue
 		var reference_marker: Marker3D = patrol_markers[0]
@@ -384,50 +472,24 @@ func _resolve_closest_patrol_corridor_index(generated_root: Node3D, spawn_positi
 	return closest_corridor_index
 
 func _collect_corridor_indices_for_room(generated_root: Node3D, room_index: int) -> Array[int]:
-	var corridor_indices: Array[int] = []
-	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
-	if patrol_root == null:
-		return corridor_indices
-	var corridor_groups: Array[Node] = patrol_root.find_children("PatrolNodes_Corridor_*", "Node3D", false, false)
-	for corridor_group in corridor_groups:
-		if not corridor_group.has_meta("from_room") or not corridor_group.has_meta("to_room"):
-			continue
-		var from_room: int = int(corridor_group.get_meta("from_room"))
-		var to_room: int = int(corridor_group.get_meta("to_room"))
-		if from_room != room_index and to_room != room_index:
-			continue
-		var corridor_index: int = _parse_corridor_index_from_group_name(corridor_group.name)
-		_append_unique_room_id(corridor_indices, corridor_index)
-	return corridor_indices
+	if _patrol_corridor_indices_by_room.is_empty():
+		_build_patrol_route_index(generated_root)
+	return _get_map_array_values(_patrol_corridor_indices_by_room, room_index)
 
 func _collect_room_indices_for_corridor(generated_root: Node3D, corridor_index: int) -> Array[int]:
-	var room_indices: Array[int] = []
-	var corridor_group: Node = _find_patrol_corridor_group(generated_root, corridor_index)
-	if corridor_group == null:
-		return room_indices
-	if corridor_group.has_meta("from_room"):
-		_append_unique_room_id(room_indices, int(corridor_group.get_meta("from_room")))
-	if corridor_group.has_meta("to_room"):
-		_append_unique_room_id(room_indices, int(corridor_group.get_meta("to_room")))
-	return room_indices
+	if _patrol_room_indices_by_corridor.is_empty():
+		_build_patrol_route_index(generated_root)
+	return _get_map_array_values(_patrol_room_indices_by_corridor, corridor_index)
 
 func _collect_linked_room_indices(generated_root: Node3D, room_index: int) -> Array[int]:
 	var linked_rooms: Array[int] = []
-	var patrol_links_root: Node = generated_root.find_child("PatrolLinks", true, false)
-	if patrol_links_root == null:
-		return linked_rooms
-
-	var link_nodes: Array[Node] = patrol_links_root.find_children("PatrolLink_*", "Marker3D", false, false)
-	for link_node in link_nodes:
-		if not link_node.has_meta("from_room") or not link_node.has_meta("to_room"):
-			continue
-		var from_room: int = int(link_node.get_meta("from_room"))
-		var to_room: int = int(link_node.get_meta("to_room"))
-		if from_room == room_index:
-			_append_unique_room_id(linked_rooms, to_room)
-		elif to_room == room_index:
-			_append_unique_room_id(linked_rooms, from_room)
-
+	var corridor_indices: Array[int] = _collect_corridor_indices_for_room(generated_root, room_index)
+	for corridor_index in corridor_indices:
+		var corridor_rooms: Array[int] = _collect_room_indices_for_corridor(generated_root, corridor_index)
+		for linked_room in corridor_rooms:
+			if linked_room == room_index:
+				continue
+			_append_unique_room_id(linked_rooms, linked_room)
 	return linked_rooms
 
 func _parse_room_index_from_group_name(group_name: String) -> int:

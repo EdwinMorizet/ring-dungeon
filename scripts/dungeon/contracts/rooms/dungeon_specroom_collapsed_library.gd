@@ -31,13 +31,13 @@ func carve_room(grid: PackedInt32Array, world_rect: Rect2i, rect: Rect2i) -> voi
 		_carve_shelf_columns(grid, width, height, start_x, start_y, end_x, end_y)
 
 # Carves a solid interior floor region first.
-func _carve_full_room(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _carve_full_room(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	for y in range(start_y, end_y):
 		for x in range(start_x, end_x):
-			_set_tile(grid, width, height, x, y, DungeonBuilderConstants.TILE_FLOOR)
+			_set_tile(grid, width, x, y, DungeonBuilderConstants.TILE_FLOOR)
 
 # Adds horizontal broken shelf strips with alternating passage gaps.
-func _carve_shelf_rows(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _carve_shelf_rows(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	var stripe_count: int = 3
 	for stripe_index in range(stripe_count):
 		var shelf_y: int = start_y + 2 + stripe_index * 3
@@ -47,10 +47,10 @@ func _carve_shelf_rows(grid: PackedInt32Array, width: int, height: int, start_x:
 		for x in range(start_x + 1, end_x - 1):
 			if abs(x - gap_center) <= 1 or abs(x - (gap_center + 5)) <= 1:
 				continue
-			_set_tile(grid, width, height, x, shelf_y, DungeonBuilderConstants.TILE_WALL)
+			_set_tile(grid, width, x, shelf_y, DungeonBuilderConstants.TILE_WALL)
 
 # Adds vertical broken shelf strips with alternating passage gaps.
-func _carve_shelf_columns(grid: PackedInt32Array, width: int, height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
+func _carve_shelf_columns(grid: PackedInt32Array, width: int, _height: int, start_x: int, start_y: int, end_x: int, end_y: int) -> void:
 	var stripe_count: int = 3
 	for stripe_index in range(stripe_count):
 		var shelf_x: int = start_x + 2 + stripe_index * 3
@@ -60,7 +60,7 @@ func _carve_shelf_columns(grid: PackedInt32Array, width: int, height: int, start
 		for y in range(start_y + 1, end_y - 1):
 			if abs(y - gap_center) <= 1 or abs(y - (gap_center + 5)) <= 1:
 				continue
-			_set_tile(grid, width, height, shelf_x, y, DungeonBuilderConstants.TILE_WALL)
+			_set_tile(grid, width, shelf_x, y, DungeonBuilderConstants.TILE_WALL)
 
 # Builds patrol points along aisle-like lanes between shelf strips.
 func build_custom_patrol_points(rect: Rect2i, padding: float, _rng: RandomNumberGenerator) -> PackedVector2Array:

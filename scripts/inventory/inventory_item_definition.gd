@@ -65,6 +65,12 @@ const _DEFAULT_MODIFIERS: Dictionary = {
 	&"active_speed_mult_flat": 0.0,
 }
 
+const _INT_MODIFIER_KEYS: Array[StringName] = [
+	&"split_flat",
+	&"gravity_trait_enabled",
+	&"max_ap_slots",
+]
+
 const _STAT_EMOJI_MAP: Dictionary = {
 	&"damage_mult": "💥",
 	&"mana_cost_mult": "🔷",
@@ -128,6 +134,7 @@ func get_rarity_label() -> String:
 			return "Common"
 
 func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
+	_normalize_compiled_modifiers()
 	var value: Variant = _get_modifier_variant(key, default_value)
 	if key == &"max_ap_slots":
 		if value is int:
@@ -148,6 +155,7 @@ func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
 	return default_value
 
 func get_modifier_int(key: StringName, default_value: int = 0) -> int:
+	_normalize_compiled_modifiers()
 	var value: Variant = _get_modifier_variant(key, default_value)
 	if key == &"max_ap_slots" and not (compiled_modifiers.has(&"max_ap_slots") or compiled_modifiers.has("max_ap_slots")) and (compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat")):
 		var legacy_value: Variant = _get_modifier_variant(&"max_ap_flat", default_value)
@@ -206,6 +214,7 @@ func build_tooltip_text() -> String:
 	return "\n".join(lines)
 
 func _build_stat_lines(benefit: bool) -> Array[String]:
+	_normalize_compiled_modifiers()
 	var lines: Array[String] = []
 	var modifier_order: Array[StringName] = [
 		&"damage_mult",
@@ -294,9 +303,47 @@ func _format_modifier_line(key: StringName, value: Variant) -> String:
 	return "%s: %s" % [String(key), String(value)]
 
 func _get_modifier_variant(key: StringName, default_value: Variant) -> Variant:
+	_normalize_compiled_modifiers()
 	if compiled_modifiers.has(key):
 		return compiled_modifiers.get(key, default_value)
 	var key_as_string: String = String(key)
 	if compiled_modifiers.has(key_as_string):
 		return compiled_modifiers.get(key_as_string, default_value)
+	return default_value
+
+func _normalize_compiled_modifiers() -> void:
+	if compiled_modifiers == null:
+		compiled_modifiers = {}
+	if not (compiled_modifiers.has(&"max_ap_slots") or compiled_modifiers.has("max_ap_slots")) and (compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat")):
+		var legacy_ap: Variant = _get_raw_modifier_variant(&"max_ap_flat", 0)
+		compiled_modifiers[&"max_ap_slots"] = _coerce_int_modifier(legacy_ap, 0)
+	for key_variant in _DEFAULT_MODIFIERS.keys():
+		var key: StringName = key_variant
+		var default_value: Variant = _DEFAULT_MODIFIERS.get(key, 0)
+		var raw_value: Variant = _get_raw_modifier_variant(key, default_value)
+		if _INT_MODIFIER_KEYS.has(key):
+			compiled_modifiers[key] = _coerce_int_modifier(raw_value, int(default_value))
+		else:
+			compiled_modifiers[key] = _coerce_float_modifier(raw_value, float(default_value))
+
+func _get_raw_modifier_variant(key: StringName, default_value: Variant) -> Variant:
+	if compiled_modifiers.has(key):
+		return compiled_modifiers.get(key, default_value)
+	var key_as_string: String = String(key)
+	if compiled_modifiers.has(key_as_string):
+		return compiled_modifiers.get(key_as_string, default_value)
+	return default_value
+
+func _coerce_int_modifier(value: Variant, default_value: int) -> int:
+	if value is int:
+		return value
+	if value is float:
+		return int(roundf(value))
+	return default_value
+
+func _coerce_float_modifier(value: Variant, default_value: float) -> float:
+	if value is int:
+		return float(value)
+	if value is float:
+		return value
 	return default_value

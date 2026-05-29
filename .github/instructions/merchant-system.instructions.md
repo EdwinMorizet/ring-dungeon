@@ -92,6 +92,7 @@ Use this file as the source of truth for merchant-room interaction and shop beha
 
 - Merchant prompt appears only when close + looking at merchant.
 - Pressing `E` opens merchant UI only under valid interaction conditions.
+- Pressind `E` while merchant UI open, close it.
 - Exactly 3 offers appear per merchant-room entry.
 - Bought offer cannot be bought again in the same session.
 - Item purchase with no free slot is blocked with clear reason.
