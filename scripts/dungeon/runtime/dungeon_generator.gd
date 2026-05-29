@@ -49,7 +49,7 @@ func generate(
 	_carve_rooms(grid, world_rect, rooms)
 
 	var corridor_paths: Array[PackedVector2Array] = _carve_corridor_doors_and_paths(grid, world_rect, rooms, corridor_edges)
-	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
+	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS_01, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
 
 	_reclaim_discarded_standard_rooms_after_corridors(
 		cells,
@@ -58,9 +58,7 @@ func generate(
 		config,
 		rng
 	)
-	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
-
-	return
+	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS_02, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
 
 	var exit_index := _find_farthest_room_index(rooms)
 	var start_index := _find_farthest_from_room_index(rooms, exit_index)
@@ -110,9 +108,8 @@ func generate(
 	stats.patrol_nodes = patrol_node_total
 	stats.patrol_room_links = patrol_graph.room_links.size()
 
-	var layout: DungeonLayoutData = DungeonLayoutData.new()
+	var layout: DungeonLayoutData = DungeonLayoutData.new(world_rect)
 	layout.grid = grid
-	layout.grid_offset = world_rect.position
 	layout.rooms = rooms
 	layout.edges = delaunay_edges
 	layout.mst_edges = mst_edges
@@ -819,11 +816,6 @@ func _annotate_rooms_with_metadata(
 	rng: RandomNumberGenerator,
 	config: DungeonFloorConfig
 	) -> DungeonAnnotationData:
-	var chest_candidate_ratio: float = config.chest_candidate_ratio
-	var patrol_nodes_per_room_min: int = config.patrol_nodes_per_room_min
-	var patrol_nodes_per_room_max: int = config.patrol_nodes_per_room_max
-	var patrol_point_padding: float = config.patrol_point_padding
-	var patrol_point_jitter: float = config.patrol.point.jitter
 	var world_offset: Vector2i = world_rect.position
 	var grid_width: int = world_rect.size.x
 	var grid_height: int =  world_rect.size.y
@@ -853,7 +845,7 @@ func _annotate_rooms_with_metadata(
 			candidate_indices[i] = candidate_indices[j]
 			candidate_indices[j] = tmp
 
-	var chest_count := int(round(float(candidate_indices.size()) * clampf(chest_candidate_ratio, 0.0, 1.0)))
+	var chest_count := int(round(float(candidate_indices.size()) * clampf(config.chest_candidate_ratio, 0.0, 1.0)))
 	if not candidate_indices.is_empty():
 		chest_count = maxi(1, chest_count)
 	chest_count = mini(chest_count, candidate_indices.size())
@@ -868,21 +860,21 @@ func _annotate_rooms_with_metadata(
 		var room: DungeonRoomData = rooms[i]
 		var metadata: DungeonRoomMetadataData = room.metadata
 		var room_carver: DungeonSpecRoomBase = null
-		if room.is_special_room and room.special_room_script != null:
+		if room.special_room_script != null:
 			room_carver = room.special_room_script.new()
 		var linked_rooms: PackedInt32Array = PackedInt32Array()
 		if i >= 0 and i < room_adjacency.size():
 			linked_rooms = room_adjacency[i]
 		var custom_patrol_points: PackedVector2Array = PackedVector2Array()
 		if room_carver != null:
-			custom_patrol_points = room_carver.build_custom_patrol_points(room.rect, patrol_point_padding, rng)
+			custom_patrol_points = room_carver.build_custom_patrol_points(room.rect,  config.patrol_point_padding, rng)
 		if custom_patrol_points.is_empty():
-			var patrol_point_count: int = _resolve_patrol_point_count(patrol_nodes_per_room_min, patrol_nodes_per_room_max, rng)
+			var patrol_point_count: int = _resolve_patrol_point_count(config.patrol_nodes_per_room_min, config.patrol_nodes_per_room_max, rng)
 			metadata.patrol_points = _build_patrol_points_for_room(
 				room.rect,
 				patrol_point_count,
-				patrol_point_padding,
-				patrol_point_jitter,
+				 config.patrol_point_padding,
+				config.patrol.point.jitter,
 				rng
 			)
 		else:
@@ -892,7 +884,7 @@ func _annotate_rooms_with_metadata(
 		if metadata.is_enemy_room:
 			var custom_spawn_points: PackedVector2Array = PackedVector2Array()
 			if room_carver != null:
-				custom_spawn_points = room_carver.build_custom_enemy_spawn_points(room.rect, patrol_point_padding, rng)
+				custom_spawn_points = room_carver.build_custom_enemy_spawn_points(room.rect,  config.patrol_point_padding, rng)
 			if custom_spawn_points.is_empty():
 				marker_data.enemy.push_back(_resolve_accessible_marker_for_room(grid, world_rect, room))
 			else:
@@ -915,7 +907,7 @@ func _annotate_rooms_with_metadata(
 		var corridor_points: PackedVector2Array = _build_patrol_points_for_corridor(
 			rooms[corridor_edge.a].center,
 			rooms[corridor_edge.b].center,
-			patrol_point_jitter,
+			config.patrol.point.jitter,
 			rng
 		)
 		var resolved_corridor_points: PackedVector2Array = PackedVector2Array()

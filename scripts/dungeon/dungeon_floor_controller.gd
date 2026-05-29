@@ -254,11 +254,8 @@ func _spawn_chests_for_floor(generation_seed: int) -> void:
 		var marker: Marker3D = chest_markers[marker_choice_index]
 		chest_markers.remove_at(marker_choice_index)
 
-		var chest_node: Node = floor_config.chest_scene.instantiate()
-		if not chest_node is Node3D:
-			chest_node.queue_free()
-			continue
-		var chest: ChestInteractable = chest_node as ChestInteractable
+		var chest: ChestInteractable = floor_config.chest_scene.instantiate() as ChestInteractable
+		if not chest : continue
 		chest.name = "ChestInteractable_%d" % spawn_index
 		_generated_root.add_child(chest)
 		chest.global_position = marker.global_position + Vector3.UP * 0.42

@@ -171,27 +171,27 @@ func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
 		&"designate_rooms":
 			_append_cell_outlines(mesh, step.cells, CELL_FADED_COLOR, 0.03)
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
-			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
+			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 		&"delaunay":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
-			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
+			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_center_markers(mesh, step.rooms, DELAUNAY_COLOR, 0.35, 0.24)
 		&"mst":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
-			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
+			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			#_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.39)
 			_append_room_center_markers(mesh, step.rooms, MST_COLOR, 0.4, 0.24)
 		&"loop_edges":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
-			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
+			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			#_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.39)
 			_append_room_edges(mesh, step.rooms, step.loop_edges, LOOP_COLOR, 0.44)
 		&"corridors":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
-			_append_special_room_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
+			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			#_append_room_edges(mesh, step.rooms, step.corridor_edges, CORRIDOR_COLOR, 0.44)
 			_append_corridor_path_cells(mesh, step.corridor_paths, CORRIDOR_COLOR, 0.16)
 		&"full_grid":
@@ -249,8 +249,8 @@ func _append_standard_room_outlines(mesh: ImmediateMesh, room_data: Array[Dungeo
 			continue
 		_append_rect_outline(mesh, cell.rect, color, y)
 
-# Appends outlines only for special rooms.
-func _append_special_room_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], color: Color, y: float) -> void:
+# Appends outlines for rooms.
+func _append_rooms_outlines(mesh: ImmediateMesh, room_data: Array[DungeonRoomData], color: Color, y: float) -> void:
 	for room in room_data:
 		_append_rect_outline(mesh, room.rect, color, y)
 
@@ -378,7 +378,7 @@ func _append_spawn_sphere_group(parent_node: Node3D, points: PackedVector2Array,
 	for point_index in range(points.size()):
 		var sphere_mesh: SphereMesh = SphereMesh.new()
 		sphere_mesh.radius = radius
-		sphere_mesh.height = radius * 2.0
+		sphere_mesh.height = radius * 10.0
 		sphere_mesh.radial_segments = 10
 		sphere_mesh.rings = 6
 		var sphere_instance: MeshInstance3D = MeshInstance3D.new()
@@ -386,7 +386,6 @@ func _append_spawn_sphere_group(parent_node: Node3D, points: PackedVector2Array,
 		sphere_instance.mesh = sphere_mesh
 		sphere_instance.material_override = material
 		sphere_instance.position = _grid_to_world(points[point_index], y)
-		sphere_instance.scale = Vector3(20,20,20)
 		parent_node.add_child(sphere_instance)
 		_assign_editor_owner(sphere_instance)
 

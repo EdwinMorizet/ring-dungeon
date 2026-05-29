@@ -10,6 +10,11 @@ var added_loop_edges: Array[DungeonEdgeData] = []
 # Relation: Called by DungeonGenerator to produce Delaunay, MST, and optional loop edges.
 # Builds undirected weighted edges from room centers using Delaunay triangulation.
 func build_delaunay_edges(rooms: Array[DungeonRoomData]) -> Array[DungeonEdgeData]:
+	points.clear()
+	edges.clear()
+	mst_edges.clear()
+	added_loop_edges.clear()
+
 	for room in rooms:
 		points.push_back(room.center)
 	if points.size() < 2:
