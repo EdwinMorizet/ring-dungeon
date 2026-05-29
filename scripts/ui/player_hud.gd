@@ -130,16 +130,15 @@ func _update_compass_guidance() -> void:
 		return
 	if not bool(GameProgressionManager.is_special_modifier_unlocked(MerchantSpecialModifierIdScript.Id.ARCANE_COMPASS)):
 		return
-	if GameProgressionManager.get_phase() != &"dungeon":
+	if not _has_dungeon_manager() or not DungeonManager.is_dungeon_phase():
 		return
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller == null:
+	if not DungeonManager.has_floor_controller():
 		return
 	var player_node: Node3D = PlayerManager.get_player_node()
 	if player_node == null:
 		return
-	var spawn_position: Vector3 = controller.get_current_floor_start_position()
-	var exit_position: Vector3 = controller.get_current_floor_exit_position()
+	var spawn_position: Vector3 = DungeonManager.get_floor_start_position()
+	var exit_position: Vector3 = DungeonManager.get_floor_exit_position()
 	if exit_position == Vector3.ZERO:
 		return
 	if player_node.global_position.distance_to(spawn_position) < GameProgressionManager.get_arcane_compass_min_exploration_distance():
@@ -173,14 +172,8 @@ func _describe_local_direction(forward_dot: float, right_dot: float) -> String:
 		return "Right"
 	return "Left"
 
-func _get_floor_controller() -> DungeonFloorController:
+func _has_dungeon_manager() -> bool:
 	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var current_scene: Node = tree.current_scene
-	if current_scene == null:
-		return null
-	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if controller_node is DungeonFloorController:
-		return controller_node as DungeonFloorController
-	return null
+	if tree == null or tree.root == null:
+		return false
+	return tree.root.has_node("DungeonManager")

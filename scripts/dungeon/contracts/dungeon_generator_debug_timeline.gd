@@ -15,6 +15,7 @@ func clear() -> void:
 # Records one generation step snapshot for later visualization.
 func record_step(step_data: DungeonGeneratorDebugStepData) -> void:
 	if step_data == null:
+		push_error("DungeonGeneratorDebugTimeline.record_step: step_data is null.")
 		return
 	_steps.append(step_data.duplicate_data())
 
@@ -29,6 +30,7 @@ func is_empty() -> bool:
 # Returns the recorded step at the requested index, or null when out of range.
 func get_step(step_index: int) -> DungeonGeneratorDebugStepData:
 	if step_index < 0 or step_index >= _steps.size():
+		push_error("DungeonGeneratorDebugTimeline.get_step: step_index %d out of range (size=%d)." % [step_index, _steps.size()])
 		return null
 	return _steps[step_index]
 

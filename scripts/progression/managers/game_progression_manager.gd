@@ -13,6 +13,8 @@ const ARCANE_COMPASS_MIN_EXPLORATION_DISTANCE: float = 18.0
 signal floor_changed(display_floor: int, progression_index: int, config_path: String)
 signal phase_changed(phase: StringName)
 signal merchant_special_state_changed()
+signal progression_floor_requested(display_floor: int, progression_index: int, floor_config: DungeonFloorConfig)
+signal merchant_room_requested()
 
 # Active parameter resource for this autoload manager.
 var _config: GameProgressionManagerConfig = DefaultGameProgressionManagerConfig
@@ -53,9 +55,7 @@ func complete_floor_exit() -> void:
 	if _phase != _config.dungeon_phase:
 		return
 	_set_phase(_config.merchant_phase)
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller != null:
-		controller.enter_merchant_room()
+	merchant_room_requested.emit()
 
 func complete_merchant_exit() -> void:
 	if _phase != _config.merchant_phase:
@@ -126,9 +126,7 @@ func get_arcane_compass_min_exploration_distance() -> float:
 
 func _request_current_floor() -> void:
 	var selected_config: DungeonFloorConfig = resolve_floor_config_for_index(_progression_index)
-	var controller: DungeonFloorController = _get_floor_controller()
-	if controller != null:
-		controller.start_progression_floor(_display_floor, _progression_index, selected_config)
+	progression_floor_requested.emit(_display_floor, _progression_index, selected_config)
 	floor_changed.emit(_display_floor, _progression_index, selected_config.resource_path)
 
 func _resolve_pool_for_index(index: int) -> Array[DungeonFloorConfig]:
@@ -179,18 +177,6 @@ func _resolve_pool_for_index(index: int) -> Array[DungeonFloorConfig]:
 func _set_phase(next_phase: StringName) -> void:
 	_phase = next_phase
 	phase_changed.emit(_phase)
-
-func _get_floor_controller() -> DungeonFloorController:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var current_scene: Node = tree.current_scene
-	if current_scene == null:
-		return null
-	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if controller_node is DungeonFloorController:
-		return controller_node as DungeonFloorController
-	return null
 
 func _has_inventory_manager() -> bool:
 	var tree: SceneTree = get_tree()

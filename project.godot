@@ -17,6 +17,7 @@ config/icon="res://assets/icon.svg"
 
 [autoload]
 
+DungeonManager="*res://scripts/dungeon/managers/dungeon_manager.gd"
 EnemyManager="*res://scripts/enemies/managers/enemy_manager.gd"
 EnemySpawnManager="*res://scripts/enemies/managers/enemy_spawn_manager.gd"
 FireballManager="*res://scripts/spells/managers/fireball_manager.gd"

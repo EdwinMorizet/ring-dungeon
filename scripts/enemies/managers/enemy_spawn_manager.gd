@@ -30,7 +30,7 @@ func clear_spawned_enemies() -> void:
 	if enemy_manager != null:
 		EnemyManager.clear_registry()
 
-func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_spawn_position: Vector3, enemy_scene: PackedScene, progression_index: int, floor_seed: int, fallback_spawn_position: Vector3) -> void:
+func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_spawn_position: Vector3, enemy_scene: PackedScene, progression_index: int, floor_seed: int) -> void:
 	clear_spawned_enemies()
 	if parent_node == null:
 		return
@@ -62,16 +62,6 @@ func spawn_enemies_for_floor(parent_node: Node, generated_root: Node3D, player_s
 				continue
 			var spawn_index: int = _spawned_enemies.size()
 			_spawn_enemy_at(parent_node, enemy_scene, spawn_position, patrol_route, floor_seed, progression_index, spawn_index)
-
-	if _spawned_enemies.is_empty() and _config.allow_fallback_spawn:
-		if fallback_spawn_position.distance_to(player_spawn_position) >= _config.min_spawn_distance_from_player:
-			var fallback_count: int = _resolve_spawn_count_for_marker()
-			for _i in range(fallback_count):
-				var spawn_position: Vector3 = _resolve_spawn_position_in_circle(fallback_spawn_position, generated_root)
-				if spawn_position == Vector3.INF:
-					continue
-				var spawn_index: int = _spawned_enemies.size()
-				_spawn_enemy_at(parent_node, enemy_scene, spawn_position, [], floor_seed, progression_index, spawn_index)
 
 func _resolve_spawn_position_in_circle(center_position: Vector3, generated_root: Node3D) -> Vector3:
 	var radius: float = maxf(_config.spawn_circle_radius, 0.0)

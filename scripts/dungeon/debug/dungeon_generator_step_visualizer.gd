@@ -77,6 +77,7 @@ func configure(timeline: Variant, tile_size: float) -> void:
 func _resolve_default_step_index() -> int:
 	var latest_index: int = _get_latest_step_index()
 	if _timeline == null or _timeline.is_empty():
+		push_warning("DungeonGeneratorStepVisualizer._resolve_default_step_index: timeline is null/empty; defaulting to step 0.")
 		return 0
 	for step_index in range(latest_index, -1, -1):
 		var step: DungeonGeneratorDebugStepData = _timeline.get_step(step_index)
@@ -87,6 +88,7 @@ func _resolve_default_step_index() -> int:
 # Returns the number of available recorded steps.
 func get_step_count() -> int:
 	if _timeline == null:
+		push_error("DungeonGeneratorStepVisualizer.get_step_count: timeline is null.")
 		return 0
 	return _timeline.get_step_count()
 
@@ -117,6 +119,7 @@ func _set_step_index(value: int) -> void:
 # Returns the final available step index for the current timeline.
 func _get_latest_step_index() -> int:
 	if _timeline == null or _timeline.is_empty():
+		push_warning("DungeonGeneratorStepVisualizer._get_latest_step_index: timeline is null/empty; returning 0.")
 		return 0
 	return maxi(_timeline.get_step_count() - 1, 0)
 
@@ -124,19 +127,15 @@ func _get_latest_step_index() -> int:
 func _rebuild_preview() -> void:
 	_clear_preview_root()
 	if _timeline == null or _timeline.is_empty():
+		push_warning("DungeonGeneratorStepVisualizer._rebuild_preview: timeline is null/empty.")
 		return
 	var step: DungeonGeneratorDebugStepData = _timeline.get_step(_step_index)
 	if step == null:
+		push_error("DungeonGeneratorStepVisualizer._rebuild_preview: step data is null for index %d." % _step_index)
 		return
 	var preview_mesh: ImmediateMesh = _build_step_mesh(step)
 	if preview_mesh == null:
-		for fallback_index in range(_get_latest_step_index(), -1, -1):
-			var fallback_step: DungeonGeneratorDebugStepData = _timeline.get_step(fallback_index)
-			preview_mesh = _build_step_mesh(fallback_step)
-			if preview_mesh != null:
-				_step_index = fallback_index
-				break
-	if preview_mesh == null:
+		push_error("DungeonGeneratorStepVisualizer._rebuild_preview: failed to build preview mesh for step '%s'." % String(step.step_name))
 		return
 	_preview_root = Node3D.new()
 	_preview_root.name = PREVIEW_ROOT_NODE_NAME
@@ -158,7 +157,7 @@ func _rebuild_preview() -> void:
 # Builds the mesh used to render one recorded generation step.
 func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
 	var step_name: StringName = step.step_name
-	if step_name != &"generate_cells" and step_name != &"separate_cells" and step_name != &"designate_rooms" and step_name != &"delaunay" and step_name != &"mst" and step_name != &"loop_edges" and step_name != &"corridors" and step_name != &"full_grid" and step_name != &"full_grid_patrol" and step_name != &"full_grid_spawns" and step_name != &"full_grid_chests":
+	if step_name != &"generate_cells" and step_name != &"separate_cells" and step_name != &"designate_rooms" and step_name != &"delaunay" and step_name != &"mst" and step_name != &"loop_edges" and step_name != &"corridors" and step_name != &"corridors1" and step_name != &"corridors2" and step_name != &"full_grid" and step_name != &"full_grid_patrol" and step_name != &"full_grid_spawns" and step_name != &"full_grid_chests":
 		return null
 	var mesh: ImmediateMesh = ImmediateMesh.new()
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
@@ -189,7 +188,7 @@ func _build_step_mesh(step: DungeonGeneratorDebugStepData) -> ImmediateMesh:
 			#_append_room_edges(mesh, step.rooms, step.delaunay_edges, DELAUNAY_COLOR, 0.34)
 			_append_room_edges(mesh, step.rooms, step.mst_edges, MST_COLOR, 0.39)
 			_append_room_edges(mesh, step.rooms, step.loop_edges, LOOP_COLOR, 0.44)
-		&"corridors":
+		&"corridors", &"corridors1", &"corridors2":
 			_append_standard_room_outlines(mesh, step.rooms, step.cells, STANDARD_ROOM_COLOR, 0.11)
 			_append_rooms_outlines(mesh, step.rooms, SPECIAL_ROOM_COLOR, 0.12)
 			#_append_room_edges(mesh, step.rooms, step.corridor_edges, CORRIDOR_COLOR, 0.44)
@@ -303,9 +302,11 @@ func _has_step_grid_data(step: DungeonGeneratorDebugStepData) -> bool:
 # Appends patrol room/corridor routes and link lines from final patrol graph payload.
 func _append_patrol_route_overlays(mesh: ImmediateMesh, layout: DungeonLayoutData, y: float) -> void:
 	if layout == null:
+		push_error("DungeonGeneratorStepVisualizer._append_patrol_route_overlays: layout is null.")
 		return
 	var patrol_graph: DungeonPatrolGraphData = layout.patrol_graph
 	if patrol_graph == null:
+		push_error("DungeonGeneratorStepVisualizer._append_patrol_route_overlays: patrol_graph is null.")
 		return
 	for room_nodes in patrol_graph.room_nodes:
 		_append_point_chain(mesh, room_nodes, PATROL_ROUTE_COLOR, y, true)
@@ -331,9 +332,11 @@ func _append_patrol_route_overlays(mesh: ImmediateMesh, layout: DungeonLayoutDat
 # Appends generation marker overlays for start/exit/enemy/chest marker groups.
 func _append_spawn_marker_overlays(mesh: ImmediateMesh, layout: DungeonLayoutData, include_chests: bool, y: float) -> void:
 	if layout == null:
+		push_error("DungeonGeneratorStepVisualizer._append_spawn_marker_overlays: layout is null.")
 		return
 	var marker_data: DungeonSpawnMarkersData = layout.spawn_markers
 	if marker_data == null:
+		push_error("DungeonGeneratorStepVisualizer._append_spawn_marker_overlays: spawn_markers is null.")
 		return
 	_append_point_markers(mesh, marker_data.player_start, SPAWN_PLAYER_START_COLOR, y, 0.28)
 	_append_point_markers(mesh, marker_data.floor_exit, SPAWN_EXIT_COLOR, y, 0.28)
@@ -362,11 +365,13 @@ func _append_point_markers(mesh: ImmediateMesh, points: PackedVector2Array, colo
 # Appends small sphere markers for enemy spawn points on spawn-focused final-grid steps.
 func _append_enemy_spawn_spheres(step: DungeonGeneratorDebugStepData, parent_node: Node3D) -> void:
 	if step == null or parent_node == null:
+		push_error("DungeonGeneratorStepVisualizer._append_enemy_spawn_spheres: step or parent_node is null.")
 		return
 	if step.step_name != &"full_grid_spawns" and step.step_name != &"full_grid_chests":
 		return
 	var final_layout: DungeonLayoutData = _resolve_final_layout()
 	if final_layout == null or final_layout.is_empty() or final_layout.spawn_markers == null:
+		push_error("DungeonGeneratorStepVisualizer._append_enemy_spawn_spheres: final layout payload is missing/invalid.")
 		return
 	var room_material: StandardMaterial3D = _build_spawn_sphere_material(SPAWN_ENEMY_ROOM_COLOR)
 	var corridor_material: StandardMaterial3D = _build_spawn_sphere_material(SPAWN_ENEMY_CORRIDOR_COLOR)
@@ -428,12 +433,15 @@ func _resolve_tile_color(tile_id: int) -> Color:
 # Returns final generated layout payload when the timeline provides one.
 func _resolve_final_layout() -> DungeonLayoutData:
 	if _timeline == null:
+		push_error("DungeonGeneratorStepVisualizer._resolve_final_layout: timeline is null.")
 		return null
 	if not _timeline.has_method("get_final_layout"):
+		push_error("DungeonGeneratorStepVisualizer._resolve_final_layout: timeline has no get_final_layout().")
 		return null
 	var final_layout: Variant = _timeline.get_final_layout()
 	if final_layout is DungeonLayoutData:
 		return final_layout as DungeonLayoutData
+	push_error("DungeonGeneratorStepVisualizer._resolve_final_layout: final layout is not DungeonLayoutData.")
 	return null
 
 # Converts grid-space coordinates into preview-local world coordinates.
@@ -523,12 +531,14 @@ func _append_special_room_labels(step: DungeonGeneratorDebugStepData, parent_nod
 # Resolves a readable special room type label from the room script metadata.
 func _resolve_special_room_type_label(room: DungeonRoomData) -> String:
 	if room.special_room_script == null:
+		push_warning("DungeonGeneratorStepVisualizer._resolve_special_room_type_label: room.special_room_script is null; using fallback label.")
 		return "Special Room"
 	return _resolve_special_room_type_label_from_script(room.special_room_script)
 
 # Resolves a readable special room type label from an optional special-room script reference.
 func _resolve_special_room_type_label_from_script(room_script: Script) -> String:
 	if room_script == null:
+		push_warning("DungeonGeneratorStepVisualizer._resolve_special_room_type_label_from_script: room_script is null; using fallback label.")
 		return "Special Room"
 	var class_name_text: String = ""
 	if room_script.has_method("get_global_name"):

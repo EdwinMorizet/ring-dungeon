@@ -2,6 +2,10 @@
 
 [ext_resource type="Script" uid="uid://q1jk71bs8y11" path="res://scripts/dungeon/resources/dungeon_floor_config.gd" id="1_1r7tx"]
 [ext_resource type="Resource" path="res://resources/dungeon/special_rooms/default_special_room_floor_pool_list.tres" id="2_special_pool_list"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player_scene"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_basic.tscn" id="4_enemy_scene"]
+[ext_resource type="PackedScene" path="res://scenes/merchant/merchant_room.tscn" id="5_merchant_room_scene"]
+[ext_resource type="PackedScene" path="res://scenes/items/chest_interactable.tscn" id="6_chest_scene"]
 
 [resource]
 script = ExtResource("1_1r7tx")
@@ -13,3 +17,7 @@ patrol_nodes_per_room_min = 2
 patrol_nodes_per_room_max = 4
 patrol_point_padding = 1.2
 patrol_point_jitter = 0.35
+player_scene = ExtResource("3_player_scene")
+enemy_scene = ExtResource("4_enemy_scene")
+merchant_room_scene = ExtResource("5_merchant_room_scene")
+chest_scene = ExtResource("6_chest_scene")

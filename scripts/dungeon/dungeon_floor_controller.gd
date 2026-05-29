@@ -54,6 +54,7 @@ func enter_merchant_room() -> void:
 	_ensure_player_spawned()
 	var floor_config: DungeonFloorConfig = _get_config()
 	if floor_config.merchant_room_scene == null:
+		push_error("DungeonFloorController.enter_merchant_room: floor_config.merchant_room_scene is null; cannot enter merchant room.")
 		return
 	if _merchant_room_instance == null or not is_instance_valid(_merchant_room_instance):
 		var room_node: Node = floor_config.merchant_room_scene.instantiate()
@@ -62,6 +63,7 @@ func enter_merchant_room() -> void:
 			add_child(_merchant_room_instance)
 			_merchant_room_instance.merchant_exit_reached.connect(_on_merchant_exit_reached)
 		else:
+			push_error("DungeonFloorController.enter_merchant_room: merchant_room_scene must instantiate MerchantRoomController.")
 			room_node.queue_free()
 			return
 
@@ -120,6 +122,7 @@ func get_current_floor_start_position() -> Vector3:
 
 func get_current_floor_exit_position() -> Vector3:
 	if _generated_root == null or not is_instance_valid(_generated_root):
+		push_error("DungeonFloorController.get_current_floor_exit_position: generated root is missing; returning Vector3.ZERO fallback.")
 		return Vector3.ZERO
 	var exit_trigger: Node = _generated_root.find_child("FloorExitTrigger", true, false)
 	if exit_trigger is Node3D:
@@ -127,6 +130,7 @@ func get_current_floor_exit_position() -> Vector3:
 	var exit_marker: Node = _generated_root.find_child("FloorExit_0", true, false)
 	if exit_marker is Marker3D:
 		return (exit_marker as Marker3D).global_position
+	push_error("DungeonFloorController.get_current_floor_exit_position: no FloorExitTrigger/FloorExit_0 found; returning Vector3.ZERO fallback.")
 	return Vector3.ZERO
 
 # Clears generated floor content through a public orchestration API.
@@ -138,6 +142,7 @@ func _get_config() -> DungeonFloorConfig:
 	if not Engine.is_editor_hint() and _progression_config_override != null:
 		return _progression_config_override
 	if config == null:
+		push_error("DungeonFloorController._get_config: config was null; creating default DungeonFloorConfig fallback.")
 		config = DungeonFloorConfig.new()
 	return config
 
@@ -164,6 +169,7 @@ func _hide_merchant_room() -> void:
 func _ensure_player_spawned() -> void:
 	var floor_config: DungeonFloorConfig = _get_config()
 	if floor_config.player_scene == null:
+		push_error("DungeonFloorController._ensure_player_spawned: floor_config.player_scene is null.")
 		return
 	if _player_instance != null and is_instance_valid(_player_instance):
 		return
@@ -172,12 +178,14 @@ func _ensure_player_spawned() -> void:
 		_player_instance = player_node as CharacterBody3D
 		add_child(_player_instance)
 	else:
+		push_error("DungeonFloorController._ensure_player_spawned: player_scene must instantiate CharacterBody3D.")
 		player_node.queue_free()
 
 # Spawns player if needed and moves player to current floor start location.
 func _spawn_or_reposition_player() -> void:
 	_ensure_player_spawned()
 	if _player_instance == null or not is_instance_valid(_player_instance):
+		push_error("DungeonFloorController._spawn_or_reposition_player: player instance is missing after spawn attempt.")
 		return
 
 	var spawn_position: Vector3 = _find_player_spawn_position()
@@ -192,7 +200,8 @@ func _find_player_spawn_position() -> Vector3:
 		var marker_node: Node = _generated_root.find_child("PlayerStart_0", true, false)
 		if marker_node is Marker3D:
 			var marker: Marker3D = marker_node as Marker3D
-			return marker.global_position + Vector3.UP * floor_config.player_spawn_height_offset
+			return marker.global_position + Vector3.UP * 1.2
+	push_error("DungeonFloorController._find_player_spawn_position: PlayerStart_0 marker missing; using player_spawn_fallback.")
 	return floor_config.player_spawn_fallback
 
 # Returns a positive random seed value, initializing RNG state lazily.
@@ -206,14 +215,18 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 	if Engine.is_editor_hint():
 		return
 	if _generated_root == null or not is_instance_valid(_generated_root):
+		push_error("DungeonFloorController._spawn_enemies_for_floor: generated root missing; cannot spawn enemies.")
 		return
 	var floor_config: DungeonFloorConfig = _get_config()
 	if floor_config.enemy_scene == null:
+		push_error("DungeonFloorController._spawn_enemies_for_floor: floor_config.enemy_scene is null.")
 		return
 	if _player_instance == null or not is_instance_valid(_player_instance):
+		push_error("DungeonFloorController._spawn_enemies_for_floor: player instance missing; cannot spawn enemies.")
 		return
 	_ensure_enemy_spawn_manager()
 	if _enemy_spawn_manager == null or not is_instance_valid(_enemy_spawn_manager):
+		push_error("DungeonFloorController._spawn_enemies_for_floor: EnemySpawnManager autoload missing.")
 		return
 	var player_spawn_position: Vector3 = _find_player_spawn_position()
 	EnemySpawnManager.spawn_enemies_for_floor(
@@ -222,8 +235,7 @@ func _spawn_enemies_for_floor(generation_seed: int) -> void:
 		player_spawn_position,
 		floor_config.enemy_scene,
 		_runtime_progression_index,
-		generation_seed,
-		floor_config.enemy_spawn_fallback
+		generation_seed
 	)
 
 # Spawns deterministic chest interactables at selected chest candidate markers.
@@ -232,8 +244,10 @@ func _spawn_chests_for_floor(generation_seed: int) -> void:
 	if Engine.is_editor_hint():
 		return
 	if _generated_root == null or not is_instance_valid(_generated_root):
+		push_error("DungeonFloorController._spawn_chests_for_floor: generated root missing; cannot spawn chests.")
 		return
 	if floor_config.chest_scene == null:
+		push_error("DungeonFloorController._spawn_chests_for_floor: floor_config.chest_scene is null.")
 		return
 	var marker_nodes: Array[Node] = _generated_root.find_children("ChestCandidate_*", "Marker3D", true, false)
 	if marker_nodes.is_empty():
@@ -259,7 +273,9 @@ func _spawn_chests_for_floor(generation_seed: int) -> void:
 		chest_markers.remove_at(marker_choice_index)
 
 		var chest: ChestInteractable = floor_config.chest_scene.instantiate() as ChestInteractable
-		if not chest : continue
+		if not chest:
+			push_error("DungeonFloorController._spawn_chests_for_floor: chest_scene must instantiate ChestInteractable.")
+			continue
 		chest.name = "ChestInteractable_%d" % spawn_index
 		_generated_root.add_child(chest)
 		chest.global_position = marker.global_position + Vector3.UP * 0.42
@@ -285,35 +301,46 @@ func _build_chest_seed(generation_seed: int, marker_position: Vector3, spawn_ind
 func _ensure_enemy_spawn_manager() -> void:
 	if _enemy_spawn_manager != null and is_instance_valid(_enemy_spawn_manager):
 		return
+	if Engine.is_editor_hint():
+		_enemy_spawn_manager = null
+		return
 	if not is_inside_tree():
+		push_error("DungeonFloorController._ensure_enemy_spawn_manager: controller is not inside tree.")
 		_enemy_spawn_manager = null
 		return
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.root == null:
+		push_error("DungeonFloorController._ensure_enemy_spawn_manager: SceneTree/root missing.")
 		_enemy_spawn_manager = null
 		return
 	_enemy_spawn_manager = tree.root.get_node_or_null("EnemySpawnManager")
+	if _enemy_spawn_manager == null:
+		push_error("DungeonFloorController._ensure_enemy_spawn_manager: EnemySpawnManager autoload not found at /root/EnemySpawnManager.")
 
 # Connects generated floor-exit trigger signal to floor completion callback.
 func _connect_floor_exit_trigger() -> void:
 	if _generated_root == null or not is_instance_valid(_generated_root):
+		push_error("DungeonFloorController._connect_floor_exit_trigger: generated root missing.")
 		return
 	var exit_trigger: Node = _generated_root.find_child("FloorExitTrigger", true, false)
+	if exit_trigger == null:
+		push_error("DungeonFloorController._connect_floor_exit_trigger: FloorExitTrigger node missing in generated root.")
+		return
 	if exit_trigger and not exit_trigger.is_connected("exit_reached", _on_floor_exit_reached):
 		exit_trigger.connect("exit_reached", _on_floor_exit_reached)
 
 # Handles floor exit activation and delegates to progression manager when present.
 func _on_floor_exit_reached() -> void:
-	if _has_progression_manager():
-		GameProgressionManager.complete_floor_exit()
+	if _has_dungeon_manager():
+		DungeonManager.complete_floor_exit()
 		return
 	regenerate_now()
 
 # Handles merchant exit and resumes floor flow via progression or regeneration.
 func _on_merchant_exit_reached() -> void:
 	MerchantManager.close_shop()
-	if _has_progression_manager():
-		GameProgressionManager.complete_merchant_exit()
+	if _has_dungeon_manager():
+		DungeonManager.complete_merchant_exit()
 		return
 	_hide_merchant_room()
 	regenerate_now()
@@ -322,8 +349,16 @@ func _on_merchant_exit_reached() -> void:
 func _has_progression_manager() -> bool:
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.root == null:
+		push_error("DungeonFloorController._has_progression_manager: SceneTree/root missing; returning false.")
 		return false
 	return tree.root.has_node("GameProgressionManager")
+
+func _has_dungeon_manager() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		push_error("DungeonFloorController._has_dungeon_manager: SceneTree/root missing; returning false.")
+		return false
+	return tree.root.has_node("DungeonManager")
 
 # Performs cleanup when this controller is about to be deleted.
 func _notification(what: int) -> void:

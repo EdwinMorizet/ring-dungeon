@@ -8,12 +8,15 @@ const PATROL_DEBUG_VISUAL_NODE_NAME: String = "PatrolDebugVisualizer"
 func rebuild(generated_root: Node3D, runtime_layout: DungeonLayoutData) -> void:
 	clear(generated_root)
 	if generated_root == null or not is_instance_valid(generated_root):
+		push_error("DungeonPatrolDebugVisualizer.rebuild: generated_root is missing/invalid.")
 		return
 	if runtime_layout == null or runtime_layout.is_empty():
+		push_error("DungeonPatrolDebugVisualizer.rebuild: runtime_layout is missing/empty.")
 		return
 
 	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
 	if patrol_root == null:
+		push_error("DungeonPatrolDebugVisualizer.rebuild: PatrolNodes root not found.")
 		return
 
 	var mesh: ImmediateMesh = ImmediateMesh.new()
@@ -110,6 +113,7 @@ func _append_corridor_patrol_lines(mesh: ImmediateMesh, patrol_root: Node, gener
 func _resolve_room_patrol_anchor(patrol_root: Node, room_index: int) -> Vector3:
 	var room_group: Node = patrol_root.find_child("PatrolNodes_Room_%d" % room_index, false, false)
 	if room_group == null:
+		push_error("DungeonPatrolDebugVisualizer._resolve_room_patrol_anchor: patrol room group not found for index %d." % room_index)
 		return Vector3.INF
 	var markers: Array[Marker3D] = _collect_sorted_patrol_markers(room_group)
 	if markers.is_empty():

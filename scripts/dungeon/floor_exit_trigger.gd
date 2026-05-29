@@ -10,6 +10,7 @@ signal exit_reached
 var _is_triggered: bool = false
 # Arms the trigger only after the player has left any initial overlap on spawn.
 var _is_armed: bool = false
+var _logged_prearmed_entry: bool = false
 
 # Enables overlap monitoring and wires runtime signals for player detection.
 func _ready() -> void:
@@ -36,10 +37,15 @@ func _on_body_entered(body: Node) -> void:
 	if _is_triggered:
 		return
 	if not _is_armed:
+		if not _logged_prearmed_entry:
+			push_warning("FloorExitTrigger._on_body_entered: trigger is not armed yet; ignoring body entry until player leaves initial overlap.")
+			_logged_prearmed_entry = true
 		return
 	if body == null:
+		push_error("FloorExitTrigger._on_body_entered: received null body.")
 		return
 	if not body.is_in_group("player"):
+		push_warning("FloorExitTrigger._on_body_entered: body entered but is not in 'player' group.")
 		return
 	_is_triggered = true
 	exit_reached.emit()

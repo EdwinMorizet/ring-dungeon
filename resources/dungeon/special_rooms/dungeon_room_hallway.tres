@@ -6,5 +6,5 @@
 [resource]
 script = ExtResource("2_0eui0")
 room_script = ExtResource("1_tw1aj")
-weight = 3
+weight = 2
 metadata/_custom_type_script = "uid://donenlmv86r3d"

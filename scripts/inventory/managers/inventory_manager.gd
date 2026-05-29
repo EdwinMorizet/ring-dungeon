@@ -579,8 +579,8 @@ func _reroll_item_definition(item_definition: InventoryItemDefinition, floor_dep
 
 func _resolve_current_floor_depth() -> int:
 	var tree: SceneTree = get_tree()
-	if tree != null and tree.root != null and tree.root.has_node("GameProgressionManager"):
-		return int(GameProgressionManager.get_progression_index())
+	if tree != null and tree.root != null and tree.root.has_node("DungeonManager"):
+		return int(DungeonManager.get_progression_index())
 	return 0
 
 func _unregister_world_item(world_item: InventoryWorldItem) -> void:

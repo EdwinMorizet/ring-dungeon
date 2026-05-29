@@ -421,19 +421,12 @@ func _get_enemy_manager_node() -> Node:
 
 func _resolve_floor_depth() -> int:
 	var tree: SceneTree = get_tree()
-	if tree != null and tree.root != null and tree.root.has_node("GameProgressionManager"):
-		return int(GameProgressionManager.get_progression_index())
+	if tree != null and tree.root != null and tree.root.has_node("DungeonManager"):
+		return int(DungeonManager.get_progression_index())
 	return 0
 
 func _resolve_floor_seed() -> int:
 	var tree: SceneTree = get_tree()
-	if tree == null:
-		return 0
-	var current_scene: Node = tree.current_scene
-	if current_scene == null:
-		return 0
-	var controller_node: Node = current_scene.find_child("DungeonFloorController", true, false)
-	if controller_node is DungeonFloorController:
-		var floor_controller: DungeonFloorController = controller_node as DungeonFloorController
-		return int(floor_controller.get_current_floor_seed())
+	if tree != null and tree.root != null and tree.root.has_node("DungeonManager"):
+		return int(DungeonManager.get_floor_seed())
 	return 0

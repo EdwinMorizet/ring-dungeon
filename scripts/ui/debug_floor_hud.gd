@@ -22,36 +22,36 @@ var _is_debug_panel_visible: bool = false
 func _ready() -> void:
 	_wire_debug_panel_actions()
 	_set_debug_panel_visible(false)
-	if _has_progression_manager():
-		if not GameProgressionManager.floor_changed.is_connected(_on_floor_changed):
-			GameProgressionManager.floor_changed.connect(_on_floor_changed)
-		if not GameProgressionManager.phase_changed.is_connected(_on_phase_changed):
-			GameProgressionManager.phase_changed.connect(_on_phase_changed)
+	if _has_dungeon_manager():
+		if not DungeonManager.floor_changed.is_connected(_on_floor_changed):
+			DungeonManager.floor_changed.connect(_on_floor_changed)
+		if not DungeonManager.phase_changed.is_connected(_on_phase_changed):
+			DungeonManager.phase_changed.connect(_on_phase_changed)
 		_refresh()
 	else:
 		_refresh_status_without_manager()
 
 func _exit_tree() -> void:
-	if not _has_progression_manager():
+	if not _has_dungeon_manager():
 		return
-	if GameProgressionManager.floor_changed.is_connected(_on_floor_changed):
-		GameProgressionManager.floor_changed.disconnect(_on_floor_changed)
-	if GameProgressionManager.phase_changed.is_connected(_on_phase_changed):
-		GameProgressionManager.phase_changed.disconnect(_on_phase_changed)
+	if DungeonManager.floor_changed.is_connected(_on_floor_changed):
+		DungeonManager.floor_changed.disconnect(_on_floor_changed)
+	if DungeonManager.phase_changed.is_connected(_on_phase_changed):
+		DungeonManager.phase_changed.disconnect(_on_phase_changed)
 
 func _on_floor_changed(_display_floor: int, _progression_index: int, _config_path: String) -> void:
-	if _has_progression_manager():
+	if _has_dungeon_manager():
 		_refresh()
 
 func _on_phase_changed(_phase: StringName) -> void:
-	if _has_progression_manager():
+	if _has_dungeon_manager():
 		_refresh()
 
 func _refresh() -> void:
 	_label.text = "Floor: %d  Phase: %s  Index: %d  F5: Toggle Debug Panel  F6: Spawn Items  F7: Print Summary  F8: Quick Validation" % [
-		int(GameProgressionManager.get_display_floor()),
-		String(GameProgressionManager.get_phase()),
-		int(GameProgressionManager.get_progression_index()),
+		int(DungeonManager.get_display_floor()),
+		String(DungeonManager.get_phase()),
+		int(DungeonManager.get_progression_index()),
 	]
 	_label.text += "  F9: Spawn Gold  F10: Spawn Gems  F11: Patrol Overlay  F12: Patrol Smoke"
 	if _show_patrol_debug:
@@ -116,7 +116,7 @@ func _wire_debug_panel_actions() -> void:
 
 func _toggle_debug_panel() -> void:
 	_set_debug_panel_visible(not _is_debug_panel_visible)
-	if _has_progression_manager():
+	if _has_dungeon_manager():
 		_refresh()
 	else:
 		_refresh_status_without_manager()
@@ -129,12 +129,12 @@ func _set_debug_panel_visible(isVisible: bool) -> void:
 func _refresh_panel_title() -> void:
 	if _panel_title_label == null:
 		return
-	if not _has_progression_manager():
+	if not _has_dungeon_manager():
 		_panel_title_label.text = "Debug Console  Floor N/A"
 		return
 	_panel_title_label.text = "Debug Console  Floor %d  Index %d" % [
-		int(GameProgressionManager.get_display_floor()),
-		int(GameProgressionManager.get_progression_index()),
+		int(DungeonManager.get_display_floor()),
+		int(DungeonManager.get_progression_index()),
 	]
 
 func _run_ring_balance_sample() -> void:
@@ -176,8 +176,8 @@ func _rarity_label(rarity: int) -> String:
 
 func _spawn_debug_items() -> void:
 	var floor_depth: int = 0
-	if _has_progression_manager():
-		floor_depth = int(GameProgressionManager.get_progression_index())
+	if _has_dungeon_manager():
+		floor_depth = int(DungeonManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_items(8, floor_depth, 1337, 2.2)
 
 func _print_modifier_summary() -> void:
@@ -185,27 +185,27 @@ func _print_modifier_summary() -> void:
 
 func _run_quick_validation() -> void:
 	var floor_depth: int = 0
-	if _has_progression_manager():
-		floor_depth = int(GameProgressionManager.get_progression_index())
+	if _has_dungeon_manager():
+		floor_depth = int(DungeonManager.get_progression_index())
 	InventoryManager.debug_run_quick_validation(floor_depth, 1337)
 
 func _spawn_debug_gold() -> void:
 	var floor_depth: int = 0
-	if _has_progression_manager():
-		floor_depth = int(GameProgressionManager.get_progression_index())
+	if _has_dungeon_manager():
+		floor_depth = int(DungeonManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_gold(8, floor_depth, 2027, 2.2)
 
 func _spawn_debug_gems() -> void:
 	var floor_depth: int = 0
-	if _has_progression_manager():
-		floor_depth = int(GameProgressionManager.get_progression_index())
+	if _has_dungeon_manager():
+		floor_depth = int(DungeonManager.get_progression_index())
 	InventoryManager.debug_spawn_seeded_gems(8, floor_depth, 3037, 2.2)
 
-func _has_progression_manager() -> bool:
+func _has_dungeon_manager() -> bool:
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.root == null:
 		return false
-	return tree.root.has_node("GameProgressionManager")
+	return tree.root.has_node("DungeonManager")
 
 func _toggle_patrol_overlay() -> void:
 	_show_patrol_debug = not _show_patrol_debug
@@ -214,7 +214,7 @@ func _toggle_patrol_overlay() -> void:
 		debug_controller.set_patrol_link_debug_visual_enabled(_show_patrol_debug)
 	if _patrol_overlay_button != null:
 		_patrol_overlay_button.text = "Patrol Overlay: %s" % ("On" if _show_patrol_debug else "Off")
-	if _has_progression_manager():
+	if _has_dungeon_manager():
 		_refresh()
 	else:
 		_refresh_status_without_manager()
@@ -255,7 +255,7 @@ func _run_patrol_smoke_check() -> void:
 		]
 	)
 	if _show_patrol_debug:
-		if _has_progression_manager():
+		if _has_dungeon_manager():
 			_refresh()
 
 func _get_floor_debug_controller() -> DungeonFloorDebugController:

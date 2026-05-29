@@ -56,6 +56,8 @@ func generate(
 		rooms,
 		corridor_paths,
 		config,
+		grid,
+		world_rect,
 		rng
 	)
 	_record_debug_step(debug_timeline, DungeonGeneratorDebugStepConstants.DEBUG_STEP_CORRIDORS_02, cells, rooms, delaunay_edges, mst_edges, loop_edges, corridor_edges, corridor_paths)
@@ -75,6 +77,7 @@ func generate(
 		config
 	)
 	if annotation_data == null:
+		push_error("DungeonGenerator.generate: _annotate_rooms_with_metadata returned null; creating fallback annotation payload.")
 		annotation_data = DungeonAnnotationData.new()
 		annotation_data.spawn_markers = DungeonSpawnMarkersData.new()
 		annotation_data.patrol_graph = DungeonPatrolGraphData.new()
@@ -163,6 +166,7 @@ func _generate_cells(rng: RandomNumberGenerator, config: DungeonFloorConfig, pro
 
 # Resolves overlapping room candidates using iterative pairwise push separation.
 func _separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, rng: RandomNumberGenerator) -> void:
+	var separation_margin: int = maxi(config.separation_margin, 1)
 	# Separate cells
 	var overlaps: int = 0
 	for i in config.separation_iterations:
@@ -172,8 +176,8 @@ func _separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, 
 			var _overlaps_dir: Vector2 = Vector2.ZERO
 			for b in cells.size():
 				if a == b: continue
-				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, config.separation_margin) if cells[a].is_room else cells[a].rect
-				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin) if cells[b].is_room else cells[b].rect
+				var rect_a: Rect2i = _grow_rect_i(cells[a].rect, separation_margin) if cells[a].is_room else cells[a].rect
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, separation_margin) if cells[b].is_room else cells[b].rect
 				while rect_a.intersects(rect_b):
 					overlaps += 1
 					var _dir := Vector2(rect_a.position - rect_b.position).normalized()
@@ -181,7 +185,7 @@ func _separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, 
 						_dir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
 					var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
 					cells[a].rect = Rect2i(cells[a].rect.position + _push_dir, cells[a].rect.size)
-					rect_a = _grow_rect_i(cells[a].rect, config.separation_margin)
+					rect_a = _grow_rect_i(cells[a].rect, separation_margin)
 		if overlaps == 0: break
 	# Consolidate to far away cells
 	var no_move := true
@@ -191,11 +195,11 @@ func _separate_cells(cells: Array[DungeonCellData], config: DungeonFloorConfig, 
 			var _dir := Vector2(cells[a].rect.get_center()).normalized()
 			if _dir.is_zero_approx(): continue
 			var _push_dir := Vector2i(roundi(_dir.x), roundi(_dir.y))
-			var rect_a: Rect2i = _grow_rect_i(Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size), config.separation_margin)  if cells[a].is_room else Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size)
+			var rect_a: Rect2i = _grow_rect_i(Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size), separation_margin)  if cells[a].is_room else Rect2i(cells[a].rect.position - _push_dir, cells[a].rect.size)
 			var can_move := true
 			for b in cells.size():
 				if a == b: continue
-				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, config.separation_margin) if cells[b].is_room else cells[b].rect
+				var rect_b: Rect2i = _grow_rect_i(cells[b].rect, separation_margin) if cells[b].is_room else cells[b].rect
 				if rect_a.intersects(rect_b): 
 					can_move = false
 					break
@@ -228,12 +232,9 @@ func _compute_world_rect(entries: Array[DungeonCellData]) -> Rect2i:
 	
 	for entry in entries:
 		entry.rect = Rect2i(entry.rect.position - bounds.position, entry.rect.size)
-		
-	var world_bounds: Rect2i = entries[0].rect
-	for entry in entries:
-		world_bounds = bounds.merge(entry.rect)
-	
-	return world_bounds
+
+	# Entries are now in local grid space, so keep the carve grid origin at (0, 0).
+	return Rect2i(Vector2i.ZERO, bounds.size)
 
 # Allocates and initializes a dense tile grid.
 func _create_grid(world_rect:Rect2i) -> PackedInt32Array:
@@ -255,12 +256,14 @@ func _carve_corridor_doors_and_paths(
 	rooms: Array[DungeonRoomData],
 	corridor_edges: Array[DungeonEdgeData]
 ) -> Array[PackedVector2Array]:
+	var room_wall_margin: int = 1
 	var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
 	var door_side_used: PackedInt32Array = PackedInt32Array()
 	door_side_used.resize(door_side_totals.size())
 	var corridor_paths: Array[PackedVector2Array] = []
 	var world_width = world_rect.size.x
 	var world_height = world_rect.size.y
+	var room_wall_block_mask: PackedByteArray = _build_room_wall_block_mask(world_width, world_height, rooms, room_wall_margin)
 
 	for edge in corridor_edges:
 		#if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
@@ -287,7 +290,18 @@ func _carve_corridor_doors_and_paths(
 
 		_set_tile(grid, world_width, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
 		_set_tile(grid, world_width, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
-		var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
+		_set_room_wall_block(room_wall_block_mask, world_width, world_height, door_a.x, door_a.y, false)
+		_set_room_wall_block(room_wall_block_mask, world_width, world_height, door_b.x, door_b.y, false)
+		_clear_room_wall_margin_from_door(room_wall_block_mask, world_width, world_height, door_a, side_a, room_wall_margin)
+		_clear_room_wall_margin_from_door(room_wall_block_mask, world_width, world_height, door_b, side_b, room_wall_margin)
+		var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(
+			grid,
+			world_width,
+			world_height,
+			door_a,
+			door_b,
+			room_wall_block_mask
+		)
 		var world_corridor_path: PackedVector2Array = PackedVector2Array()
 		for local_cell in local_corridor_path:
 			world_corridor_path.push_back(Vector2(local_cell))
@@ -295,56 +309,16 @@ func _carve_corridor_doors_and_paths(
 
 	return corridor_paths
 
-# Carves corridors between connected rooms and returns world-space debug corridor paths.
-#func _carve_corridors_for_edges(
-	#grid: PackedInt32Array,
-	#world_width: int,
-	#world_height: int,
-	#world_rect: Rect2i,
-	#rooms: Array[DungeonRoomData],
-	#corridor_edges: Array[DungeonEdgeData]
-#) -> Array[PackedVector2Array]:
-	#var door_side_totals: PackedInt32Array = _build_room_side_door_counts(rooms, corridor_edges)
-	#var door_side_used: PackedInt32Array = PackedInt32Array()
-	#door_side_used.resize(door_side_totals.size())
-	#var corridor_paths: Array[PackedVector2Array] = []
-#
-	#for edge in corridor_edges:
-		##if edge.a < 0 or edge.b < 0 or edge.a >= rooms.size() or edge.b >= rooms.size() or edge.a == edge.b:
-			##continue
-#
-		#var room_a: DungeonRoomData = rooms[edge.a]
-		#var room_b: DungeonRoomData = rooms[edge.b]
-		#var side_a: int = _resolve_room_side_for_target(room_a.center, room_b.center)
-		#var side_b: int = _resolve_room_side_for_target(room_b.center, room_a.center)
-#
-		#var key_a: int = edge.a * 4 + side_a
-		#var key_b: int = edge.b * 4 + side_b
-		#var slot_total_a: int = maxi(1, door_side_totals[key_a])
-		#var slot_total_b: int = maxi(1, door_side_totals[key_b])
-		#var slot_index_a: int = mini(door_side_used[key_a], slot_total_a - 1)
-		#var slot_index_b: int = mini(door_side_used[key_b], slot_total_b - 1)
-		#door_side_used[key_a] = door_side_used[key_a] + 1
-		#door_side_used[key_b] = door_side_used[key_b] + 1
-#
-		#var door_a_world: Vector2i = _resolve_room_door_cell(room_a, side_a, slot_index_a, slot_total_a)
-		#var door_b_world: Vector2i = _resolve_room_door_cell(room_b, side_b, slot_index_b, slot_total_b)
-		#var door_a: Vector2i = door_a_world - world_rect.position
-		#var door_b: Vector2i = door_b_world - world_rect.position
-#
-		#_set_tile(grid, world_width, world_height, door_a.x, door_a.y, DungeonBuilderConstants.TILE_DOOR)
-		#_set_tile(grid, world_width, world_height, door_b.x, door_b.y, DungeonBuilderConstants.TILE_DOOR)
-		#var local_corridor_path: Array[Vector2i] = _carve_orthogonal_a_star_corridor_between_doors(grid, world_width, world_height, door_a, door_b)
-		#var world_corridor_path: PackedVector2Array = PackedVector2Array()
-		#for local_cell in local_corridor_path:
-			#world_corridor_path.push_back(Vector2(local_cell + world_rect.position))
-		#corridor_paths.append(world_corridor_path)
-#
-	#return corridor_paths
-
 # Carves an orthogonal A* corridor that prefers merging into existing corridor tiles.
-func _carve_orthogonal_a_star_corridor_between_doors(grid: PackedInt32Array, width: int, height: int, a: Vector2i, b: Vector2i) -> Array[Vector2i]:
-	var path: Array[Vector2i] = _build_orthogonal_corridor_path(grid, width, height, a, b)
+func _carve_orthogonal_a_star_corridor_between_doors(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	a: Vector2i,
+	b: Vector2i,
+	room_wall_block_mask: PackedByteArray
+) -> Array[Vector2i]:
+	var path: Array[Vector2i] = _build_orthogonal_corridor_path(grid, width, height, a, b, room_wall_block_mask)
 	if path.size() < 2:
 		return path
 	for i in range(1, path.size() - 1):
@@ -355,9 +329,11 @@ func _carve_orthogonal_a_star_corridor_between_doors(grid: PackedInt32Array, wid
 # Re-adds previously discarded standard cells when carved corridors traverse their bounds.
 func _reclaim_discarded_standard_rooms_after_corridors(
 	cells: Array[DungeonCellData],
-	rooms: Array[DungeonRoomData],
+	_rooms: Array[DungeonRoomData],
 	corridor_paths: Array[PackedVector2Array],
 	config: DungeonFloorConfig,
+	grid: PackedInt32Array,
+	world_rect: Rect2i,
 	rng: RandomNumberGenerator
 ) -> void:
 	if corridor_paths.is_empty():
@@ -368,8 +344,7 @@ func _reclaim_discarded_standard_rooms_after_corridors(
 		var room_rect: Rect2i = cell.rect
 		if rng.randf() > config.room_keep_corridor_overlap_chance: continue
 		if not _does_any_corridor_path_touch_rect(corridor_paths, room_rect): continue
-		rooms.append(DungeonRoomData.new(room_rect, cell.special_room_script))
-		cells[cell_index].is_room = true
+		_carve_reclaimed_room_from_corridor_overlap(grid, world_rect, room_rect)
 
 # Returns true when any carved corridor path includes a cell inside a target rect.
 func _does_any_corridor_path_touch_rect(corridor_paths: Array[PackedVector2Array], rect: Rect2i) -> bool:
@@ -381,8 +356,29 @@ func _does_any_corridor_path_touch_rect(corridor_paths: Array[PackedVector2Array
 				return true
 	return false
 
+# Carves reclaimed room area after corridor-overlap recovery.
+# Keeps corridor/door cells untouched so the original corridor path remains visible/connected.
+func _carve_reclaimed_room_from_corridor_overlap(grid: PackedInt32Array, world_rect: Rect2i, room_rect: Rect2i) -> void:
+	var inner_rect: Rect2i = room_rect.grow(-1)
+	if inner_rect.size.x <= 0 or inner_rect.size.y <= 0:
+		inner_rect = room_rect
+	for y in range(inner_rect.position.y, inner_rect.end.y):
+		for x in range(inner_rect.position.x, inner_rect.end.x):
+			var tile_id: int = _get_tile(grid, world_rect.size.x, x, y)
+			# Doors must stay explicit non-wall pass tiles for corridor routing.
+			if tile_id == DungeonBuilderConstants.TILE_CORRIDOR or tile_id == DungeonBuilderConstants.TILE_DOOR:
+				continue
+			_set_tile(grid, world_rect.size.x, x, y, DungeonBuilderConstants.TILE_FLOOR)
+
 # Builds an orthogonal A* path that prefers existing corridor tiles over fresh wall carving.
-func _build_orthogonal_corridor_path(grid: PackedInt32Array, width: int, height: int, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+func _build_orthogonal_corridor_path(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	start: Vector2i,
+	goal: Vector2i,
+	room_wall_block_mask: PackedByteArray
+) -> Array[Vector2i]:
 	var path: Array[Vector2i] = []
 	if width <= 0 or height <= 0:
 		return path
@@ -445,7 +441,7 @@ func _build_orthogonal_corridor_path(grid: PackedInt32Array, width: int, height:
 		var current_pos: Vector2i = Vector2i(current_index % width, int(current_index / float(width)))
 		for offset in DungeonBuilderConstants.CARDINAL_OFFSETS:
 			var neighbor_pos: Vector2i = current_pos + offset
-			if not _is_corridor_path_walkable(grid, width, height, neighbor_pos, start, goal):
+			if not _is_corridor_path_walkable(grid, width, height, neighbor_pos, start, goal, room_wall_block_mask):
 				continue
 			var neighbor_index: int = neighbor_pos.y * width + neighbor_pos.x
 			if closed_flags[neighbor_index] == 1:
@@ -487,15 +483,78 @@ func _resolve_corridor_path_heuristic(from_cell: Vector2i, to_cell: Vector2i) ->
 	return float(abs(from_cell.x - to_cell.x) + abs(from_cell.y - to_cell.y))
 
 # Returns true when a cell can participate in corridor routing.
-func _is_corridor_path_walkable(grid: PackedInt32Array, width: int, height: int, cell: Vector2i, start: Vector2i, goal: Vector2i) -> bool:
+func _is_corridor_path_walkable(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	cell: Vector2i,
+	start: Vector2i,
+	goal: Vector2i,
+	room_wall_block_mask: PackedByteArray
+) -> bool:
 	if cell == start or cell == goal:
 		return true
 	if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= height:
 		return false
 	if cell.x == 0 or cell.y == 0 or cell.x == width - 1 or cell.y == height - 1:
 		return false
+	var block_index: int = cell.y * width + cell.x
+	if block_index >= 0 and block_index < room_wall_block_mask.size() and room_wall_block_mask[block_index] == 1:
+		return false
 	var tile: int = _get_tile(grid, width, cell.x, cell.y)
 	return tile == DungeonBuilderConstants.TILE_WALL or tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
+
+# Builds a blocked-cell mask for room surrounding walls with configurable margin.
+func _build_room_wall_block_mask(width: int, height: int, rooms: Array[DungeonRoomData], margin: int) -> PackedByteArray:
+	var mask: PackedByteArray = PackedByteArray()
+	mask.resize(width * height)
+	var safe_margin: int = maxi(margin, 0)
+	for room in rooms:
+		for ring in range(0, safe_margin + 1):
+			var ring_rect: Rect2i = room.rect.grow(ring)
+			var left: int = maxi(0, ring_rect.position.x)
+			var top: int = maxi(0, ring_rect.position.y)
+			var right: int = mini(width - 1, ring_rect.end.x - 1)
+			var bottom: int = mini(height - 1, ring_rect.end.y - 1)
+			if left > right or top > bottom:
+				continue
+			for x in range(left, right + 1):
+				_set_room_wall_block(mask, width, height, x, top, true)
+				_set_room_wall_block(mask, width, height, x, bottom, true)
+			for y in range(top, bottom + 1):
+				_set_room_wall_block(mask, width, height, left, y, true)
+				_set_room_wall_block(mask, width, height, right, y, true)
+	return mask
+
+# Marks or clears a blocked wall-reservation cell in the room-wall mask.
+func _set_room_wall_block(mask: PackedByteArray, width: int, height: int, x: int, y: int, blocked: bool) -> void:
+	if x < 0 or y < 0 or x >= width or y >= height:
+		return
+	var index: int = y * width + x
+	if index < 0 or index >= mask.size():
+		return
+	mask[index] = 1 if blocked else 0
+
+# Clears blocked ring cells just outside a door so corridor A* can leave room walls.
+func _clear_room_wall_margin_from_door(mask: PackedByteArray, width: int, height: int, door: Vector2i, side: int, margin: int) -> void:
+	_set_room_wall_block(mask, width, height, door.x, door.y, false)
+	if margin <= 0:
+		return
+	var step: Vector2i = Vector2i.ZERO
+	match side:
+		DungeonSpecRoomBase.SIDE_NORTH:
+			step = Vector2i(0, -1)
+		DungeonSpecRoomBase.SIDE_SOUTH:
+			step = Vector2i(0, 1)
+		DungeonSpecRoomBase.SIDE_EAST:
+			step = Vector2i(1, 0)
+		DungeonSpecRoomBase.SIDE_WEST:
+			step = Vector2i(-1, 0)
+		_:
+			return
+	for distance in range(1, margin + 1):
+		var cell: Vector2i = door + step * distance
+		_set_room_wall_block(mask, width, height, cell.x, cell.y, false)
 
 # Returns the weighted traversal cost for a walkable corridor-routing cell.
 func _resolve_corridor_path_tile_cost(grid: PackedInt32Array, width: int, _height: int, cell: Vector2i, start: Vector2i, goal: Vector2i) -> float:
@@ -656,11 +715,13 @@ func _get_tile(grid: PackedInt32Array, width: int, x: int, y: int) -> int:
 # Picks one weighted special-room entry from a list of eligible entries.
 func _pick_weighted_special_room_entry(eligible_entries: Array[DungeonSpecialRoomWeightedEntry], rng: RandomNumberGenerator) -> DungeonSpecialRoomWeightedEntry:
 	if eligible_entries.is_empty():
+		push_error("DungeonGenerator._pick_weighted_special_room_entry: eligible_entries is empty.")
 		return null
 	var total_weight: int = 0
 	for entry in eligible_entries:
 		total_weight += maxi(entry.weight, 0)
 	if total_weight <= 0:
+		push_error("DungeonGenerator._pick_weighted_special_room_entry: total_weight <= 0.")
 		return null
 
 	var pick: int = rng.randi_range(0, total_weight - 1)
@@ -1039,6 +1100,7 @@ func _resolve_accessible_marker_near_world_point(
 	world_point: Vector2
 ) -> Vector2:
 	if width <= 0 or height <= 0:
+		push_error("DungeonGenerator._resolve_accessible_marker_near_world_point: invalid grid bounds; returning world_point fallback.")
 		return world_point
 	var local_origin: Vector2i = Vector2i(
 		clampi(int(round(world_point.x - world_offset.x)), 0, width - 1),

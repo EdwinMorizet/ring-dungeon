@@ -33,12 +33,16 @@ Apply these rules when changing:
 
 Current default roll split:
 
-- Gold: 45%
-- Diamonds: 30%
-- Ring/Band item: 15%
+- Gold: 20%
+- Diamonds: 20%
+- Ring/Band item: 50%
 - Empty: 10%
 
 When tuning, keep all weights explicit in exported properties and ensure total weighting logic is stable even if values do not sum to 1.0.
+
+Chest have a chance of multiple item spawn, use this sequence starting with the second item spawn chance :
+- 35%, 20%, 15%, 12%, 5%, 1%
+A chest can spawn at max 7 different items.
 
 ## Per-Floor Amount Scaling
 

@@ -5,6 +5,7 @@ class_name DungeonPatrolDebugReporter
 func build_snapshot(runtime_layout: DungeonLayoutData) -> DungeonPatrolDebugSnapshot:
 	var snapshot: DungeonPatrolDebugSnapshot = DungeonPatrolDebugSnapshot.new()
 	if runtime_layout == null or runtime_layout.is_empty():
+		push_error("DungeonPatrolDebugReporter.build_snapshot: runtime_layout is missing/empty.")
 		return snapshot
 
 	var rooms: Array[DungeonRoomData] = runtime_layout.rooms
@@ -36,14 +37,17 @@ func run_smoke_check(generated_root: Node3D, runtime_layout: DungeonLayoutData) 
 	var report: DungeonPatrolSmokeReport = DungeonPatrolSmokeReport.new()
 
 	if generated_root == null or not is_instance_valid(generated_root):
+		push_error("DungeonPatrolDebugReporter.run_smoke_check: generated_root is missing/invalid.")
 		report.error = "Generated root missing"
 		return report
 	if runtime_layout == null or runtime_layout.is_empty():
+		push_error("DungeonPatrolDebugReporter.run_smoke_check: runtime_layout is missing/empty.")
 		report.error = "Runtime layout missing"
 		return report
 
 	var patrol_root: Node = generated_root.find_child("PatrolNodes", true, false)
 	if patrol_root == null:
+		push_error("DungeonPatrolDebugReporter.run_smoke_check: PatrolNodes root missing.")
 		report.error = "PatrolNodes root missing"
 		return report
 

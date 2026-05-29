@@ -15,6 +15,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig
 	var height: int = layout.height
 	var grid: PackedInt32Array = layout.grid
 	if width <= 0 or height <= 0 or grid.is_empty():
+		push_error("DungeonBuilder3D.build: layout grid is empty/invalid; returning empty GeneratedDungeon root.")
 		return root
 	var grid_offset: Vector2 = Vector2(layout.grid_offset)
 
@@ -32,7 +33,7 @@ func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig
 	_assign_owner(wall_parent, editor_owner)
 
 	var floor_mesh := BoxMesh.new()
-	floor_mesh.size = Vector3(tile_size, tile_size, tile_size)
+	floor_mesh.size = Vector3(tile_size, 0.1, tile_size)
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(tile_size, wall_height, tile_size)
 
@@ -319,6 +320,7 @@ func _spawn_patrol_link_markers(patrol_root: Node3D, layout: DungeonLayoutData, 
 # Resolves a room center from room array data with bounds safety.
 func _resolve_room_center(rooms: Array[DungeonRoomData], room_index: int) -> Vector2:
 	if room_index < 0 or room_index >= rooms.size():
+		push_error("DungeonBuilder3D._resolve_room_center: room index out of bounds; returning Vector2.ZERO fallback.")
 		return Vector2.ZERO
 	var room_data: DungeonRoomData = rooms[room_index]
 	return room_data.center
@@ -370,11 +372,13 @@ func _spawn_floor_exit_visuals(root: Node3D, _tile_size: float, editor_owner: No
 		if not fallback_markers.is_empty():
 			marker_node = fallback_markers[0]
 	if not marker_node is Marker3D:
+		push_error("DungeonBuilder3D._spawn_floor_exit_visuals: no FloorExit marker found.")
 		return
 	var marker: Marker3D = marker_node as Marker3D
 
 	var trigger_node: Node = DungeonBuilderConstants.FloorExitTriggerScene.instantiate()
 	if not trigger_node is FloorExitTrigger:
+		push_error("DungeonBuilder3D._spawn_floor_exit_visuals: FloorExitTriggerScene must instantiate FloorExitTrigger.")
 		return
 	var trigger: FloorExitTrigger = trigger_node as FloorExitTrigger
 	trigger.name = "FloorExitTrigger"
