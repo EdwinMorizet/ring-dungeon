@@ -21,6 +21,9 @@ const SPECIAL_LABEL_OUTLINE_COLOR: Color = Color(0.08, 0.08, 0.08, 0.95)
 const TILE_WALL_COLOR: Color = Color(0.575, 0.01, 0.571, 0.58)
 const TILE_FLOOR_COLOR: Color = Color(0.46, 0.86, 1.0, 0.65)
 const TILE_CORRIDOR_COLOR: Color = Color(0.84, 1.0, 0.2, 0.72)
+const TILE_CORRIDOR_WIDTH_1_COLOR: Color = Color(0.58, 0.96, 0.24, 0.72)
+const TILE_CORRIDOR_WIDTH_2_COLOR: Color = Color(1.0, 0.82, 0.28, 0.8)
+const TILE_CORRIDOR_WIDTH_3_COLOR: Color = Color(1.0, 0.43, 0.28, 0.86)
 const TILE_DOOR_COLOR: Color = Color(1.0, 0.62, 0.18, 0.82)
 const PATROL_ROUTE_COLOR: Color = Color(0.1, 0.95, 1.0, 1.0)
 const SPAWN_ENEMY_ROOM_COLOR: Color = Color(1.0, 0.27, 0.27, 1.0)
@@ -291,8 +294,10 @@ func _append_final_grid_tiles(mesh: ImmediateMesh, step: DungeonGeneratorDebugSt
 			var tile_id: int = step.grid[tile_index]
 			if tile_id != DungeonBuilderConstants.TILE_WALL and tile_id != DungeonBuilderConstants.TILE_FLOOR and tile_id != DungeonBuilderConstants.TILE_CORRIDOR and tile_id != DungeonBuilderConstants.TILE_DOOR:
 				continue
-			var tile_color: Color = _resolve_tile_color(tile_id)
 			var world_cell: Vector2i = Vector2i(grid_x, grid_y)
+			var tile_color: Color = _resolve_tile_color(tile_id)
+			if tile_id == DungeonBuilderConstants.TILE_CORRIDOR:
+				tile_color = _resolve_corridor_width_debug_color(step.grid, step.grid_width, step.grid_height, world_cell)
 			_append_rect_outline(mesh, Rect2i(world_cell, Vector2i.ONE), tile_color, y)
 
 # Returns true when the debug step carries a snapped carved grid payload.
@@ -429,6 +434,59 @@ func _resolve_tile_color(tile_id: int) -> Color:
 	if tile_id == DungeonBuilderConstants.TILE_DOOR:
 		return TILE_DOOR_COLOR
 	return CELL_FADED_COLOR
+
+# Resolves debug color for a corridor tile by estimated local width (1-3 cells).
+func _resolve_corridor_width_debug_color(grid: PackedInt32Array, width: int, height: int, cell: Vector2i) -> Color:
+	var corridor_width: int = _resolve_corridor_visual_width(grid, width, height, cell)
+	match corridor_width:
+		1:
+			return TILE_CORRIDOR_WIDTH_1_COLOR
+		2:
+			return TILE_CORRIDOR_WIDTH_2_COLOR
+		3:
+			return TILE_CORRIDOR_WIDTH_3_COLOR
+		_:
+			return TILE_CORRIDOR_COLOR
+
+# Estimates corridor width using cross-span against dominant local axis.
+func _resolve_corridor_visual_width(grid: PackedInt32Array, width: int, height: int, cell: Vector2i) -> int:
+	if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= height:
+		return 1
+	var horizontal_span: int = _measure_corridor_span(grid, width, height, cell, Vector2i(1, 0))
+	var vertical_span: int = _measure_corridor_span(grid, width, height, cell, Vector2i(0, 1))
+	var resolved_width: int = 1
+	if horizontal_span > vertical_span:
+		resolved_width = vertical_span
+	elif vertical_span > horizontal_span:
+		resolved_width = horizontal_span
+	else:
+		resolved_width = maxi(horizontal_span, vertical_span)
+	return clampi(resolved_width, 1, 3)
+
+# Measures contiguous corridor-like cells from center along one axis in both directions.
+func _measure_corridor_span(grid: PackedInt32Array, width: int, height: int, center: Vector2i, axis: Vector2i) -> int:
+	var span: int = 1
+	for sign in [-1, 1]:
+		var cursor: Vector2i = center + (axis * sign)
+		while cursor.x >= 0 and cursor.y >= 0 and cursor.x < width and cursor.y < height:
+			if not _is_corridor_like_debug_tile(_read_debug_tile(grid, width, height, cursor)):
+				break
+			span += 1
+			cursor += axis * sign
+	return span
+
+# Returns tile id with wall fallback for invalid debug-grid reads.
+func _read_debug_tile(grid: PackedInt32Array, width: int, height: int, cell: Vector2i) -> int:
+	if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= height:
+		return DungeonBuilderConstants.TILE_WALL
+	var tile_index: int = cell.y * width + cell.x
+	if tile_index < 0 or tile_index >= grid.size():
+		return DungeonBuilderConstants.TILE_WALL
+	return grid[tile_index]
+
+# Returns true when a tile should count toward corridor width in debug visualization.
+func _is_corridor_like_debug_tile(tile_id: int) -> bool:
+	return tile_id == DungeonBuilderConstants.TILE_CORRIDOR or tile_id == DungeonBuilderConstants.TILE_DOOR
 
 # Returns final generated layout payload when the timeline provides one.
 func _resolve_final_layout() -> DungeonLayoutData:

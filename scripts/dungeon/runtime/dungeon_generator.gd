@@ -3,6 +3,8 @@ extends RefCounted
 class_name DungeonGenerator
 
 # Relation: Driven by DungeonFloorController and delegates graph work to DungeonGraph.
+const MIN_CORRIDOR_WIDTH: int = 1
+const MAX_CORRIDOR_WIDTH: int = 3
 
 # Runs the full generation pipeline and returns layout, markers, patrol graph, and stats.
 func generate(
@@ -323,8 +325,87 @@ func _carve_orthogonal_a_star_corridor_between_doors(
 		return path
 	for i in range(1, path.size() - 1):
 		var cell: Vector2i = path[i]
-		_set_tile(grid, width, cell.x, cell.y, DungeonBuilderConstants.TILE_CORRIDOR)
+		var prev_cell: Vector2i = path[i - 1]
+		var next_cell: Vector2i = path[i + 1]
+		_carve_corridor_cell_with_width(grid, width, height, cell, prev_cell, next_cell, room_wall_block_mask)
 	return path
+
+# Carves one corridor path cell and expands it sideways up to max corridor width when space allows.
+func _carve_corridor_cell_with_width(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	cell: Vector2i,
+	prev_cell: Vector2i,
+	next_cell: Vector2i,
+	room_wall_block_mask: PackedByteArray
+) -> void:
+	_carve_corridor_tile_if_allowed(grid, width, height, cell, room_wall_block_mask)
+	if MAX_CORRIDOR_WIDTH <= MIN_CORRIDOR_WIDTH:
+		return
+
+	var travel_dir: Vector2i = _resolve_corridor_travel_direction(cell, prev_cell, next_cell)
+	if travel_dir == Vector2i.ZERO:
+		return
+
+	var lateral_offset: Vector2i = Vector2i(-travel_dir.y, travel_dir.x)
+	if lateral_offset == Vector2i.ZERO:
+		return
+
+	var can_expand_positive: bool = _is_corridor_cell_expandable(cell + lateral_offset, width, height, grid, room_wall_block_mask)
+	var can_expand_negative: bool = _is_corridor_cell_expandable(cell - lateral_offset, width, height, grid, room_wall_block_mask)
+	if can_expand_positive:
+		_carve_corridor_tile_if_allowed(grid, width, height, cell + lateral_offset, room_wall_block_mask)
+	if can_expand_negative:
+		_carve_corridor_tile_if_allowed(grid, width, height, cell - lateral_offset, room_wall_block_mask)
+
+# Resolves the primary travel direction around one path cell using adjacent path points.
+func _resolve_corridor_travel_direction(cell: Vector2i, prev_cell: Vector2i, next_cell: Vector2i) -> Vector2i:
+	var outgoing: Vector2i = next_cell - cell
+	if outgoing != Vector2i.ZERO:
+		if outgoing.x != 0:
+			return Vector2i(signi(outgoing.x), 0)
+		if outgoing.y != 0:
+			return Vector2i(0, signi(outgoing.y))
+	var incoming: Vector2i = cell - prev_cell
+	if incoming.x != 0:
+		return Vector2i(signi(incoming.x), 0)
+	if incoming.y != 0:
+		return Vector2i(0, signi(incoming.y))
+	return Vector2i.ZERO
+
+# Returns true when a cell can be used by corridor widening logic.
+func _is_corridor_cell_expandable(
+	cell: Vector2i,
+	width: int,
+	height: int,
+	grid: PackedInt32Array,
+	room_wall_block_mask: PackedByteArray
+) -> bool:
+	if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= height:
+		return false
+	if cell.x == 0 or cell.y == 0 or cell.x == width - 1 or cell.y == height - 1:
+		return false
+	var block_index: int = cell.y * width + cell.x
+	if block_index >= 0 and block_index < room_wall_block_mask.size() and room_wall_block_mask[block_index] == 1:
+		return false
+	var tile: int = _get_tile(grid, width, cell.x, cell.y)
+	return tile == DungeonBuilderConstants.TILE_WALL or tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
+
+# Writes one widened corridor tile while preserving room floors and door markers.
+func _carve_corridor_tile_if_allowed(
+	grid: PackedInt32Array,
+	width: int,
+	height: int,
+	cell: Vector2i,
+	room_wall_block_mask: PackedByteArray
+) -> void:
+	if not _is_corridor_cell_expandable(cell, width, height, grid, room_wall_block_mask):
+		return
+	var existing_tile: int = _get_tile(grid, width, cell.x, cell.y)
+	if existing_tile == DungeonBuilderConstants.TILE_DOOR:
+		return
+	_set_tile(grid, width, cell.x, cell.y, DungeonBuilderConstants.TILE_CORRIDOR)
 
 # Re-adds previously discarded standard cells when carved corridors traverse their bounds.
 func _reclaim_discarded_standard_rooms_after_corridors(

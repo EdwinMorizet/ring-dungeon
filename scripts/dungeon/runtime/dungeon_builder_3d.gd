@@ -32,23 +32,19 @@ func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig
 	root.add_child(wall_parent)
 	_assign_owner(wall_parent, editor_owner)
 
-	var floor_mesh := BoxMesh.new()
-	floor_mesh.size = Vector3(tile_size, 0.1, tile_size)
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(tile_size, wall_height, tile_size)
 
-	#var floor_material := StandardMaterial3D.new()
 	var floor_material := DungeonBuilderConstants.floorMat
 	floor_material.albedo_color = Color(0.28, 0.25, 0.2)
-	floor_mesh.material = floor_material
 
-	#var wall_material := StandardMaterial3D.new()
 	var wall_material := DungeonBuilderConstants.wallMat
 	wall_material.albedo_color = Color(0.42, 0.42, 0.45)
 	wall_mesh.material = wall_material
 
-	var floor_transforms: Array[Transform3D] = []
 	var wall_transforms: Array[Transform3D] = []
+	var corridor_floor_mask := PackedByteArray()
+	corridor_floor_mask.resize(width * height)
 	var wall_collision_mask := PackedByteArray()
 	wall_collision_mask.resize(width * height)
 
@@ -57,10 +53,9 @@ func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig
 			var idx := y * width + x
 			if idx < 0 or idx >= grid.size():
 				continue
-			if _is_walkable_tile(grid[idx]):
-				floor_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, tile_size * 0.5)))
-				# No per-tile floor collider
-			else:
+			if _is_corridor_floor_tile(grid[idx]):
+				corridor_floor_mask[idx] = 1
+			if not _is_walkable_tile(grid[idx]):
 				if _has_floor_neighbor(grid, width, height, x, y):
 					wall_transforms.append(Transform3D(Basis.IDENTITY, _tile_to_world(float(x) + grid_offset.x, float(y) + grid_offset.y, tile_size, wall_height * 0.5)))
 					wall_collision_mask[idx] = 1
@@ -94,11 +89,13 @@ func build(parent: Node3D, layout: DungeonLayoutData, config: DungeonFloorConfig
 		var size_z = float(max_y - min_y + 1) * tile_size
 		var center_x = (float(min_x + max_x) * 0.5 + grid_offset.x) * tile_size
 		var center_z = (float(min_y + max_y) * 0.5 + grid_offset.y) * tile_size
-		var center_y = tile_size * 0.5
-		_spawn_single_floor_collider(floor_parent, Vector3(size_x, tile_size, size_z), Vector3(center_x, center_y, center_z), editor_owner)
+		var floor_collider_height: float = 0.1
+		var center_y: float = floor_collider_height * 0.5
+		_spawn_single_floor_collider(floor_parent, Vector3(size_x, floor_collider_height, size_z), Vector3(center_x, center_y, center_z), editor_owner)
 
-	# Spawn tiles and markers
-	_spawn_multimesh_tiles(floor_parent, floor_mesh, floor_transforms, editor_owner, "FloorBatch")
+	# Spawn room floor planes and merged corridor strip planes.
+	_spawn_room_floor_planes(floor_parent, layout.rooms, tile_size, grid_offset, floor_material, editor_owner)
+	_spawn_corridor_floor_planes(floor_parent, corridor_floor_mask, width, height, tile_size, grid_offset, floor_material, editor_owner)
 	_spawn_multimesh_tiles(wall_parent, wall_mesh, wall_transforms, editor_owner, "WallBatch")
 
 	_spawn_room_markers(root, layout, tile_size, editor_owner)
@@ -176,6 +173,82 @@ func _spawn_wall_collider_box(parent: Node3D, box_size: Vector3, center: Vector3
 	parent.add_child(body)
 	_assign_owner(body, editor_owner)
 	_assign_owner(shape, editor_owner)
+
+# Spawns one floor plane per room rect.
+func _spawn_room_floor_planes(parent: Node3D, rooms: Array[DungeonRoomData], tile_size: float, grid_offset: Vector2, floor_material: Material, editor_owner: Node) -> void:
+	for room_index in range(rooms.size()):
+		var room: DungeonRoomData = rooms[room_index]
+		var room_size: Vector2i = room.rect.size
+		if room_size.x <= 0 or room_size.y <= 0:
+			continue
+		var world_size_x: float = float(room_size.x) * tile_size
+		var world_size_z: float = float(room_size.y) * tile_size
+		var center_x: float = (float(room.rect.position.x) + float(room_size.x - 1) * 0.5 + grid_offset.x) * tile_size
+		var center_z: float = (float(room.rect.position.y) + float(room_size.y - 1) * 0.5 + grid_offset.y) * tile_size
+		_spawn_floor_plane(parent, "RoomFloor_%d" % room_index, Vector2(world_size_x, world_size_z), Vector3(center_x, 0.0, center_z), floor_material, editor_owner)
+
+# Spawns corridor floor planes by greedily merging unvisited corridor cells into rectangles.
+func _spawn_corridor_floor_planes(parent: Node3D, corridor_mask: PackedByteArray, width: int, height: int, tile_size: float, grid_offset: Vector2, floor_material: Material, editor_owner: Node) -> void:
+	var visited := PackedByteArray()
+	visited.resize(width * height)
+	var strip_index: int = 0
+
+	for y in height:
+		for x in width:
+			var start_idx: int = y * width + x
+			if corridor_mask[start_idx] == 0 or visited[start_idx] == 1:
+				continue
+
+			var rect_width: int = _corridor_unvisited_run_width(corridor_mask, visited, width, x, y)
+			if rect_width <= 0:
+				continue
+			var rect_height: int = 1
+			while y + rect_height < height:
+				if not _corridor_row_is_fillable(corridor_mask, visited, width, x, y + rect_height, rect_width):
+					break
+				rect_height += 1
+
+			for mark_y in range(y, y + rect_height):
+				for mark_x in range(x, x + rect_width):
+					visited[mark_y * width + mark_x] = 1
+
+			var size_x: float = float(rect_width) * tile_size
+			var size_z: float = float(rect_height) * tile_size
+			var center_x: float = (float(x) + float(rect_width - 1) * 0.5 + grid_offset.x) * tile_size
+			var center_z: float = (float(y) + float(rect_height - 1) * 0.5 + grid_offset.y) * tile_size
+			_spawn_floor_plane(parent, "CorridorFloor_%d" % strip_index, Vector2(size_x, size_z), Vector3(center_x, 0.0, center_z), floor_material, editor_owner)
+			strip_index += 1
+
+# Returns the contiguous unvisited corridor width from a start cell on one row.
+func _corridor_unvisited_run_width(corridor_mask: PackedByteArray, visited: PackedByteArray, width: int, start_x: int, y: int) -> int:
+	var run_width: int = 0
+	while start_x + run_width < width:
+		var idx: int = y * width + (start_x + run_width)
+		if corridor_mask[idx] == 0 or visited[idx] == 1:
+			break
+		run_width += 1
+	return run_width
+
+# Returns true when every cell in the row segment is an unvisited corridor cell.
+func _corridor_row_is_fillable(corridor_mask: PackedByteArray, visited: PackedByteArray, width: int, start_x: int, y: int, segment_width: int) -> bool:
+	for local_x in segment_width:
+		var idx: int = y * width + (start_x + local_x)
+		if corridor_mask[idx] == 0 or visited[idx] == 1:
+			return false
+	return true
+
+# Spawns one zero-thickness visual floor plane.
+func _spawn_floor_plane(parent: Node3D, plane_name: String, plane_size: Vector2, world_position: Vector3, floor_material: Material, editor_owner: Node) -> void:
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = plane_size
+	plane_mesh.material = floor_material
+
+	var instance := MeshInstance3D.new()
+	instance.name = plane_name
+	instance.mesh = plane_mesh
+	instance.position = world_position
+	parent.add_child(instance)
+	_assign_owner(instance, editor_owner)
 
 # Spawns one visible mesh tile instance at grid coordinates.
 func _spawn_tile(parent: Node3D, mesh: Mesh, tile_size: float, center_y: float, x: int, y: int, editor_owner: Node) -> void:
@@ -415,6 +488,10 @@ func _has_floor_neighbor(grid: PackedInt32Array, width: int, height: int, x: int
 # Returns true when a tile should render and collide like floor.
 func _is_walkable_tile(tile: int) -> bool:
 	return tile == DungeonBuilderConstants.TILE_FLOOR or tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
+
+# Returns true when tile should be rendered as corridor strip floor.
+func _is_corridor_floor_tile(tile: int) -> bool:
+	return tile == DungeonBuilderConstants.TILE_CORRIDOR or tile == DungeonBuilderConstants.TILE_DOOR
 
 # Converts grid-space coordinates into world-space position.
 func _tile_to_world(x: float, y: float, tile_size: float, world_y: float) -> Vector3:

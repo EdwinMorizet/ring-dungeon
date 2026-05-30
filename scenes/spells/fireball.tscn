@@ -60,6 +60,7 @@ size = Vector2(0.03, 0.08)
 radius = 0.225
 
 [node name="Fireball" type="RigidBody3D" unique_id=1206540595]
+mass = 0.001
 can_sleep = false
 lock_rotation = true
 continuous_cd = true

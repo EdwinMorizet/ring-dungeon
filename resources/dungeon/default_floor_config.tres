@@ -9,12 +9,13 @@
 
 [resource]
 script = ExtResource("1_2x5xk")
-generation_seed = 1170793423
+generation_seed = 1482059863
 auto_randomize_seed_on_regenerate = true
-cell_count = 25
+cell_count = 6
 special_room_target_count = 4
 special_room_floor_pool_list = ExtResource("2_idk7u")
-spawn_radius = 10.0
+separation_margin = 2
+spawn_radius = 4.0
 loop_percent = 0.2
 room_keep_corridor_overlap_chance = 0.75
 patrol_nodes_per_room_max = 3

@@ -1,36 +1,56 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/runtime/enemy_overhead_hud.gd" id="1_aq8de"]
-
-[sub_resource type="BoxMesh" id="BoxMesh_fill"]
-size = Vector3(1.25, 0.0624, 0.035)
-
-[sub_resource type="BoxMesh" id="BoxMesh_background"]
-size = Vector3(1.25, 0.08, 0.05)
 
 [node name="EnemyOverheadHud" type="Node3D"]
 script = ExtResource("1_aq8de")
 
-[node name="TypeLabel" type="Label3D" parent="."]
+[node name="HudViewport" type="SubViewport" parent="."]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(172, 60)
+render_target_update_mode = 4
+
+[node name="HudCanvas" type="Control" parent="HudViewport"]
+offset_right = 172.0
+offset_bottom = 60.0
+mouse_filter = 2
+
+[node name="TypeLabel" type="Label" parent="HudViewport/HudCanvas"]
+offset_right = 172.0
+offset_bottom = 22.0
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Enemy"
+
+[node name="StateLabel" type="Label" parent="HudViewport/HudCanvas"]
+offset_top = 20.0
+offset_right = 172.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+text = "Idle"
+
+[node name="HealthBarRoot" type="Control" parent="HudViewport/HudCanvas"]
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 156.0
+offset_bottom = 56.0
+mouse_filter = 2
+
+[node name="HealthBarBackground" type="ColorRect" parent="HudViewport/HudCanvas/HealthBarRoot"]
+offset_right = 140.0
+offset_bottom = 10.0
+color = Color(0.12, 0.12, 0.14, 0.95)
+
+[node name="HealthBarFill" type="ColorRect" parent="HudViewport/HudCanvas/HealthBarRoot"]
+offset_left = 1.0
+offset_top = 1.0
+offset_right = 139.0
+offset_bottom = 9.0
+color = Color(0.27, 0.86, 0.36, 1)
+
+[node name="HudSprite" type="Sprite3D" parent="."]
 billboard = 1
+pixel_size = 0.0073
 no_depth_test = true
-font_size = 44
-outline_size = 10
-modulate = Color(1, 0.95, 0.82, 1)
-
-[node name="StateLabel" type="Label3D" parent="."]
-position = Vector3(0, -0.28, 0)
-billboard = 1
-no_depth_test = true
-font_size = 32
-outline_size = 8
-modulate = Color(0.72, 0.88, 1, 1)
-
-[node name="HealthBarRoot" type="Node3D" parent="."]
-position = Vector3(0, -0.52, 0)
-
-[node name="HealthBarBackground" type="MeshInstance3D" parent="HealthBarRoot"]
-mesh = SubResource("BoxMesh_background")
-
-[node name="HealthBarFill" type="MeshInstance3D" parent="HealthBarRoot"]
-mesh = SubResource("BoxMesh_fill")
