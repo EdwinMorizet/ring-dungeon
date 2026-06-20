@@ -17,7 +17,7 @@ signal equipment_changed()
 
 # Active parameter resource for this autoload manager.
 var _config: InventoryManagerConfig = DefaultInventoryManagerConfig
-var _is_inventory_open: bool = false
+var is_inventory_open: bool = false
 var _left_hand_slots: Array[InventoryItemDefinition] = []
 var _right_hand_slots: Array[InventoryItemDefinition] = []
 var _world_items: Array[InventoryWorldItem] = []
@@ -26,43 +26,36 @@ var _player: Node3D = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _drop_counter: int = 0
 
-func set_config(config: InventoryManagerConfig) -> void:
-	if config != null:
-		_config = config
-
-func reset_default_config() -> void:
-	_config = DefaultInventoryManagerConfig
-
+# Godot Methods
 func _ready() -> void:
 	_rng.randomize()
 	_left_hand_slots = _create_empty_slots(maxi(_config.left_hand_slot_count, 0))
 	_right_hand_slots = _create_empty_slots(maxi(_config.right_hand_slot_count, 0))
 
 func _process(_delta: float) -> void:
-	_refresh_player_reference()
 	_refresh_nearby_items()
 
-func is_inventory_open() -> bool:
-	return _is_inventory_open
-
+# Opening/Closing
 func open_inventory() -> void:
-	if _is_inventory_open:
+	if is_inventory_open:
 		return
-	_is_inventory_open = true
-	inventory_open_changed.emit(_is_inventory_open)
+	is_inventory_open = true
+	inventory_open_changed.emit(is_inventory_open)
 
 func close_inventory() -> void:
-	if not _is_inventory_open:
+	if not is_inventory_open:
 		return
-	_is_inventory_open = false
-	inventory_open_changed.emit(_is_inventory_open)
+	is_inventory_open = false
+	inventory_open_changed.emit(is_inventory_open)
 
 func toggle_inventory() -> void:
-	if _is_inventory_open:
+	if is_inventory_open:
 		close_inventory()
 	else:
 		open_inventory()
 
+
+# ??
 func get_left_hand_slots() -> Array[InventoryItemDefinition]:
 	return _left_hand_slots.duplicate()
 
@@ -71,6 +64,8 @@ func get_right_hand_slots() -> Array[InventoryItemDefinition]:
 
 func get_nearby_items() -> Array[InventoryWorldItem]:
 	return _nearby_items.duplicate()
+
+
 
 func get_equipped_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int) -> InventoryItemDefinition:
 	var slots: Array[InventoryItemDefinition] = _get_slot_array(slot_kind)
@@ -172,7 +167,7 @@ func sell_equipped_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index:
 		return 0
 	var sale_value: int = maxi(item_definition.gold_value, 1)
 	slots[slot_index] = null
-	add_player_gold(sale_value)
+	PlayerManager.add_gold(sale_value)
 	inventory_changed.emit()
 	equipment_changed.emit()
 	return sale_value
@@ -187,7 +182,7 @@ func sell_world_item(world_item: InventoryWorldItem) -> int:
 	var sale_value: int = maxi(world_item.item_definition.gold_value, 1)
 	_unregister_world_item(world_item)
 	world_item.queue_free()
-	add_player_gold(sale_value)
+	PlayerManager.add_gold(sale_value)
 	return sale_value
 
 func reroll_equipped_item(slot_kind: InventoryItemDefinition.ItemKind, slot_index: int, floor_depth: int = -1) -> bool:
@@ -296,40 +291,45 @@ func spawn_gold_pickup(amount: int, spawn_position: Vector3, parent_node: Node =
 func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node = null) -> Node3D:
 	return spawn_currency_pickup(CURRENCY_KIND_GEMS, amount, spawn_position, parent_node)
 
-func add_player_gold(amount: int) -> int:
-	var added: int = int(PlayerManager.add_gold(maxi(amount, 0)))
-	inventory_changed.emit()
-	return added
 
-func add_player_gems(amount: int) -> int:
-	var added: int = int(PlayerManager.add_gems(maxi(amount, 0)))
-	inventory_changed.emit()
-	return added
 
-func get_player_gold() -> int:
-	return PlayerManager.gold
+# Magic Projectil
+func _get_magic_projectil_mult(definition_key: StringName) -> float:
+	var multiplier: float = 1.0
+	for item_definition: InventoryItemDefinition in  _left_hand_slots + _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
+			multiplier *= max(item_definition.get_modifier_float(definition_key, 1.0), 0.0)
+	return multiplier
 
-func get_player_gems() -> int:
-	return PlayerManager.gems
+func _get_magic_projectil_chance(definition_key: StringName) -> float:
+	var bonus: float = 0.0
+	for item_definition: InventoryItemDefinition in _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
+			bonus += item_definition.get_modifier_float(definition_key, 0.0)
+	return clampf(bonus, 0.0, 1.0)
 
 func get_fireball_damage_multiplier() -> float:
-	var multiplier: float = 1.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"damage_mult", 1.0), 0.0)
-	return multiplier
+	return _get_magic_projectil_mult(&"damage_mult")
 
 func get_fireball_projectile_speed_multiplier() -> float:
-	var multiplier: float = 1.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"proj_speed_mult", 1.0), 0.0)
-	return multiplier
+	return _get_magic_projectil_mult(&"proj_speed_mult")
+	
+func get_fireball_mana_cost_multiplier() -> float:
+	return _get_magic_projectil_mult(&"mana_cost_mult")
+	
+func get_fireball_cast_delay_multiplier() -> float:
+	return _get_magic_projectil_mult(&"cast_delay_mult")
+
+func get_fireball_bounce_chance() -> float:
+	return _get_magic_projectil_chance(&"bounce_chance")
+
+func get_fireball_pierce_chance() -> float:
+	return _get_magic_projectil_chance(&"pierce_chance")
 
 func has_fireball_gravity_trait() -> bool:
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			if item_definition.get_modifier_int(RingBandConstants.GRAVITY_TRAIT_MARKER_KEY, 0) > 0:
+	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
+			if item_definition.get_modifier_int(&"gravity_trait_enabled", 0) > 0:
 				return true
 	return false
 
@@ -348,55 +348,33 @@ func get_fireball_gravity_profile() -> Dictionary:
 		"angular_damp": RingBandConstants.GRAVITY_TRAIT_PROFILE_ANGULAR_DAMP,
 	}
 
-func get_fireball_mana_cost_multiplier() -> float:
-	var multiplier: float = 1.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"mana_cost_mult", 1.0), 0.0)
-	return multiplier
-
-func get_fireball_cast_delay_multiplier() -> float:
-	var multiplier: float = 1.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"cast_delay_mult", 1.0), 0.0)
-	return multiplier
-
 func get_fireball_accuracy_deviation_flat() -> float:
 	var modifier: float = 0.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
+	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
 			modifier += item_definition.get_modifier_float(&"accuracy_deviation_flat", 0.0)
 	return modifier
 
-func get_fireball_bounce_chance() -> float:
-	var bonus: float = 0.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"bounce_chance", 0.0)
-	return clampf(bonus, 0.0, RingBandConstants.MAX_BOUNCE_CHANCE)
-
 func get_fireball_split_bonus() -> int:
 	var bonus: int = 0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
+	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
 			bonus += item_definition.get_modifier_int(&"split_flat", 0)
 	return bonus
 
 func get_fireball_aoe_bonus() -> float:
 	var bonus: float = 0.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
+	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
+		if item_definition != null and item_definition.is_ring():
 			bonus += item_definition.get_modifier_float(&"aoe_radius_flat", 0.0)
 	return bonus
 
-func get_fireball_pierce_chance() -> float:
-	var bonus: float = 0.0
-	for item_definition: InventoryItemDefinition in _right_hand_slots:
-		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"pierce_chance", 0.0)
-	return clampf(bonus, 0.0, RingBandConstants.MAX_PIERCE_CHANCE)
+func get_fireball_accuracy_bonus() -> float:
+	return -get_fireball_accuracy_deviation_flat()
 
+
+
+# Defend Spells
 func get_band_max_hp_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
@@ -460,26 +438,7 @@ func get_band_active_speed_bonus() -> float:
 			bonus += item_definition.get_modifier_float(&"active_speed_mult_flat", 0.0)
 	return bonus
 
-func get_fireball_speed_multiplier() -> float:
-	return get_fireball_projectile_speed_multiplier()
 
-func get_fireball_accuracy_bonus() -> float:
-	return -get_fireball_accuracy_deviation_flat()
-
-func _refresh_player_reference() -> void:
-	if _player != null and is_instance_valid(_player):
-		return
-	var manager_player: Node = PlayerManager.get_player_node()
-	if manager_player is Node3D:
-		_player = manager_player as Node3D
-		return
-	_player = null
-
-func _resolve_player_node() -> Node:
-	_refresh_player_reference()
-	if _player != null and is_instance_valid(_player):
-		return _player
-	return null
 
 func _refresh_nearby_items() -> void:
 	_prune_invalid_world_items()
@@ -610,121 +569,6 @@ func _build_drop_seed(spawn_position: Vector3, floor_depth: int, floor_seed: int
 	if combined == 0:
 		combined = 1
 	return abs(combined)
-
-func debug_spawn_seeded_items(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
-	var spawn_count: int = maxi(count, 0)
-	if spawn_count <= 0:
-		return
-	var center: Vector3 = _get_player_spawn_position()
-	for index: int in spawn_count:
-		var local_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-		local_rng.seed = _build_drop_seed(center + Vector3(float(index), 0.0, 0.0), floor_depth, floor_seed + index)
-		var angle: float = TAU * float(index) / max(float(spawn_count), 1.0)
-		var offset: Vector3 = Vector3(cos(angle), 0.0, sin(angle)) * max(radius, 0.2)
-		var spawn_position: Vector3 = center + offset + Vector3.UP * 0.6
-		var item_definition: InventoryItemDefinition = _create_random_item_definition(floor_depth, local_rng)
-		spawn_world_item(item_definition, spawn_position)
-
-func debug_spawn_seeded_gold(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
-	_debug_spawn_seeded_currency(CURRENCY_KIND_GOLD, count, floor_depth, floor_seed, radius)
-
-func debug_spawn_seeded_gems(count: int, floor_depth: int = 0, floor_seed: int = 1, radius: float = 2.0) -> void:
-	_debug_spawn_seeded_currency(CURRENCY_KIND_GEMS, count, floor_depth, floor_seed, radius)
-
-func debug_print_equipped_modifier_summary() -> void:
-	var lines: Array[String] = []
-	lines.append("[RingsBands] Equipped Summary")
-	for index: int in _right_hand_slots.size():
-		var ring: InventoryItemDefinition = _right_hand_slots[index]
-		if ring == null:
-			lines.append("Ring %d: Empty" % (index + 1))
-			continue
-		lines.append("Ring %d: %s [%s]" % [index + 1, ring.display_name, ring.get_rarity_label()])
-	for index: int in _left_hand_slots.size():
-		var band: InventoryItemDefinition = _left_hand_slots[index]
-		if band == null:
-			lines.append("Band %d: Empty" % (index + 1))
-			continue
-		lines.append("Band %d: %s [%s]" % [index + 1, band.display_name, band.get_rarity_label()])
-	lines.append("Aggregates")
-	lines.append("damage_mult=%.3f" % get_fireball_damage_multiplier())
-	lines.append("mana_cost_mult=%.3f" % get_fireball_mana_cost_multiplier())
-	lines.append("proj_speed_mult=%.3f" % get_fireball_projectile_speed_multiplier())
-	var gravity_profile: Dictionary = get_fireball_gravity_profile()
-	lines.append("gravity_trait_active=%s" % String(gravity_profile.get("active", false)))
-	lines.append("gravity_trait_gravity_influence=%.3f" % float(gravity_profile.get("gravity_influence", 0.0)))
-	lines.append("gravity_trait_linear_damp=%.3f" % float(gravity_profile.get("linear_damp", 0.0)))
-	lines.append("gravity_trait_angular_damp=%.3f" % float(gravity_profile.get("angular_damp", 0.0)))
-	lines.append("cast_delay_mult=%.3f" % get_fireball_cast_delay_multiplier())
-	lines.append("accuracy_deviation_flat=%+.3f" % get_fireball_accuracy_deviation_flat())
-	lines.append("bounce_chance=%.2f" % get_fireball_bounce_chance())
-	lines.append("split_flat=%d" % get_fireball_split_bonus())
-	lines.append("pierce_chance=%.2f" % get_fireball_pierce_chance())
-	lines.append("aoe_radius_flat=%+.3f" % get_fireball_aoe_bonus())
-	lines.append("max_hp_flat=%+.1f" % get_band_max_hp_bonus())
-	lines.append("max_mp_flat=%+.1f" % get_band_max_mp_bonus())
-	lines.append("mana_regen_flat=%+.1f" % get_mana_regen_bonus())
-	lines.append("max_ap_slots=%+d" % get_band_max_ap_slots_bonus())
-	lines.append("speed_mult=%.3f" % get_band_speed_multiplier())
-	lines.append("active_heal_power_flat=%+.2f" % get_band_active_heal_power_bonus())
-	lines.append("active_shield_fill_rate_flat=%+.2f" % get_band_active_shield_fill_rate_bonus())
-	lines.append("active_speed_mult_flat=%+.2f" % get_band_active_speed_bonus())
-	print("\n".join(lines))
-
-func debug_run_quick_validation(floor_depth: int = 0, floor_seed: int = 1337) -> void:
-	clear_world_items()
-	debug_spawn_seeded_items(8, floor_depth, floor_seed, 2.2)
-	_refresh_player_reference()
-	_refresh_nearby_items()
-
-	var rarity_counts: Dictionary = {
-		"Common": 0,
-		"Rare": 0,
-		"Epic": 0,
-		"Legendary": 0,
-	}
-	var preview_lines: Array[String] = []
-	for world_item: InventoryWorldItem in _world_items:
-		if world_item == null or not is_instance_valid(world_item):
-			continue
-		var definition: InventoryItemDefinition = world_item.item_definition
-		if definition == null:
-			continue
-		var rarity_label: String = definition.get_rarity_label()
-		rarity_counts[rarity_label] = int(rarity_counts.get(rarity_label, 0)) + 1
-		if preview_lines.size() < 4:
-			preview_lines.append("%s [%s]" % [definition.display_name, rarity_label])
-
-	var lines: Array[String] = []
-	lines.append("[RingsBands] Quick Validation")
-	lines.append("seed=%d depth=%d" % [floor_seed, floor_depth])
-	lines.append("world_items=%d nearby_items=%d" % [_world_items.size(), _nearby_items.size()])
-	lines.append("rarity_counts: Common=%d Rare=%d Epic=%d Legendary=%d" % [
-		int(rarity_counts.get("Common", 0)),
-		int(rarity_counts.get("Rare", 0)),
-		int(rarity_counts.get("Epic", 0)),
-		int(rarity_counts.get("Legendary", 0)),
-	])
-	if preview_lines.is_empty():
-		lines.append("preview: none")
-	else:
-		lines.append("preview: %s" % " | ".join(preview_lines))
-	print("\n".join(lines))
-	debug_print_equipped_modifier_summary()
-
-func _debug_spawn_seeded_currency(currency_kind: int, count: int, floor_depth: int, floor_seed: int, radius: float) -> void:
-	var spawn_count: int = maxi(count, 0)
-	if spawn_count <= 0:
-		return
-	var center: Vector3 = _get_player_spawn_position()
-	for index: int in spawn_count:
-		var local_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-		local_rng.seed = _build_drop_seed(center + Vector3(float(index), 0.0, 0.0), floor_depth, floor_seed + index)
-		var angle: float = TAU * float(index) / max(float(spawn_count), 1.0)
-		var offset: Vector3 = Vector3(cos(angle), 0.0, sin(angle)) * max(radius, 0.2)
-		var spawn_position: Vector3 = center + offset + Vector3.UP * 0.4
-		var amount: int = _roll_currency_amount(currency_kind, floor_depth, local_rng)
-		spawn_currency_pickup(currency_kind, amount, spawn_position)
 
 func _roll_currency_amount(currency_kind: int, floor_depth: int, rng: RandomNumberGenerator) -> int:
 	var safe_depth: int = maxi(floor_depth, 0)

@@ -5,7 +5,7 @@ class_name FireballConfig
 # Projectile travel speed in world units per second.
 @export var speed: float = 30.0
 # Gravity multiplier applied to projectile arc simulation.
-@export var gravity_influence: float = 0.2
+@export var gravity_influence: float = 0
 # Linear damping applied to projectile rigidbody motion.
 @export var linear_damp: float = 0.0
 # Angular damping applied to projectile rigidbody rotation.
@@ -17,7 +17,7 @@ class_name FireballConfig
 # Number of extra split projectiles emitted per cast.
 @export var split_count: int = 0
 # Base area-of-effect radius used by explosion handling.
-@export var aoe: float = 2.5
+@export var aoe: float = 0
 # Base hit damage before equipment multipliers are applied.
 @export var damage: int = 20
 # Visual/physics size scalar used by projectile scene.

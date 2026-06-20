@@ -5,64 +5,18 @@ const PlayerFpsControllerScript = preload("res://scripts/player/player_fps_contr
 # Default parameter resource for lock ids and startup tuning.
 const DefaultPlayerManagerConfig: PlayerManagerConfig = preload("res://resources/player/default_player_manager_config.tres")
 
-class InputLockEntry extends RefCounted:
-	var lock_id: StringName = StringName()
-	var count: int = 0
-
-	func _init(value_lock_id: StringName = StringName(), value_count: int = 0) -> void:
-		lock_id = value_lock_id
-		count = maxi(value_count, 0)
-
-class InputLockTracker extends RefCounted:
-	var _entries: Array[InputLockEntry] = []
-
-	func push(lock_id: StringName) -> void:
-		if lock_id == StringName():
-			return
-		var existing: InputLockEntry = _find_entry(lock_id)
-		if existing != null:
-			existing.count += 1
-			return
-		_entries.append(InputLockEntry.new(lock_id, 1))
-
-	func pop(lock_id: StringName) -> void:
-		for index in range(_entries.size() - 1, -1, -1):
-			var entry: InputLockEntry = _entries[index]
-			if entry.lock_id != lock_id:
-				continue
-			entry.count -= 1
-			if entry.count <= 0:
-				_entries.remove_at(index)
-			return
-
-	func clear() -> void:
-		_entries.clear()
-
-	func is_empty() -> bool:
-		return _entries.is_empty()
-
-	func _find_entry(lock_id: StringName) -> InputLockEntry:
-		for entry in _entries:
-			if entry.lock_id == lock_id:
-				return entry
-		return null
-
-signal player_bound(player: Node3D)
+signal player_bound(player: PlayerFpsControllerScript)
 signal player_unbound()
-signal controls_changed(enabled: bool)
 signal currency_changed(gold: int, gems: int)
 
 # Active parameter resource for this autoload manager.
 var _config: PlayerManagerConfig = DefaultPlayerManagerConfig
-var _player: Node3D = null
-var _controls_forced_enabled: bool = true
-var _input_locks: InputLockTracker = InputLockTracker.new()
+var _player: PlayerFpsControllerScript = null
 var _gold: int = 0
 var _gems: int = 0
 var _inventory_lock_active: bool = false
 
 # Runtime state: player combat/resources and frame-to-frame ability/input tracking.
-var pitch_radians: float = 0.0
 var current_health: float = 100.0
 var effective_max_health: float = 100.0
 var current_mana: float = 100.0
@@ -81,132 +35,118 @@ var left_press_elapsed: float = 0.0
 var right_press_elapsed: float = 0.0
 var left_was_down: bool = false
 var right_was_down: bool = false
-var left_long_triggered: bool = false
 var right_long_triggered: bool = false
 var controls_enabled: bool = true
-
-# Config group: startup/control defaults.
-var controls_forced_enabled_by_default: bool:
-	get:
-		return _get_config_or_default().controls_forced_enabled_by_default
-
-var inventory_lock_id: StringName:
-	get:
-		return _get_config_or_default().inventory_lock_id
 
 # Config group: movement/look tuning.
 var walk_speed: float:
 	get:
-		return _get_config_or_default().walk_speed
+		return _config.walk_speed
 
 var sprint_speed: float:
 	get:
-		return _get_config_or_default().sprint_speed
+		return _config.sprint_speed
 
 var acceleration: float:
 	get:
-		return _get_config_or_default().acceleration
+		return _config.acceleration
 
 var deceleration: float:
 	get:
-		return _get_config_or_default().deceleration
+		return _config.deceleration
 
 var gravity: float:
 	get:
-		return _get_config_or_default().gravity
+		return _config.gravity
 
 var mouse_sensitivity: float:
 	get:
-		return _get_config_or_default().mouse_sensitivity
+		return _config.mouse_sensitivity
 
 var pitch_min_degrees: float:
 	get:
-		return _get_config_or_default().pitch_min_degrees
+		return _config.pitch_min_degrees
 
 var pitch_max_degrees: float:
 	get:
-		return _get_config_or_default().pitch_max_degrees
+		return _config.pitch_max_degrees
 
 var walk_fov: float:
 	get:
-		return _get_config_or_default().walk_fov
+		return _config.walk_fov
 
 var sprint_fov: float:
 	get:
-		return _get_config_or_default().sprint_fov
+		return _config.sprint_fov
 
 var fov_lerp_speed: float:
 	get:
-		return _get_config_or_default().fov_lerp_speed
+		return _config.fov_lerp_speed
 
 # Config group: base resources and active ability tuning.
 var base_max_mana: float:
 	get:
-		return _get_config_or_default().base_max_mana
+		return _config.base_max_mana
 
 var base_mana_regen: float:
 	get:
-		return _get_config_or_default().base_mana_regen
+		return _config.base_mana_regen
 
 var base_cast_cooldown_seconds: float:
 	get:
-		return _get_config_or_default().base_cast_cooldown_seconds
+		return _config.base_cast_cooldown_seconds
 
 var base_max_health: float:
 	get:
-		return _get_config_or_default().base_max_health
+		return _config.base_max_health
 
 var base_max_ap_slots: int:
 	get:
-		return _get_config_or_default().base_max_ap_slots
-
-var left_long_press_threshold_seconds: float:
-	get:
-		return _get_config_or_default().left_long_press_threshold_seconds
+		return _config.base_max_ap_slots
 
 var right_long_press_threshold_seconds: float:
 	get:
-		return _get_config_or_default().right_long_press_threshold_seconds
+		return _config.right_long_press_threshold_seconds
 
 var active_heal_base_hp_per_second: float:
 	get:
-		return _get_config_or_default().active_heal_base_hp_per_second
+		return _config.active_heal_base_hp_per_second
 
 var active_heal_base_mana_per_second: float:
 	get:
-		return _get_config_or_default().active_heal_base_mana_per_second
+		return _config.active_heal_base_mana_per_second
 
 var active_heal_cooldown_seconds: float:
 	get:
-		return _get_config_or_default().active_heal_cooldown_seconds
+		return _config.active_heal_cooldown_seconds
 
 var active_shield_base_fills_per_second: float:
 	get:
-		return _get_config_or_default().active_shield_base_fills_per_second
+		return _config.active_shield_base_fills_per_second
 
 var active_shield_mana_per_slot: float:
 	get:
-		return _get_config_or_default().active_shield_mana_per_slot
+		return _config.active_shield_mana_per_slot
 
 var active_shield_cooldown_seconds: float:
 	get:
-		return _get_config_or_default().active_shield_cooldown_seconds
+		return _config.active_shield_cooldown_seconds
 
 var active_speed_base_bonus_mult: float:
 	get:
-		return _get_config_or_default().active_speed_base_bonus_mult
+		return _config.active_speed_base_bonus_mult
 
 var active_speed_duration_seconds: float:
 	get:
-		return _get_config_or_default().active_speed_duration_seconds
+		return _config.active_speed_duration_seconds
 
 var active_speed_mana_cost: float:
 	get:
-		return _get_config_or_default().active_speed_mana_cost
+		return _config.active_speed_mana_cost
 
 var active_speed_cooldown_seconds: float:
 	get:
-		return _get_config_or_default().active_speed_cooldown_seconds
+		return _config.active_speed_cooldown_seconds
 
 # Runtime group: derived read models for UI and systems.
 var max_health: float:
@@ -250,85 +190,9 @@ var gems: int:
 	get:
 		return _gems
 
-func set_config(config: PlayerManagerConfig) -> void:
-	if config != null:
-		_config = config
 
-func reset_default_config() -> void:
-	_config = DefaultPlayerManagerConfig
-
-func _ready() -> void:
-	_controls_forced_enabled = controls_forced_enabled_by_default
-	reset_runtime_state()
-	_connect_inventory_lock_signal()
-	sync_inventory_lock_state()
-	_apply_controls_state()
-
-func _exit_tree() -> void:
-	_disconnect_inventory_lock_signal()
-
-func register_player(player: Node3D) -> void:
-	if player == null or not is_instance_valid(player):
-		return
-	if _player == player:
-		_apply_controls_state()
-		return
-	_player = player
-	player_bound.emit(player)
-	_apply_controls_state()
-
-func unregister_player(player: Node3D = null) -> void:
-	if _player == null:
-		return
-	if player != null and _player != player:
-		return
-	_player = null
-	player_unbound.emit()
-
-func has_live_player() -> bool:
-	return _resolve_player() != null
-
-func get_player_node() -> Node3D:
-	return _resolve_player()
-
-func is_player_node(node: Node) -> bool:
-	if node == null:
-		return false
-	var player: Node3D = _resolve_player()
-	return player != null and node == player
-
-func get_player_position() -> Vector3:
-	var player: Node3D = _resolve_player()
-	if player == null:
-		return Vector3.ZERO
-	return player.global_position
-
-func set_controls_enabled(enabled: bool) -> void:
-	var next_enabled: bool = enabled
-	if _controls_forced_enabled == next_enabled:
-		return
-	_controls_forced_enabled = next_enabled
-	_apply_controls_state()
-
-func push_input_lock(lock_id: StringName) -> void:
-	_input_locks.push(lock_id)
-	_apply_controls_state()
-
-func pop_input_lock(lock_id: StringName) -> void:
-	_input_locks.pop(lock_id)
-	_apply_controls_state()
-
-func clear_input_locks() -> void:
-	if _input_locks.is_empty():
-		return
-	_input_locks.clear()
-	_apply_controls_state()
-
-func are_controls_enabled() -> bool:
-	return _controls_forced_enabled and _input_locks.is_empty()
-
+# Runtime group: config
 func reset_runtime_state() -> void:
-	pitch_radians = 0.0
 	current_health = base_max_health
 	effective_max_health = base_max_health
 	current_mana = base_max_mana
@@ -347,23 +211,169 @@ func reset_runtime_state() -> void:
 	right_press_elapsed = 0.0
 	left_was_down = false
 	right_was_down = false
-	left_long_triggered = false
 	right_long_triggered = false
 	controls_enabled = true
 	refresh_runtime_derived_stats()
+
+# Runtime group: godot methods
+func _ready() -> void:
+	reset_runtime_state()
+
+# Runtime group: player handle
+func register_player(player: PlayerFpsControllerScript) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	_player = player
+	controls_enabled = true
+	_player.camera.fov = PlayerManager.walk_fov
+	player_bound.emit(player)
+
+func unregister_player() -> void:
+	_player = null
+	controls_enabled = false
+	player_unbound.emit()
+
+# Runtime group: camera
+func look_around(event: InputEvent) -> void:
+	_player.rotate_y(-event.relative.x * mouse_sensitivity)
+	_player.camera_pivot.rotation.x = clamp(
+		_player.camera_pivot.rotation.x - event.relative.y * PlayerManager.mouse_sensitivity,
+		deg_to_rad(PlayerManager.pitch_min_degrees),
+		deg_to_rad(PlayerManager.pitch_max_degrees)
+	)
+
+func camera_sprint_effect(delta: float) -> void:
+	var horizontal_speed: float = Vector2(_player.velocity.x, _player.velocity.z).length()
+	var is_sprinting: bool = Input.is_action_pressed("sprint") and horizontal_speed > 0.05
+	var target_fov: float = sprint_fov if is_sprinting else walk_fov
+	_player.camera.fov = lerp(_player.camera.fov, target_fov, clamp(fov_lerp_speed * delta, 0.0, 1.0))
+
+# Runtime group: process input and actions
+func process_mouse_press_actions(delta: float) -> void:
+	var left_down: bool = Input.is_action_pressed("attack")
+	var right_down: bool = Input.is_action_pressed("defend")
+	
+	if left_down:
+		left_press_elapsed += delta
+		_shoot_magic_projectil()
+	if left_was_down and not left_down:
+		left_press_elapsed = 0.0
+	left_was_down = left_down
+
+	if right_down:
+		right_press_elapsed += delta
+		if right_press_elapsed >= right_long_press_threshold_seconds:
+			right_long_triggered = true
+			_process_right_long_press(delta)
+	if right_was_down and not right_down:
+		if not right_long_triggered:
+			_on_right_single_click()
+		else:
+			_on_right_long_press_release()
+		right_press_elapsed = 0.0
+		right_long_triggered = false
+		shield_fill_progress = 0.0
+	right_was_down = right_down
+
+func _shoot_magic_projectil() -> void:
+	# check cooldown
+	if cast_cooldown_remaining > 0.0: return
+	
+	# check mana cost
+	var mana_cost: float = FireballManager.get_mana_cost()
+	if not spend_mana(mana_cost): return
+	
+	# update delay for next shoot
+	var cast_delay: float = float(FireballManager.get_cast_delay_seconds())
+	cast_cooldown_remaining = max(cast_delay, 0.0)
+	
+	# get projectil spawn infos
+	var camera = _player.camera
+	var fireball_origin: Vector3 = camera.global_position
+	var fireball_direction: Vector3 = -camera.global_transform.basis.z.normalized()
+	
+	FireballManager.shoot(fireball_origin, fireball_direction, _player)
+
+func _on_right_single_click() -> void:
+	if PlayerManager.speed_active_cooldown_remaining > 0.0:
+		return
+	var bonus_from_bands: float = InventoryManager.get_band_active_speed_bonus()
+	if bonus_from_bands <= 0.0:
+		return
+	var speed_bonus: float = max(PlayerManager.active_speed_base_bonus_mult + bonus_from_bands, 0.0)
+	if speed_bonus <= 0.0:
+		return
+	if not PlayerManager.spend_mana(PlayerManager.active_speed_mana_cost):
+		return
+	PlayerManager.speed_active_remaining = max(PlayerManager.active_speed_duration_seconds, 0.0)
+	PlayerManager.speed_active_cooldown_remaining = max(PlayerManager.active_speed_cooldown_seconds, 0.0)
+	PlayerManager.refresh_runtime_derived_stats()
+
+func _process_right_long_press(delta: float) -> void:
+	_process_right_long_heal(delta)
+	_process_right_long_shield(delta)
+
+func _process_right_long_heal(delta: float) -> void:
+	if heal_active_cooldown_remaining > 0.0:
+		return
+	var heal_bonus: float = InventoryManager.get_band_active_heal_power_bonus()
+	if heal_bonus <= 0.0:
+		return
+	var heal_rate: float = max(active_heal_base_hp_per_second + heal_bonus, 0.0)
+	if heal_rate <= 0.0:
+		return
+	var mana_rate: float = max(active_heal_base_mana_per_second, 0.0)
+	if mana_rate <= 0.0:
+		return
+	var mana_spend: float = mana_rate * delta
+	if not spend_mana(mana_spend):
+		return
+	heal_player(heal_rate * delta)
+
+func _process_right_long_shield(delta: float) -> void:
+	if shield_active_cooldown_remaining > 0.0:
+		return
+	if effective_max_ap_slots <= 0:
+		return
+	if current_ap_slots >= effective_max_ap_slots:
+		return
+	var fill_rate_bonus: float = InventoryManager.get_band_active_shield_fill_rate_bonus()
+	if fill_rate_bonus <= 0.0:
+		return
+	var fills_per_second: float = max(active_shield_base_fills_per_second + fill_rate_bonus, 0.0)
+	if fills_per_second <= 0.0:
+		return
+	shield_fill_progress += fills_per_second * delta
+	if shield_fill_progress < 1.0:
+		return
+	if not spend_mana(active_shield_mana_per_slot):
+		return
+	current_ap_slots = mini(current_ap_slots + 1, effective_max_ap_slots)
+	shield_fill_progress = max(shield_fill_progress - 1.0, 0.0)
+
+func _on_right_long_press_release() -> void:
+	if right_press_elapsed < right_long_press_threshold_seconds: return
+	
+	var has_heal_trait: bool = InventoryManager.get_band_active_heal_power_bonus() > 0.0
+	var has_shield_trait: bool = InventoryManager.get_band_active_shield_fill_rate_bonus() > 0.0
+	if has_heal_trait and heal_active_cooldown_remaining <= 0.0:
+		heal_active_cooldown_remaining = max(active_heal_cooldown_seconds, 0.0)
+	if has_shield_trait and shield_active_cooldown_remaining <= 0.0:
+		shield_active_cooldown_remaining = max(active_shield_cooldown_seconds, 0.0)
 
 func clear_runtime_press_tracking() -> void:
 	left_press_elapsed = 0.0
 	right_press_elapsed = 0.0
 	left_was_down = false
 	right_was_down = false
-	left_long_triggered = false
 	right_long_triggered = false
 	shield_fill_progress = 0.0
 
+
+
 func tick_runtime_timers(delta: float) -> void:
-	if delta <= 0.0:
-		return
+	if delta <= 0.0: return
+	
 	var was_speed_active: bool = speed_active_remaining > 0.0
 	cast_cooldown_remaining = max(cast_cooldown_remaining - delta, 0.0)
 	speed_active_remaining = max(speed_active_remaining - delta, 0.0)
@@ -451,63 +461,5 @@ func add_gems(amount: int) -> int:
 	_currency_changed()
 	return amount
 
-func _resolve_player() -> Node3D:
-	if _player != null and is_instance_valid(_player):
-		return _player
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		_player = null
-		return null
-	var player_candidate: Node = tree.get_first_node_in_group("player")
-	if not player_candidate is Node3D:
-		_player = null
-		return null
-	var resolved_player: Node3D = player_candidate as Node3D
-	if _player != resolved_player:
-		_player = resolved_player
-		player_bound.emit(_player)
-		_apply_controls_state()
-	return _player
-
-func _apply_controls_state() -> void:
-	var was_controls_enabled: bool = controls_enabled
-	var next_controls_enabled: bool = are_controls_enabled()
-	controls_enabled = next_controls_enabled
-	var player: Node3D = _player
-	if player != null and is_instance_valid(player):
-		var player_controller: PlayerFpsControllerScript = player as PlayerFpsControllerScript
-		if player_controller != null:
-			player_controller.set_controls_enabled(next_controls_enabled)
-	if was_controls_enabled != next_controls_enabled:
-		controls_changed.emit(next_controls_enabled)
-
 func _currency_changed() -> void:
 	currency_changed.emit(_gold, _gems)
-
-func _connect_inventory_lock_signal() -> void:
-	if not InventoryManager.inventory_open_changed.is_connected(_on_inventory_open_changed):
-		InventoryManager.inventory_open_changed.connect(_on_inventory_open_changed)
-
-func _disconnect_inventory_lock_signal() -> void:
-	if InventoryManager.inventory_open_changed.is_connected(_on_inventory_open_changed):
-		InventoryManager.inventory_open_changed.disconnect(_on_inventory_open_changed)
-
-func sync_inventory_lock_state() -> void:
-	_on_inventory_open_changed(InventoryManager.is_inventory_open())
-
-func _on_inventory_open_changed(is_open: bool) -> void:
-	if is_open:
-		if _inventory_lock_active:
-			return
-		_inventory_lock_active = true
-		push_input_lock(inventory_lock_id)
-		return
-	if not _inventory_lock_active:
-		return
-	_inventory_lock_active = false
-	pop_input_lock(inventory_lock_id)
-
-func _get_config_or_default() -> PlayerManagerConfig:
-	if _config != null:
-		return _config
-	return DefaultPlayerManagerConfig

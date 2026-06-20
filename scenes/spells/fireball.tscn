@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bsn5654e6dthj"]
 
-[ext_resource type="Script" uid="uid://dhhpx1xv1dh4r" path="res://scripts/spells/fireball_projectile.gd" id="1_joqmh"]
+[ext_resource type="Script" uid="uid://dhhpx1xv1dh4r" path="res://scripts/spells/runtime/fireball_projectile.gd" id="1_joqmh"]
 [ext_resource type="Shader" uid="uid://6l4prpoxlbi" path="res://materials/spells/fireball.tres" id="2_vaqcd"]
-[ext_resource type="Script" uid="uid://dvu7tuplcshlo" path="res://scripts/spells/fireball_tween_visuals.gd" id="2_wk21o"]
+[ext_resource type="Script" uid="uid://dvu7tuplcshlo" path="res://scripts/spells/runtime/fireball_tween_visuals.gd" id="2_wk21o"]
 [ext_resource type="Texture2D" uid="uid://xy5wjy6g3r5q" path="res://assets/T_VFX_basic1.PNG" id="3_fnao3"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_2f8ue"]

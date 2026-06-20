@@ -2,25 +2,22 @@
 extends Node
 
 const FireballProjectileScene: PackedScene = preload("res://scenes/spells/fireball.tscn")
+
 # Default parameter resource for fireball baseline stats.
-const DefaultFireballConfig: FireballConfig = preload("res://resources/spells/default_fireball_config.tres")
-const RingBandConstantsScript = preload("res://scripts/inventory/ring_band_constants.gd")
+const DEFAULT_FIREBALL_CONFIG: FireballConfig = preload("res://resources/spells/default_fireball_config.tres")
+const RING_BAND_CONSTANTS = preload("res://scripts/inventory/ring_band_constants.gd")
+
 const DEGREES_TO_RADIANS: float = PI / 180.0
 
 # Active parameter resource for this autoload manager.
-var _config: FireballConfig = DefaultFireballConfig
+var _config: FireballConfig = DEFAULT_FIREBALL_CONFIG
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _shoot_side: int = 1
 
 func _ready() -> void:
 	_rng.randomize()
 
-func set_config(config: FireballConfig) -> void:
-	if config != null:
-		_config = config
-
-func reset_default_config() -> void:
-	_config = DefaultFireballConfig
-
+# Public methods
 func get_mana_cost() -> float:
 	var mana_cost_multiplier: float = InventoryManager.get_fireball_mana_cost_multiplier()
 	return max(_config.mana_cost * mana_cost_multiplier, 0.0)
@@ -28,7 +25,7 @@ func get_mana_cost() -> float:
 func get_cast_delay_seconds() -> float:
 	var cast_delay_multiplier: float = InventoryManager.get_fireball_cast_delay_multiplier()
 	var effective_delay: float = _config.cast_delay_seconds * cast_delay_multiplier
-	return max(effective_delay, RingBandConstantsScript.CAST_DELAY_MIN_SECONDS)
+	return max(effective_delay, RING_BAND_CONSTANTS.CAST_DELAY_MIN_SECONDS)
 
 func get_runtime_stat_summary() -> Dictionary:
 	var modified_config: FireballConfig = _build_modified_config()
@@ -65,42 +62,36 @@ func get_runtime_stat_summary() -> Dictionary:
 	}
 
 func shoot(origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -> void:
+	# find a parent
 	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
-
+	if tree == null: return
 	var parent_node: Node = tree.current_scene
-	if parent_node == null:
-		parent_node = tree.root
+	if parent_node == null: parent_node = tree.root
+	
+	# alternate side
+	var side_origin = origin + direction.cross(Vector3.UP).normalized() * _shoot_side * 0.1
+	var corrected_direction = (origin + direction * 50) - side_origin
+	_shoot_side = -1 if _shoot_side == 1 else 1
 
+	# get modified stats
 	var modified_config: FireballConfig = _build_modified_config()
-	var split_count: int = maxi(modified_config.split_count, 0)
-	var projectile_count: int = 1 + split_count
+	var projectile_count: int = 1 + maxi(modified_config.split_count, 0)
 
-	var projectile_config: FireballConfig = modified_config.duplicate(true) as FireballConfig
-	if projectile_config == null:
-		projectile_config = modified_config
-	# Split count is consumed at cast time to produce a multi-shot fan.
-	projectile_config.split_count = 0
+	# spawn all projectiles count
 	var spawned_projectiles: Array[PhysicsBody3D] = []
-
 	for _shot_index: int in range(projectile_count):
-		var final_direction: Vector3 = _apply_accuracy(direction, projectile_config.accuracy)
-		var spawned_projectile: FireballProjectile = _spawn_projectile(parent_node, projectile_config, origin, final_direction, shooter)
-		if spawned_projectile == null:
-			continue
+		var final_direction: Vector3 = _apply_accuracy(corrected_direction, modified_config.accuracy)
+		var spawned_projectile: FireballProjectile = _spawn_projectile(parent_node, modified_config, side_origin, final_direction, shooter)
+		if spawned_projectile == null: continue
+		# ignore collision between spawned projectiles
 		for existing_projectile: PhysicsBody3D in spawned_projectiles:
 			spawned_projectile.add_collision_exception_with(existing_projectile)
 			existing_projectile.add_collision_exception_with(spawned_projectile)
 		spawned_projectiles.append(spawned_projectile)
 
+# Private Methods
 func _spawn_projectile(parent_node: Node, config: FireballConfig, origin: Vector3, direction: Vector3, shooter: PhysicsBody3D = null) -> FireballProjectile:
-	var instance_node: Node = FireballProjectileScene.instantiate()
-	if not instance_node is FireballProjectile:
-		instance_node.queue_free()
-		return null
-
-	var projectile: FireballProjectile = instance_node as FireballProjectile
+	var projectile: FireballProjectile = FireballProjectileScene.instantiate() as FireballProjectile
 	parent_node.add_child(projectile)
 	projectile.configure(config, origin, direction, shooter)
 	return projectile
@@ -123,9 +114,9 @@ func _build_modified_config() -> FireballConfig:
 	modified_config.gravity_influence = max(_config.gravity_influence, 0.0)
 	modified_config.linear_damp = max(_config.linear_damp, 0.0)
 	modified_config.angular_damp = max(_config.angular_damp, 0.0)
-	modified_config.bounce_chance = clampf(_config.bounce_chance + bounce_chance, 0.0, RingBandConstantsScript.MAX_BOUNCE_CHANCE)
+	modified_config.bounce_chance = clampf(_config.bounce_chance + bounce_chance, 0.0, RING_BAND_CONSTANTS.MAX_BOUNCE_CHANCE)
 	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
-	modified_config.pierce_chance = clampf(_config.pierce_chance + pierce_chance, 0.0, RingBandConstantsScript.MAX_PIERCE_CHANCE)
+	modified_config.pierce_chance = clampf(_config.pierce_chance + pierce_chance, 0.0, RING_BAND_CONSTANTS.MAX_PIERCE_CHANCE)
 	modified_config.aoe = max(_config.aoe + aoe_bonus, 1.0)
 	_apply_gravity_trait_profile(modified_config, gravity_profile)
 	modified_config.cast_delay_seconds = get_cast_delay_seconds()

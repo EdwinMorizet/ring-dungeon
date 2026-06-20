@@ -99,8 +99,7 @@ static func reroll_item(item: InventoryItemDefinition, floor_depth: int, rng: Ra
 	return item
 
 static func _roll_item(item: InventoryItemDefinition, rarity: InventoryItemDefinition.Rarity, floor_depth: int, rng: RandomNumberGenerator) -> void:
-	if item == null:
-		return
+	if item == null: return
 	item.rarity = rarity
 	item.major_trait_label = ""
 	var item_kind: InventoryItemDefinition.ItemKind = item.item_kind

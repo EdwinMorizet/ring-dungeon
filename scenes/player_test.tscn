@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://dyhkitm5mlh46"]
+
+[ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="1_a8v3n"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_fdpfy"]
+size = Vector2(100, 100)
+
+[sub_resource type="Gradient" id="Gradient_a8v3n"]
+interpolation_mode = 1
+colors = PackedColorArray(0.57126963, 0.6523339, 0.61788577, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fdpfy"]
+gradient = SubResource("Gradient_a8v3n")
+fill = 2
+fill_from = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6p80c"]
+albedo_texture = SubResource("GradientTexture2D_fdpfy")
+uv1_triplanar = true
+uv1_world_triplanar = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6p80c"]
+size = Vector3(100, 0.001, 100)
+
+[node name="Player Test" type="Node3D" unique_id=50756128]
+
+[node name="Player" parent="." unique_id=1695648106 instance=ExtResource("1_a8v3n")]
+
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=131738368]
+mesh = SubResource("PlaneMesh_fdpfy")
+surface_material_override/0 = SubResource("StandardMaterial3D_6p80c")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor" unique_id=1807815609]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D" unique_id=1420762623]
+shape = SubResource("BoxShape3D_6p80c")

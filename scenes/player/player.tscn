@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://q6thighm2mu1"]
 
-[ext_resource type="Script" uid="uid://dlejhctdpchsr" path="res://scripts/player/player_fps_controller.gd" id="1_8mmsm"]
+[ext_resource type="Script" uid="uid://dwjxm5pwii4kj" path="res://scripts/player/player_fps_controller.gd" id="1_8mmsm"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mka3k"]
 radius = 0.35

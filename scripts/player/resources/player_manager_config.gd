@@ -2,11 +2,6 @@
 extends Resource
 class_name PlayerManagerConfig
 
-# Input-lock identifier used when inventory UI is open.
-@export var inventory_lock_id: StringName = &"inventory_open"
-# Initial forced controls state before lock checks are applied.
-@export var controls_forced_enabled_by_default: bool = true
-
 # Startup configuration: movement and look.
 # Base walk speed in units per second.
 @export var walk_speed: float = 9.0
@@ -42,8 +37,6 @@ class_name PlayerManagerConfig
 @export var base_max_health: float = 100.0
 # Base player AP slot capacity before equipment modifiers.
 @export var base_max_ap_slots: int = 0
-# Left-click hold duration required to classify as long press.
-@export var left_long_press_threshold_seconds: float = 0.30
 # Right-click hold duration required to classify as long press.
 @export var right_long_press_threshold_seconds: float = 0.30
 
