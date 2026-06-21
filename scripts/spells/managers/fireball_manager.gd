@@ -98,8 +98,6 @@ func _spawn_projectile(parent_node: Node, config: FireballConfig, origin: Vector
 
 func _build_modified_config() -> FireballConfig:
 	var modified_config: FireballConfig = _config.duplicate(true) as FireballConfig
-	if modified_config == null:
-		modified_config = _config
 	var damage_multiplier: float = InventoryManager.get_fireball_damage_multiplier()
 	var speed_multiplier: float = InventoryManager.get_fireball_projectile_speed_multiplier()
 	var gravity_profile: Dictionary = InventoryManager.get_fireball_gravity_profile()

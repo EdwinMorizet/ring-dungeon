@@ -14,102 +14,110 @@ enum Rarity {
 	LEGENDARY,
 }
 
+enum Level {
+	I,II,III,IV
+}
+
+enum keys {
+	damage_mult,
+	mana_cost_mult,
+	proj_speed_mult,
+	cast_delay_mult,
+	accuracy_deviation_flat,
+	bounce_chance,
+	split_flat,
+	aoe_radius_flat,
+	pierce_chance,
+	gravity_trait_enabled,
+	max_hp_flat,
+	max_mp_flat,
+	mana_regen_flat,
+	max_ap_slots,
+	speed_mult,
+	active_heal_power_flat,
+	active_shield_fill_rate_flat,
+	active_speed_mult_flat,
+}
+
+
+
 @export var item_id: StringName = &""
 @export var display_name: String = ""
 @export var item_kind: ItemKind = ItemKind.RING
 @export var rarity: Rarity = Rarity.COMMON
+@export var level: Level = Level.I
 @export var gold_value: int = 0
 @export var affix_tokens: Array[String] = []
 @export var benefit_lines: Array[String] = []
 @export var tradeoff_lines: Array[String] = []
 @export var major_trait_label: String = ""
 @export var compiled_modifiers: Dictionary = {
-	&"damage_mult": 1.0,
-	&"mana_cost_mult": 1.0,
-	&"proj_speed_mult": 1.0,
-	&"cast_delay_mult": 1.0,
-	&"accuracy_deviation_flat": 0.0,
-	&"bounce_chance": 0.0,
-	&"split_flat": 0,
-	&"aoe_radius_flat": 0.0,
-	&"pierce_chance": 0.0,
-	&"gravity_trait_enabled": 0,
-	&"max_hp_flat": 0.0,
-	&"max_mp_flat": 0.0,
-	&"mana_regen_flat": 0.0,
-	&"max_ap_slots": 0,
-	&"speed_mult": 1.0,
-	&"active_heal_power_flat": 0.0,
-	&"active_shield_fill_rate_flat": 0.0,
-	&"active_speed_mult_flat": 0.0,
+	keys.damage_mult: 1.0,
+	keys.mana_cost_mult: 1.0,
+	keys.proj_speed_mult: 1.0,
+	keys.cast_delay_mult: 1.0,
+	keys.accuracy_deviation_flat: 0.0,
+	keys.bounce_chance: 0.0,
+	keys.split_flat: 0,
+	keys.aoe_radius_flat: 0.0,
+	keys.pierce_chance: 0.0,
+	keys.gravity_trait_enabled: 0,
+	keys.max_hp_flat: 0.0,
+	keys.max_mp_flat: 0.0,
+	keys.mana_regen_flat: 0.0,
+	keys.max_ap_slots: 0,
+	keys.speed_mult: 1.0,
+	keys.active_heal_power_flat: 0.0,
+	keys.active_shield_fill_rate_flat: 0.0,
+	keys.active_speed_mult_flat: 0.0,
 }
-
-const _DEFAULT_MODIFIERS: Dictionary = {
-	&"damage_mult": 1.0,
-	&"mana_cost_mult": 1.0,
-	&"proj_speed_mult": 1.0,
-	&"cast_delay_mult": 1.0,
-	&"accuracy_deviation_flat": 0.0,
-	&"bounce_chance": 0.0,
-	&"split_flat": 0,
-	&"aoe_radius_flat": 0.0,
-	&"pierce_chance": 0.0,
-	&"gravity_trait_enabled": 0,
-	&"max_hp_flat": 0.0,
-	&"max_mp_flat": 0.0,
-	&"mana_regen_flat": 0.0,
-	&"max_ap_slots": 0,
-	&"speed_mult": 1.0,
-	&"active_heal_power_flat": 0.0,
-	&"active_shield_fill_rate_flat": 0.0,
-	&"active_speed_mult_flat": 0.0,
-}
-
-const _INT_MODIFIER_KEYS: Array[StringName] = [
-	&"split_flat",
-	&"gravity_trait_enabled",
-	&"max_ap_slots",
-]
 
 const _STAT_EMOJI_MAP: Dictionary = {
-	&"damage_mult": "💥",
-	&"mana_cost_mult": "🔷",
-	&"proj_speed_mult": "🚀",
-	&"cast_delay_mult": "⏱",
-	&"accuracy_deviation_flat": "🎯",
-	&"bounce_chance": "🪃",
-	&"split_flat": "✨",
-	&"aoe_radius_flat": "💣",
-	&"pierce_chance": "🗡",
-	&"max_hp_flat": "❤️",
-	&"max_mp_flat": "🔵",
-	&"mana_regen_flat": "♻️",
-	&"max_ap_slots": "⚡",
-	&"speed_mult": "👟",
-	&"active_heal_power_flat": "💚",
-	&"active_shield_fill_rate_flat": "🛡",
-	&"active_speed_mult_flat": "⚡",
+	keys.damage_mult: "💥",
+	keys.mana_cost_mult: "🔷",
+	keys.proj_speed_mult: "🚀",
+	keys.cast_delay_mult: "⏱",
+	keys.accuracy_deviation_flat: "🎯",
+	keys.bounce_chance: "🪃",
+	keys.split_flat: "✨",
+	keys.aoe_radius_flat: "💣",
+	keys.pierce_chance: "🗡",
+	keys.max_hp_flat: "❤️",
+	keys.max_mp_flat: "🔵",
+	keys.mana_regen_flat: "♻️",
+	keys.max_ap_slots: "⚡",
+	keys.speed_mult: "👟",
+	keys.active_heal_power_flat: "💚",
+	keys.active_shield_fill_rate_flat: "🛡",
+	keys.active_speed_mult_flat: "⚡",
 }
 
 const _STAT_LABEL_MAP: Dictionary = {
-	&"damage_mult": "Damage",
-	&"mana_cost_mult": "Mana Cost",
-	&"proj_speed_mult": "Projectile Speed",
-	&"cast_delay_mult": "Cast Delay",
-	&"accuracy_deviation_flat": "Accuracy Deviation",
-	&"bounce_chance": "Bounce",
-	&"split_flat": "Split",
-	&"aoe_radius_flat": "AoE Radius",
-	&"pierce_chance": "Pierce",
-	&"max_hp_flat": "Max HP",
-	&"max_mp_flat": "Max MP",
-	&"mana_regen_flat": "Mana Regen",
-	&"max_ap_slots": "Max AP Slots",
-	&"speed_mult": "Move Speed",
-	&"active_heal_power_flat": "Healing Power",
-	&"active_shield_fill_rate_flat": "Shield Fill Rate",
-	&"active_speed_mult_flat": "Speed Burst",
+	keys.damage_mult: "Damage",
+	keys.mana_cost_mult: "Mana Cost",
+	keys.proj_speed_mult: "Projectile Speed",
+	keys.cast_delay_mult: "Cast Delay",
+	keys.accuracy_deviation_flat: "Accuracy Deviation",
+	keys.bounce_chance: "Bounce",
+	keys.split_flat: "Split",
+	keys.aoe_radius_flat: "AoE Radius",
+	keys.pierce_chance: "Pierce",
+	keys.max_hp_flat: "Max HP",
+	keys.max_mp_flat: "Max MP",
+	keys.mana_regen_flat: "Mana Regen",
+	keys.max_ap_slots: "Max AP Slots",
+	keys.speed_mult: "Move Speed",
+	keys.active_heal_power_flat: "Healing Power",
+	keys.active_shield_fill_rate_flat: "Shield Fill Rate",
+	keys.active_speed_mult_flat: "Speed Burst",
 }
+
+#static var spell_traits_list: Array[SpellTrait] = [
+	#SpellTrait.new(Level.I, Rarity.COMMON,
+		#[SpellMod.new(keys.damage_mult, 0.1, 0.2)], 
+		#[SpellMod.new(keys.mana_cost_mult, 0.05, 0.2), SpellMod.new(keys.cast_delay_mult, 0.05, 0.2)]
+	#)
+#]
 
 func is_ring() -> bool:
 	return item_kind == ItemKind.RING
@@ -133,36 +141,16 @@ func get_rarity_label() -> String:
 		_:
 			return "Common"
 
-func get_modifier_float(key: StringName, default_value: float = 0.0) -> float:
-	_normalize_compiled_modifiers()
-	var value: Variant = _get_modifier_variant(key, default_value)
-	if key == &"max_ap_slots":
-		if value is int:
-			return float(value)
-		if value is float:
-			return float(int(roundf(value)))
-		if compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat"):
-			var legacy_value: Variant = _get_modifier_variant(&"max_ap_flat", 0.0)
-			if legacy_value is int:
-				return float(legacy_value)
-			if legacy_value is float:
-				return float(int(roundf(legacy_value)))
-		return default_value
+func get_modifier_float(key: keys, default_value: float = 0.0) -> float:
+	var value: Variant = compiled_modifiers.get(key, default_value)
 	if value is int:
 		return float(value)
 	if value is float:
 		return value
 	return default_value
 
-func get_modifier_int(key: StringName, default_value: int = 0) -> int:
-	_normalize_compiled_modifiers()
-	var value: Variant = _get_modifier_variant(key, default_value)
-	if key == &"max_ap_slots" and not (compiled_modifiers.has(&"max_ap_slots") or compiled_modifiers.has("max_ap_slots")) and (compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat")):
-		var legacy_value: Variant = _get_modifier_variant(&"max_ap_flat", default_value)
-		if legacy_value is float:
-			return int(roundf(legacy_value))
-		if legacy_value is int:
-			return legacy_value
+func get_modifier_int(key: keys, default_value: int = 0) -> int:
+	var value: Variant = compiled_modifiers.get(key, default_value)
 	if value is float:
 		return int(roundf(value))
 	if value is int:
@@ -174,157 +162,52 @@ func get_slot_compatibility_hint() -> String:
 		return "Fits Right-Hand Ring Slots"
 	return "Fits Left-Hand Band Slots"
 
-static func get_stat_emoji(key: StringName) -> String:
+static func get_stat_emoji(key: keys) -> String:
 	return String(_STAT_EMOJI_MAP.get(key, "•"))
 
-static func get_stat_label(key: StringName) -> String:
-	return String(_STAT_LABEL_MAP.get(key, String(key)))
+static func get_stat_label(key: keys) -> String:
+	return String(_STAT_LABEL_MAP.get(key))
 
-func build_tooltip_text() -> String:
-	var lines: Array[String] = []
-	lines.append(display_name)
-	lines.append("%s | %s" % [get_rarity_label(), get_kind_label()])
-	lines.append("")
-	lines.append("Benefits")
-	var benefit_stats: Array[String] = _build_stat_lines(true)
-	if benefit_stats.is_empty() and benefit_lines.is_empty():
-		lines.append("- None")
-	else:
-		for line: String in benefit_stats:
-			lines.append(line)
-		for line: String in benefit_lines:
-			lines.append(line)
-	lines.append("")
-	lines.append("Trade-Offs")
-	var tradeoff_stats: Array[String] = _build_stat_lines(false)
-	if tradeoff_stats.is_empty() and tradeoff_lines.is_empty():
-		lines.append("- None")
-	else:
-		for line: String in tradeoff_stats:
-			lines.append(line)
-		for line: String in tradeoff_lines:
-			lines.append(line)
-	if not major_trait_label.is_empty():
-		lines.append("")
-		lines.append("Special Trait")
-		lines.append("* %s" % major_trait_label)
-	lines.append("")
-	lines.append("Gold Value: %d" % gold_value)
-	lines.append(get_slot_compatibility_hint())
-	return "\n".join(lines)
-
-func _build_stat_lines(benefit: bool) -> Array[String]:
-	_normalize_compiled_modifiers()
-	var lines: Array[String] = []
-	var modifier_order: Array[StringName] = [
-		&"damage_mult",
-		&"mana_cost_mult",
-		&"proj_speed_mult",
-		&"cast_delay_mult",
-		&"accuracy_deviation_flat",
-		&"bounce_chance",
-		&"split_flat",
-		&"aoe_radius_flat",
-		&"pierce_chance",
-		&"max_hp_flat",
-		&"max_mp_flat",
-		&"mana_regen_flat",
-		&"max_ap_slots",
-		&"speed_mult",
-		&"active_heal_power_flat",
-		&"active_shield_fill_rate_flat",
-		&"active_speed_mult_flat",
-	]
-	for key: StringName in modifier_order:
-		var default_value: Variant = _DEFAULT_MODIFIERS.get(key, 0)
-		var current_value: Variant = _get_modifier_variant(key, default_value)
-		if current_value == default_value:
-			continue
-		var is_benefit_value: bool = _is_benefit_modifier_value(key, current_value)
-		if is_benefit_value != benefit:
-			continue
-		lines.append(_format_modifier_line(key, current_value))
-	return lines
-
-func _is_benefit_modifier_value(key: StringName, value: Variant) -> bool:
-	if key == &"mana_cost_mult" or key == &"cast_delay_mult" or key == &"accuracy_deviation_flat":
-		return float(value) < float(_DEFAULT_MODIFIERS.get(key, 0.0))
-	if key == &"damage_mult" or key == &"proj_speed_mult" or key == &"speed_mult":
-		return float(value) > float(_DEFAULT_MODIFIERS.get(key, 1.0))
-	if key == &"split_flat":
-		return int(value) > 0
-	if key == &"bounce_chance" or key == &"pierce_chance":
-		return float(value) > 0.0
-	if key == &"max_ap_slots":
-		return int(value) > 0
-	if key == &"active_heal_power_flat" or key == &"active_shield_fill_rate_flat" or key == &"active_speed_mult_flat":
-		return float(value) > 0.0
-	return float(value) > 0.0
-
-func _format_modifier_line(key: StringName, value: Variant) -> String:
+func _format_modifier_line(key: keys, value: Variant) -> String:
 	var emoji: String = get_stat_emoji(key)
 	var label: String = get_stat_label(key)
-	if key == &"damage_mult":
+	if key == keys.damage_mult:
 		return "%s %s x%.2f" % [emoji, label, float(value)]
-	if key == &"mana_cost_mult":
+	if key == keys.mana_cost_mult:
 		return "%s %s x%.2f" % [emoji, label, float(value)]
-	if key == &"proj_speed_mult":
+	if key == keys.proj_speed_mult:
 		return "%s %s x%.2f" % [emoji, label, float(value)]
-	if key == &"cast_delay_mult":
+	if key == keys.cast_delay_mult:
 		var pace: String = "faster" if float(value) < 1.0 else "slower"
 		return "%s %s x%.2f (%s)" % [emoji, label, float(value), pace]
-	if key == &"accuracy_deviation_flat":
+	if key == keys.accuracy_deviation_flat:
 		var spread_desc: String = "tighter spread" if float(value) < 0.0 else "wider spread"
 		return "%s %s %+.2f (%s)" % [emoji, label, float(value), spread_desc]
-	if key == &"bounce_chance":
+	if key == keys.bounce_chance:
 		return "%s %s %+.0f%%" % [emoji, label, float(value) * 100.0]
-	if key == &"split_flat":
+	if key == keys.split_flat:
 		return "%s %s %+d" % [emoji, label, int(value)]
-	if key == &"aoe_radius_flat":
+	if key == keys.aoe_radius_flat:
 		return "%s %s %+.2f" % [emoji, label, float(value)]
-	if key == &"pierce_chance":
+	if key == keys.pierce_chance:
 		return "%s %s %+.0f%%" % [emoji, label, float(value) * 100.0]
-	if key == &"max_hp_flat":
+	if key == keys.max_hp_flat:
 		return "%s %s %+.0f" % [emoji, label, float(value)]
-	if key == &"max_mp_flat":
+	if key == keys.max_mp_flat:
 		return "%s %s %+.0f" % [emoji, label, float(value)]
-	if key == &"mana_regen_flat":
+	if key == keys.mana_regen_flat:
 		return "%s %s %+.1f" % [emoji, label, float(value)]
-	if key == &"max_ap_slots":
+	if key == keys.max_ap_slots:
 		return "%s %s %+d" % [emoji, label, int(value)]
-	if key == &"speed_mult":
+	if key == keys.speed_mult:
 		return "%s %s x%.2f" % [emoji, label, float(value)]
-	if key == &"active_heal_power_flat":
+	if key == keys.active_heal_power_flat:
 		return "%s %s %+0.1f (RMB Long)" % [emoji, label, float(value)]
-	if key == &"active_shield_fill_rate_flat":
+	if key == keys.active_shield_fill_rate_flat:
 		return "%s %s %+0.2f/s (RMB Long)" % [emoji, label, float(value)]
-	if key == &"active_speed_mult_flat":
+	if key == keys.active_speed_mult_flat:
 		return "%s %s +%.0f%% (RMB Single)" % [emoji, label, float(value) * 100.0]
-	return "%s: %s" % [String(key), String(value)]
-
-func _get_modifier_variant(key: StringName, default_value: Variant) -> Variant:
-	_normalize_compiled_modifiers()
-	if compiled_modifiers.has(key):
-		return compiled_modifiers.get(key, default_value)
-	var key_as_string: String = String(key)
-	if compiled_modifiers.has(key_as_string):
-		return compiled_modifiers.get(key_as_string, default_value)
-	return default_value
-
-func _normalize_compiled_modifiers() -> void:
-	if compiled_modifiers == null:
-		compiled_modifiers = {}
-	if not (compiled_modifiers.has(&"max_ap_slots") or compiled_modifiers.has("max_ap_slots")) and (compiled_modifiers.has(&"max_ap_flat") or compiled_modifiers.has("max_ap_flat")):
-		var legacy_ap: Variant = _get_raw_modifier_variant(&"max_ap_flat", 0)
-		compiled_modifiers[&"max_ap_slots"] = _coerce_int_modifier(legacy_ap, 0)
-	for key_variant in _DEFAULT_MODIFIERS.keys():
-		var key: StringName = key_variant
-		var default_value: Variant = _DEFAULT_MODIFIERS.get(key, 0)
-		var raw_value: Variant = _get_raw_modifier_variant(key, default_value)
-		if _INT_MODIFIER_KEYS.has(key):
-			compiled_modifiers[key] = _coerce_int_modifier(raw_value, int(default_value))
-		else:
-			compiled_modifiers[key] = _coerce_float_modifier(raw_value, float(default_value))
+	return "%s: %s" % [key, String(value)]
 
 func _get_raw_modifier_variant(key: StringName, default_value: Variant) -> Variant:
 	if compiled_modifiers.has(key):
@@ -332,18 +215,4 @@ func _get_raw_modifier_variant(key: StringName, default_value: Variant) -> Varia
 	var key_as_string: String = String(key)
 	if compiled_modifiers.has(key_as_string):
 		return compiled_modifiers.get(key_as_string, default_value)
-	return default_value
-
-func _coerce_int_modifier(value: Variant, default_value: int) -> int:
-	if value is int:
-		return value
-	if value is float:
-		return int(roundf(value))
-	return default_value
-
-func _coerce_float_modifier(value: Variant, default_value: float) -> float:
-	if value is int:
-		return float(value)
-	if value is float:
-		return value
 	return default_value

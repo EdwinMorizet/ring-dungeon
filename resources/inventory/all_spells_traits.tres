@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="SpellTraits" format=3 uid="uid://ctn2h5wys6r51"]
+
+[ext_resource type="Script" uid="uid://bo1hsgny3icgv" path="res://scripts/inventory/spell_trait_list.gd" id="1_gyvxg"]
+[ext_resource type="Script" uid="uid://bpgxm03b225j5" path="res://scripts/inventory/spell_trait.gd" id="2_juul7"]
+[ext_resource type="Script" uid="uid://4xt7rbayflcu" path="res://scripts/inventory/spell_mod.gd" id="3_juul7"]
+
+[sub_resource type="Resource" id="Resource_fbnfl"]
+script = ExtResource("3_juul7")
+_min = 0.1
+_max = 0.2
+metadata/_custom_type_script = "uid://4xt7rbayflcu"
+
+[sub_resource type="Resource" id="Resource_hqec6"]
+script = ExtResource("3_juul7")
+_key = 1
+_min = 0.05
+_max = 0.1
+metadata/_custom_type_script = "uid://4xt7rbayflcu"
+
+[sub_resource type="Resource" id="Resource_xpb7n"]
+script = ExtResource("3_juul7")
+_key = 3
+_min = 0.05
+_max = 0.1
+metadata/_custom_type_script = "uid://4xt7rbayflcu"
+
+[sub_resource type="Resource" id="Resource_cganh"]
+script = ExtResource("2_juul7")
+_main_traits = Array[ExtResource("3_juul7")]([SubResource("Resource_fbnfl")])
+_neg_traits = Array[ExtResource("3_juul7")]([SubResource("Resource_hqec6"), SubResource("Resource_xpb7n")])
+metadata/_custom_type_script = "uid://bpgxm03b225j5"
+
+[resource]
+script = ExtResource("1_gyvxg")
+traits = Array[ExtResource("2_juul7")]([SubResource("Resource_cganh")])
+metadata/_custom_type_script = "uid://bo1hsgny3icgv"

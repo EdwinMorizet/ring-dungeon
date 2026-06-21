@@ -294,14 +294,14 @@ func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node =
 
 
 # Magic Projectil
-func _get_magic_projectil_mult(definition_key: StringName) -> float:
+func _get_magic_projectil_mult(definition_key: InventoryItemDefinition.keys) -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in  _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			multiplier *= max(item_definition.get_modifier_float(definition_key, 1.0), 0.0)
 	return multiplier
 
-func _get_magic_projectil_chance(definition_key: StringName) -> float:
+func _get_magic_projectil_chance(definition_key: InventoryItemDefinition.keys) -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
@@ -309,27 +309,27 @@ func _get_magic_projectil_chance(definition_key: StringName) -> float:
 	return clampf(bonus, 0.0, 1.0)
 
 func get_fireball_damage_multiplier() -> float:
-	return _get_magic_projectil_mult(&"damage_mult")
+	return _get_magic_projectil_mult(InventoryItemDefinition.keys.damage_mult)
 
 func get_fireball_projectile_speed_multiplier() -> float:
-	return _get_magic_projectil_mult(&"proj_speed_mult")
+	return _get_magic_projectil_mult(InventoryItemDefinition.keys.proj_speed_mult)
 	
 func get_fireball_mana_cost_multiplier() -> float:
-	return _get_magic_projectil_mult(&"mana_cost_mult")
+	return _get_magic_projectil_mult(InventoryItemDefinition.keys.mana_cost_mult)
 	
 func get_fireball_cast_delay_multiplier() -> float:
-	return _get_magic_projectil_mult(&"cast_delay_mult")
+	return _get_magic_projectil_mult(InventoryItemDefinition.keys.cast_delay_mult)
 
 func get_fireball_bounce_chance() -> float:
-	return _get_magic_projectil_chance(&"bounce_chance")
+	return _get_magic_projectil_chance(InventoryItemDefinition.keys.bounce_chance)
 
 func get_fireball_pierce_chance() -> float:
-	return _get_magic_projectil_chance(&"pierce_chance")
+	return _get_magic_projectil_chance(InventoryItemDefinition.keys.pierce_chance)
 
 func has_fireball_gravity_trait() -> bool:
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
-			if item_definition.get_modifier_int(&"gravity_trait_enabled", 0) > 0:
+			if item_definition.get_modifier_int(InventoryItemDefinition.keys.gravity_trait_enabled, 0) > 0:
 				return true
 	return false
 
@@ -352,21 +352,21 @@ func get_fireball_accuracy_deviation_flat() -> float:
 	var modifier: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
-			modifier += item_definition.get_modifier_float(&"accuracy_deviation_flat", 0.0)
+			modifier += item_definition.get_modifier_float(InventoryItemDefinition.keys.accuracy_deviation_flat, 0.0)
 	return modifier
 
 func get_fireball_split_bonus() -> int:
 	var bonus: int = 0
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
-			bonus += item_definition.get_modifier_int(&"split_flat", 0)
+			bonus += item_definition.get_modifier_int(InventoryItemDefinition.keys.split_flat, 0)
 	return bonus
 
 func get_fireball_aoe_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
-			bonus += item_definition.get_modifier_float(&"aoe_radius_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.aoe_radius_flat, 0.0)
 	return bonus
 
 func get_fireball_accuracy_bonus() -> float:
@@ -379,21 +379,21 @@ func get_band_max_hp_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"max_hp_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.max_hp_flat, 0.0)
 	return bonus
 
 func get_band_max_mp_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"max_mp_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.max_mp_flat, 0.0)
 	return bonus
 
 func get_band_max_ap_slots_bonus() -> int:
 	var bonus: int = 0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_int(&"max_ap_slots", 0)
+			bonus += item_definition.get_modifier_int(InventoryItemDefinition.keys.max_ap_slots, 0)
 	return bonus
 
 func get_band_max_ap_bonus() -> float:
@@ -404,7 +404,7 @@ func get_band_speed_multiplier() -> float:
 	var multiplier: float = 1.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			multiplier *= max(item_definition.get_modifier_float(&"speed_mult", 1.0), 0.0)
+			multiplier *= max(item_definition.get_modifier_float(InventoryItemDefinition.keys.speed_mult, 1.0), 0.0)
 	return multiplier
 
 func get_mana_max_bonus() -> float:
@@ -414,28 +414,28 @@ func get_mana_regen_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"mana_regen_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.mana_regen_flat, 0.0)
 	return bonus
 
 func get_band_active_heal_power_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"active_heal_power_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.active_heal_power_flat, 0.0)
 	return bonus
 
 func get_band_active_shield_fill_rate_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"active_shield_fill_rate_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.active_shield_fill_rate_flat, 0.0)
 	return bonus
 
 func get_band_active_speed_bonus() -> float:
 	var bonus: float = 0.0
 	for item_definition: InventoryItemDefinition in _left_hand_slots:
 		if item_definition != null:
-			bonus += item_definition.get_modifier_float(&"active_speed_mult_flat", 0.0)
+			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.active_speed_mult_flat, 0.0)
 	return bonus
 
 
