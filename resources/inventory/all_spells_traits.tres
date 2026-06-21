@@ -30,7 +30,23 @@ _main_traits = Array[ExtResource("3_juul7")]([SubResource("Resource_fbnfl")])
 _neg_traits = Array[ExtResource("3_juul7")]([SubResource("Resource_hqec6"), SubResource("Resource_xpb7n")])
 metadata/_custom_type_script = "uid://bpgxm03b225j5"
 
+[sub_resource type="Resource" id="Resource_juul7"]
+script = ExtResource("3_juul7")
+_key = 14
+_min = 0.05
+_max = 0.1
+metadata/_custom_type_script = "uid://4xt7rbayflcu"
+
+[sub_resource type="Resource" id="Resource_xucpl"]
+script = ExtResource("2_juul7")
+_main_traits = Array[ExtResource("3_juul7")]([SubResource("Resource_juul7")])
+metadata/_custom_type_script = "uid://bpgxm03b225j5"
+
+[sub_resource type="Resource" id="Resource_53l5o"]
+script = ExtResource("2_juul7")
+metadata/_custom_type_script = "uid://bpgxm03b225j5"
+
 [resource]
 script = ExtResource("1_gyvxg")
-traits = Array[ExtResource("2_juul7")]([SubResource("Resource_cganh")])
+traits = Array[ExtResource("2_juul7")]([SubResource("Resource_cganh"), SubResource("Resource_xucpl"), SubResource("Resource_53l5o")])
 metadata/_custom_type_script = "uid://bo1hsgny3icgv"

@@ -107,10 +107,11 @@ func _refresh_all() -> void:
 	_refresh_unlocks()
 
 func _refresh_currency() -> void:
-	var gold: int = InventoryManager.get_player_gold()
-	var gems: int = InventoryManager.get_player_gems()
-	_gold_label.text = "🪙 Gold: %d" % gold
-	_gems_label.text = "💎 Gems: %d" % gems
+	pass
+	#var gold: int = InventoryManager.get_player_gold()
+	#var gems: int = InventoryManager.get_player_gems()
+	#_gold_label.text = "🪙 Gold: %d" % gold
+	#_gems_label.text = "💎 Gems: %d" % gems
 
 func _refresh_offers() -> void:
 	_clear_container(_offer_list)
@@ -367,9 +368,9 @@ func _release_input_lock() -> void:
 	_lock_active = false
 
 func _sync_mouse_mode_after_close() -> void:
-	if InventoryManager.is_inventory_open():
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		return
+	#if InventoryManager.is_inventory_open():
+		#Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		#return
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 func _add_info_label(container: VBoxContainer, text_value: String) -> void:

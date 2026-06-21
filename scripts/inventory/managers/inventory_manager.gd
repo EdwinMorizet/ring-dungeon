@@ -292,10 +292,16 @@ func spawn_gems_pickup(amount: int, spawn_position: Vector3, parent_node: Node =
 	return spawn_currency_pickup(CURRENCY_KIND_GEMS, amount, spawn_position, parent_node)
 
 
+@export var debug_modified_stats: InventoryItemDefinition = preload("res://resources/items/debug_items.tres")
 
 # Magic Projectil
 func _get_magic_projectil_mult(definition_key: InventoryItemDefinition.keys) -> float:
 	var multiplier: float = 1.0
+	
+	if debug_modified_stats:
+		multiplier *= max(debug_modified_stats.get_modifier_float(definition_key, 1.0), 0.0)
+		return multiplier
+	
 	for item_definition: InventoryItemDefinition in  _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			multiplier *= max(item_definition.get_modifier_float(definition_key, 1.0), 0.0)
@@ -303,6 +309,11 @@ func _get_magic_projectil_mult(definition_key: InventoryItemDefinition.keys) -> 
 
 func _get_magic_projectil_chance(definition_key: InventoryItemDefinition.keys) -> float:
 	var bonus: float = 0.0
+	
+	if debug_modified_stats:
+		bonus += debug_modified_stats.get_modifier_float(definition_key, 0.0)
+		return clampf(bonus, 0.0, 1.0)
+	
 	for item_definition: InventoryItemDefinition in _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			bonus += item_definition.get_modifier_float(definition_key, 0.0)
@@ -327,6 +338,11 @@ func get_fireball_pierce_chance() -> float:
 	return _get_magic_projectil_chance(InventoryItemDefinition.keys.pierce_chance)
 
 func has_fireball_gravity_trait() -> bool:
+	
+	if debug_modified_stats:
+		if debug_modified_stats.get_modifier_int(InventoryItemDefinition.keys.gravity_trait_enabled, 0) > 0:
+			return true
+	
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			if item_definition.get_modifier_int(InventoryItemDefinition.keys.gravity_trait_enabled, 0) > 0:
@@ -350,6 +366,11 @@ func get_fireball_gravity_profile() -> Dictionary:
 
 func get_fireball_accuracy_deviation_flat() -> float:
 	var modifier: float = 0.0
+	
+	if debug_modified_stats:
+		modifier += debug_modified_stats.get_modifier_float(InventoryItemDefinition.keys.accuracy_deviation_flat, 0.0)
+		return modifier
+		
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			modifier += item_definition.get_modifier_float(InventoryItemDefinition.keys.accuracy_deviation_flat, 0.0)
@@ -357,6 +378,11 @@ func get_fireball_accuracy_deviation_flat() -> float:
 
 func get_fireball_split_bonus() -> int:
 	var bonus: int = 0
+	
+	if debug_modified_stats:
+		bonus += debug_modified_stats.get_modifier_int(InventoryItemDefinition.keys.split_flat, 0)
+		return bonus
+	
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			bonus += item_definition.get_modifier_int(InventoryItemDefinition.keys.split_flat, 0)
@@ -364,6 +390,11 @@ func get_fireball_split_bonus() -> int:
 
 func get_fireball_aoe_bonus() -> float:
 	var bonus: float = 0.0
+	
+	if debug_modified_stats:
+		bonus += debug_modified_stats.get_modifier_float(InventoryItemDefinition.keys.aoe_radius_flat, 0.0)
+		return bonus
+	
 	for item_definition: InventoryItemDefinition in _left_hand_slots + _right_hand_slots:
 		if item_definition != null and item_definition.is_ring():
 			bonus += item_definition.get_modifier_float(InventoryItemDefinition.keys.aoe_radius_flat, 0.0)

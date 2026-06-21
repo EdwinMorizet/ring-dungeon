@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="InventoryItemDefinition" format=3 uid="uid://b4id6ejq5oo7l"]
+
+[ext_resource type="Script" uid="uid://6vuno0he1o0g" path="res://scripts/inventory/inventory_item_definition.gd" id="1_00h2y"]
+
+[resource]
+script = ExtResource("1_00h2y")
+item_id = &"testte"
+display_name = "test"
+gold_value = 34
+major_trait_label = "erer"
+metadata/_custom_type_script = "uid://6vuno0he1o0g"

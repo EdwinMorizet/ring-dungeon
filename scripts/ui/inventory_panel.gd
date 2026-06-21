@@ -216,8 +216,8 @@ func _refresh_actual_stats() -> void:
 		_fireball_actual_label.text = _build_fireball_actual_stats_text()
 
 func _build_player_actual_stats_text() -> String:
-	if not PlayerManager.has_live_player():
-		return "Player not found"
+	#if not PlayerManager.has_live_player():
+		#return "Player not found"
 
 	var current_health: float = PlayerManager.current_health
 	var max_health: float = PlayerManager.max_health
@@ -293,22 +293,22 @@ func _build_band_summary_text() -> String:
 	var active_shield_bonus: float = InventoryManager.get_band_active_shield_fill_rate_bonus()
 	var active_speed_bonus: float = InventoryManager.get_band_active_speed_bonus()
 
-	if not is_zero_approx(max_hp_bonus):
-		lines.append(_format_float_line(&"max_hp_flat", max_hp_bonus, 0))
-	if not is_zero_approx(max_mp_bonus):
-		lines.append(_format_float_line(&"max_mp_flat", max_mp_bonus, 0))
-	if not is_zero_approx(mana_regen_bonus):
-		lines.append(_format_float_line(&"mana_regen_flat", mana_regen_bonus, 1))
-	if not is_zero_approx(max_ap_slots_bonus):
-		lines.append(_format_int_line(&"max_ap_slots", int(roundf(max_ap_slots_bonus))))
-	if not is_equal_approx(speed_mult, 1.0):
-		lines.append(_format_mult_line(&"speed_mult", speed_mult))
-	if not is_zero_approx(active_heal_bonus):
-		lines.append(_format_float_line(&"active_heal_power_flat", active_heal_bonus, 1))
-	if not is_zero_approx(active_shield_bonus):
-		lines.append(_format_float_line(&"active_shield_fill_rate_flat", active_shield_bonus, 2))
-	if not is_zero_approx(active_speed_bonus):
-		lines.append(_format_float_line(&"active_speed_mult_flat", active_speed_bonus * 100.0, 0))
+	#if not is_zero_approx(max_hp_bonus):
+		#lines.append(_format_float_line(&"max_hp_flat", max_hp_bonus, 0))
+	#if not is_zero_approx(max_mp_bonus):
+		#lines.append(_format_float_line(&"max_mp_flat", max_mp_bonus, 0))
+	#if not is_zero_approx(mana_regen_bonus):
+		#lines.append(_format_float_line(&"mana_regen_flat", mana_regen_bonus, 1))
+	#if not is_zero_approx(max_ap_slots_bonus):
+		#lines.append(_format_int_line(&"max_ap_slots", int(roundf(max_ap_slots_bonus))))
+	#if not is_equal_approx(speed_mult, 1.0):
+		#lines.append(_format_mult_line(&"speed_mult", speed_mult))
+	#if not is_zero_approx(active_heal_bonus):
+		#lines.append(_format_float_line(&"active_heal_power_flat", active_heal_bonus, 1))
+	#if not is_zero_approx(active_shield_bonus):
+		#lines.append(_format_float_line(&"active_shield_fill_rate_flat", active_shield_bonus, 2))
+	#if not is_zero_approx(active_speed_bonus):
+		#lines.append(_format_float_line(&"active_speed_mult_flat", active_speed_bonus * 100.0, 0))
 
 	if lines.is_empty():
 		return _NONE_EQUIPPED_TEXT
@@ -328,30 +328,30 @@ func _build_ring_summary_text() -> String:
 	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
 	var aoe_bonus: float = InventoryManager.get_fireball_aoe_bonus()
 	var pierce_chance_bonus: float = InventoryManager.get_fireball_pierce_chance()
-
-	if not is_equal_approx(damage_mult, 1.0):
-		lines.append(_format_mult_line(&"damage_mult", damage_mult))
-	if not is_equal_approx(mana_cost_mult, 1.0):
-		lines.append(_format_mult_line(&"mana_cost_mult", mana_cost_mult))
-	if not is_equal_approx(proj_speed_mult, 1.0):
-		lines.append(_format_mult_line(&"proj_speed_mult", proj_speed_mult))
-	if bool(gravity_profile.get("active", false)):
-		lines.append("🧿 Gravity Trait Active")
-		lines.append("🧲 Trait Gravity %.2f" % float(gravity_profile.get("gravity_influence", 0.0)))
-		lines.append("🧲 Trait Linear Damp %.2f" % float(gravity_profile.get("linear_damp", 0.0)))
-		lines.append("🧲 Trait Angular Damp %.2f" % float(gravity_profile.get("angular_damp", 0.0)))
-	if not is_equal_approx(cast_delay_mult, 1.0):
-		lines.append(_format_mult_line(&"cast_delay_mult", cast_delay_mult))
-	if not is_zero_approx(accuracy_deviation):
-		lines.append(_format_float_line(&"accuracy_deviation_flat", accuracy_deviation, 2))
-	if not is_zero_approx(bounce_chance_bonus):
-		lines.append(_format_float_line(&"bounce_chance", bounce_chance_bonus * 100.0, 0))
-	if split_bonus != 0:
-		lines.append(_format_int_line(&"split_flat", split_bonus))
-	if not is_zero_approx(aoe_bonus):
-		lines.append(_format_float_line(&"aoe_radius_flat", aoe_bonus, 2))
-	if not is_zero_approx(pierce_chance_bonus):
-		lines.append(_format_float_line(&"pierce_chance", pierce_chance_bonus * 100.0, 0))
+#
+	#if not is_equal_approx(damage_mult, 1.0):
+		#lines.append(_format_mult_line(&"damage_mult", damage_mult))
+	#if not is_equal_approx(mana_cost_mult, 1.0):
+		#lines.append(_format_mult_line(&"mana_cost_mult", mana_cost_mult))
+	#if not is_equal_approx(proj_speed_mult, 1.0):
+		#lines.append(_format_mult_line(&"proj_speed_mult", proj_speed_mult))
+	#if bool(gravity_profile.get("active", false)):
+		#lines.append("🧿 Gravity Trait Active")
+		#lines.append("🧲 Trait Gravity %.2f" % float(gravity_profile.get("gravity_influence", 0.0)))
+		#lines.append("🧲 Trait Linear Damp %.2f" % float(gravity_profile.get("linear_damp", 0.0)))
+		#lines.append("🧲 Trait Angular Damp %.2f" % float(gravity_profile.get("angular_damp", 0.0)))
+	#if not is_equal_approx(cast_delay_mult, 1.0):
+		#lines.append(_format_mult_line(&"cast_delay_mult", cast_delay_mult))
+	#if not is_zero_approx(accuracy_deviation):
+		#lines.append(_format_float_line(&"accuracy_deviation_flat", accuracy_deviation, 2))
+	#if not is_zero_approx(bounce_chance_bonus):
+		#lines.append(_format_float_line(&"bounce_chance", bounce_chance_bonus * 100.0, 0))
+	#if split_bonus != 0:
+		#lines.append(_format_int_line(&"split_flat", split_bonus))
+	#if not is_zero_approx(aoe_bonus):
+		#lines.append(_format_float_line(&"aoe_radius_flat", aoe_bonus, 2))
+	#if not is_zero_approx(pierce_chance_bonus):
+		#lines.append(_format_float_line(&"pierce_chance", pierce_chance_bonus * 100.0, 0))
 
 	if lines.is_empty():
 		return _NONE_EQUIPPED_TEXT
@@ -363,12 +363,12 @@ func _are_slots_empty(slots: Array[InventoryItemDefinition]) -> bool:
 			return false
 	return true
 
-func _format_mult_line(key: StringName, value: float) -> String:
+func _format_mult_line(key: InventoryItemDefinition.keys, value: float) -> String:
 	var emoji: String = InventoryItemDefinition.get_stat_emoji(key)
 	var label: String = InventoryItemDefinition.get_stat_label(key)
 	return "%s %s x%.2f" % [emoji, label, value]
 
-func _format_float_line(key: StringName, value: float, decimals: int) -> String:
+func _format_float_line(key: InventoryItemDefinition.keys, value: float, decimals: int) -> String:
 	var emoji: String = InventoryItemDefinition.get_stat_emoji(key)
 	var label: String = InventoryItemDefinition.get_stat_label(key)
 	var format_string: String = "%s %s %+.1f"
@@ -377,11 +377,11 @@ func _format_float_line(key: StringName, value: float, decimals: int) -> String:
 		format_string = "%s %s %+.0f"
 	elif decimals == 2:
 		format_string = "%s %s %+.2f"
-	if key == &"bounce_chance" or key == &"pierce_chance" or key == &"active_speed_mult_flat":
-		suffix = "%"
+	#if key == &"bounce_chance" or key == &"pierce_chance" or key == &"active_speed_mult_flat":
+		#suffix = "%"
 	return "%s%s" % [format_string % [emoji, label, value], suffix]
 
-func _format_int_line(key: StringName, value: int) -> String:
+func _format_int_line(key: InventoryItemDefinition.keys, value: int) -> String:
 	var emoji: String = InventoryItemDefinition.get_stat_emoji(key)
 	var label: String = InventoryItemDefinition.get_stat_label(key)
 	return "%s %s %+d" % [emoji, label, value]
