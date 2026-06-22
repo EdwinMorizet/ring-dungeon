@@ -1,5 +1,6 @@
 # Rolls procedural ring and band affixes based on rarity and generation budgets.
 extends RefCounted
+class_name ItemAffixGenerator
 
 class AffixEntry extends RefCounted:
 	var key: StringName = StringName()

@@ -403,6 +403,8 @@ func get_fireball_aoe_bonus() -> float:
 func get_fireball_accuracy_bonus() -> float:
 	return -get_fireball_accuracy_deviation_flat()
 
+func get_fireball_size_multiplier() -> float:
+	return _get_magic_projectil_mult(InventoryItemDefinition.keys.proj_size_mult)
 
 
 # Defend Spells

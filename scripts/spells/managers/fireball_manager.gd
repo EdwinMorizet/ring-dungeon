@@ -106,6 +106,10 @@ func _build_modified_config() -> FireballConfig:
 	var split_bonus: int = InventoryManager.get_fireball_split_bonus()
 	var pierce_chance: float = InventoryManager.get_fireball_pierce_chance()
 	var aoe_bonus: float = InventoryManager.get_fireball_aoe_bonus()
+	var size_mutliplier : float = InventoryManager.get_fireball_size_multiplier()
+	
+	print(size_mutliplier)
+	
 	modified_config.damage = maxi(int(roundf(float(_config.damage) * damage_multiplier)), 0)
 	modified_config.speed = max(_config.speed * speed_multiplier, 0.0)
 	modified_config.accuracy = max(_config.accuracy + accuracy_deviation, 0.0)
@@ -116,6 +120,7 @@ func _build_modified_config() -> FireballConfig:
 	modified_config.split_count = maxi(_config.split_count + split_bonus, 0)
 	modified_config.pierce_chance = clampf(_config.pierce_chance + pierce_chance, 0.0, RING_BAND_CONSTANTS.MAX_PIERCE_CHANCE)
 	modified_config.aoe = max(_config.aoe + aoe_bonus, 1.0)
+	modified_config.size = max(_config.size * size_mutliplier, 0.05)
 	_apply_gravity_trait_profile(modified_config, gravity_profile)
 	modified_config.cast_delay_seconds = get_cast_delay_seconds()
 	return modified_config

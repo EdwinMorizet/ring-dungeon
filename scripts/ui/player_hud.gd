@@ -41,9 +41,6 @@ func _exit_tree() -> void:
 		PlayerManager.currency_changed.disconnect(_on_currency_changed)
 
 func _process(_delta: float) -> void:
-	if not PlayerManager.has_live_player():
-		_update_compass_guidance()
-		return
 	var health_current_value: float = PlayerManager.current_health
 	var health_max_value: float = PlayerManager.max_health
 	set_health(health_current_value, health_max_value)

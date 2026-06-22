@@ -8,4 +8,24 @@ item_id = &"testte"
 display_name = "test"
 gold_value = 34
 major_trait_label = "erer"
+compiled_modifiers = {
+0: 1.2,
+1: 1.1,
+2: 1.0,
+3: 1.2,
+4: -0.2,
+5: 0.0,
+6: 0,
+7: 0.0,
+8: 0.0,
+9: 0,
+10: 0.0,
+11: 0.0,
+12: 0.0,
+13: 0,
+14: 1.0,
+15: 0.0,
+16: 0.0,
+17: 0.0
+}
 metadata/_custom_type_script = "uid://6vuno0he1o0g"

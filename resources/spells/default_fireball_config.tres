@@ -4,3 +4,4 @@
 
 [resource]
 script = ExtResource("1_ex2vi")
+mana_cost = 2.0

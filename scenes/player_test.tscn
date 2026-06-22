@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://dyhkitm5mlh46"]
 
 [ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="1_a8v3n"]
+[ext_resource type="PackedScene" uid="uid://eicmvh8yjf8w" path="res://scenes/ui/player_hud.tscn" id="2_fdpfy"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_fdpfy"]
 size = Vector2(100, 100)
@@ -34,3 +35,5 @@ surface_material_override/0 = SubResource("StandardMaterial3D_6p80c")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D" unique_id=1420762623]
 shape = SubResource("BoxShape3D_6p80c")
+
+[node name="PlayerHud" parent="." unique_id=442110535 instance=ExtResource("2_fdpfy")]
