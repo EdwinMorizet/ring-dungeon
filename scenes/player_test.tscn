@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://q6thighm2mu1" path="res://scenes/player/player.tscn" id="1_a8v3n"]
 [ext_resource type="PackedScene" uid="uid://eicmvh8yjf8w" path="res://scenes/ui/player_hud.tscn" id="2_fdpfy"]
+[ext_resource type="PackedScene" uid="uid://ibvmxfvchrb0" path="res://models/dummy.glb" id="3_6p80c"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_fdpfy"]
 size = Vector2(100, 100)
@@ -37,3 +38,6 @@ surface_material_override/0 = SubResource("StandardMaterial3D_6p80c")
 shape = SubResource("BoxShape3D_6p80c")
 
 [node name="PlayerHud" parent="." unique_id=442110535 instance=ExtResource("2_fdpfy")]
+
+[node name="dummy" parent="." unique_id=311074610 instance=ExtResource("3_6p80c")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.638938, -0.0013057739, 2.4793663)
